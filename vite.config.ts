@@ -8,7 +8,7 @@ const __dirname = dirname(__filename);
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/',  
+  base: '/',
   plugins: [
     react({
       babel: {
@@ -21,7 +21,12 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src')
+      '@': resolve(__dirname, './src'),
+      '@components': resolve(__dirname, './src/components'),
+      '@pages': resolve(__dirname, './src/pages'),
+      '@stores': resolve(__dirname, './src/stores'),
+      '@theme': resolve(__dirname, './src/theme'),
+      '@utils': resolve(__dirname, './src/utils')
     }
   },
   build: {
