@@ -8,7 +8,7 @@ const __dirname = dirname(__filename);
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/Algo360FX/',  
+  base: '/',  
   plugins: [
     react({
       babel: {
