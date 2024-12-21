@@ -1,18 +1,17 @@
 {
-  "name": "Algo360FX",
+  "name": "Algo360FX Trading Platform",
   "short_name": "Algo360FX",
   "description": "Advanced Forex Trading Platform",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "theme_color": "#1976d2",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icons/icon.svg",
+      "src": "./favicon.svg",
       "type": "image/svg+xml",
-      "sizes": "512x512",
-      "purpose": "any maskable"
+      "sizes": "64x64 32x32 24x24 16x16"
     }
   ]
 }
