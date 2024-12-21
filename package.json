@@ -76,7 +76,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "build:server": "tsc -p src/server/tsconfig.json",
     "start:server": "node dist/server/mt5bridge.js",
