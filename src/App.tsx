@@ -11,7 +11,7 @@ import LoginForm from '@components/auth/LoginForm';
 import RegisterForm from '@components/auth/RegisterForm';
 import ForgotPasswordForm from '@components/auth/ForgotPasswordForm';
 import ResetPasswordForm from '@components/auth/ResetPasswordForm';
-import AppLayout from '@components/layout/AppLayout';
+import MainLayout from '@/layouts/MainLayout';
 import { RootStore } from '@stores/RootStore';
 import { RootStoreProvider } from '@stores/RootStoreContext';
 
@@ -71,7 +71,7 @@ function App() {
             path="/app"
             element={
               <ProtectedRoute>
-                <AppLayout />
+                <MainLayout />
               </ProtectedRoute>
             }
           >
