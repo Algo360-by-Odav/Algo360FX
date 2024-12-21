@@ -1,0 +1,167 @@
+.portfolio-rebalancing {
+  padding: 24px;
+}
+
+.strategy-card,
+.targets-card,
+.constraints-card,
+.history-card {
+  height: 100%;
+}
+
+.strategy-card .MuiFormControl-root {
+  width: 100%;
+}
+
+.target-chip {
+  margin: 4px;
+}
+
+.target-chip:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.constraints-card .MuiTextField-root {
+  margin-bottom: 16px;
+}
+
+.history-card {
+  margin-top: 24px;
+}
+
+.recharts-wrapper {
+  margin: 0 auto;
+}
+
+.MuiDialog-paper {
+  min-width: 400px;
+}
+
+.MuiDialogContent-root {
+  padding-top: 16px !important;
+}
+
+.MuiDialogActions-root {
+  padding: 16px 24px;
+}
+
+.target-weight-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.strategy-info {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+}
+
+.strategy-info-title {
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.strategy-info-description {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.875rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.metric-card {
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.metric-title {
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 4px;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.chart-container {
+  height: 300px;
+  margin-top: 24px;
+}
+
+.pie-chart-legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.legend-label {
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.rebalance-button {
+  min-width: 200px;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 1;
+}
+
+.error-message {
+  color: #f44336;
+  font-size: 0.875rem;
+  margin-top: 8px;
+}
+
+.success-message {
+  color: #4caf50;
+  font-size: 0.875rem;
+  margin-top: 8px;
+}
+
+@media (max-width: 960px) {
+  .portfolio-rebalancing {
+    padding: 16px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-container {
+    height: 250px;
+  }
+}

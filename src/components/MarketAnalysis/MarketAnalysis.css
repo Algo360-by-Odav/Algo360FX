@@ -1,0 +1,146 @@
+.market-analysis {
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tabs {
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.content {
+  margin-top: 24px;
+}
+
+/* Chart Section */
+.chart-container {
+  padding: 16px;
+  height: 600px;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.chart-controls {
+  display: flex;
+  gap: 8px;
+}
+
+/* Market Movers */
+.price-info {
+  text-align: right;
+}
+
+.change {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* News Section */
+.impact-high {
+  background-color: #ef5350 !important;
+  color: white !important;
+}
+
+.impact-medium {
+  background-color: #ffa726 !important;
+  color: white !important;
+}
+
+.impact-low {
+  background-color: #66bb6a !important;
+  color: white !important;
+}
+
+/* Technical Analysis */
+.signal-buy {
+  background-color: #66bb6a !important;
+  color: white !important;
+}
+
+.signal-sell {
+  background-color: #ef5350 !important;
+  color: white !important;
+}
+
+.signal-neutral {
+  background-color: #bdbdbd !important;
+  color: white !important;
+}
+
+/* Sentiment Analysis */
+.sentiment-meter {
+  height: 100px;
+  margin: 24px 0;
+  background: linear-gradient(90deg, #ef5350 0%, #ffa726 50%, #66bb6a 100%);
+  border-radius: 4px;
+  position: relative;
+}
+
+.sentiment-indicator {
+  position: absolute;
+  top: -10px;
+  width: 20px;
+  height: 120px;
+  background-color: rgba(0, 0, 0, 0.5);
+  transform: translateX(-50%);
+}
+
+.position-chart {
+  height: 300px;
+  margin-top: 16px;
+}
+
+/* Support & Resistance */
+.level-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.level-line {
+  flex: 1;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .chart-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .chart-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

@@ -1,0 +1,170 @@
+.portfolio-optimizer {
+  padding: 24px;
+}
+
+.strategy-selection {
+  margin-bottom: 24px;
+}
+
+.strategy-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.strategy-chip {
+  margin: 4px;
+}
+
+.chart-card {
+  height: 100%;
+}
+
+.correlation-card {
+  height: 100%;
+}
+
+.correlation-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 16px;
+}
+
+.correlation-row {
+  display: flex;
+  gap: 2px;
+}
+
+.correlation-cell {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: white;
+  cursor: help;
+}
+
+.stress-test-card {
+  height: 100%;
+}
+
+.stress-test-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.stress-test-item {
+  padding: 16px;
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.negative {
+  color: #f44336;
+}
+
+.positive {
+  color: #4caf50;
+}
+
+.optimization-progress {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.constraints-section {
+  margin-top: 24px;
+}
+
+.constraint-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.constraint-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.constraint-value {
+  width: 120px;
+}
+
+.efficient-frontier-chart {
+  width: 100%;
+  height: 400px;
+}
+
+.risk-decomposition-chart {
+  width: 100%;
+  height: 300px;
+}
+
+.portfolio-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.metric-card {
+  padding: 16px;
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.optimization-history {
+  margin-top: 24px;
+}
+
+.history-item {
+  padding: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.history-timestamp {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.875rem;
+}
+
+.history-metrics {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.history-metric {
+  flex: 1;
+  text-align: center;
+}
+
+.history-metric-label {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.75rem;
+  margin-bottom: 4px;
+}
+
+.history-metric-value {
+  font-weight: 500;
+}

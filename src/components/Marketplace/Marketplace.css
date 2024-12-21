@@ -1,0 +1,83 @@
+.marketplace {
+  padding: 24px;
+}
+
+.marketplace-header {
+  margin-bottom: 32px;
+}
+
+.marketplace-filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+.search-field {
+  flex: 1;
+  max-width: 400px;
+}
+
+.sort-select {
+  min-width: 200px;
+}
+
+.bot-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.bot-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.bot-description {
+  margin: 8px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bot-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.bot-tag {
+  background-color: rgba(144, 202, 249, 0.08);
+}
+
+.bot-stats {
+  display: flex;
+  justify-content: space-between;
+  margin: 16px 0;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.bot-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bot-actions {
+  margin-top: auto;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
