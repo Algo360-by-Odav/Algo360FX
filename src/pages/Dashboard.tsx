@@ -1,9 +1,9 @@
 import React from 'react';
 import { Grid, Box } from '@mui/material';
 import { observer } from 'mobx-react-lite';
-import { useResponsive } from '../hooks/useResponsive';
-import AccountSummaryWidget from '../components/Account/AccountSummaryWidget';
-import TradingDashboard from '../components/trading/TradingDashboard';
+import { useResponsive } from '@/hooks/useResponsive';
+import AccountSummaryWidget from '@components/Account/AccountSummaryWidget';
+import TradingDashboard from '@components/trading/TradingDashboard';
 
 const Dashboard: React.FC = observer(() => {
   const { deviceType } = useResponsive('up', 'xs');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useTradingStore } from '../../hooks/useTradingStore';
+import { useTradingStore } from '@/hooks/useTradingStore';
 import {
   Grid,
   Paper,
@@ -18,11 +18,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import TradingViewChart from './TradingViewChart';
-import { formatCurrency, formatNumber, formatPrice } from '../../utils/formatters';
-import WebSocketService from '../../services/websocket';
-import SymbolSelector from './SymbolSelector';
-import OrderEntry from './OrderEntry';
+import TradingViewChart from '@components/trading/TradingViewChart';
+import { formatCurrency, formatNumber, formatPrice } from '@/utils/formatters';
+import WebSocketService from '@/services/websocket';
+import SymbolSelector from '@components/trading/SymbolSelector';
+import OrderEntry from '@components/trading/OrderEntry';
 
 const TradingDashboard = observer(() => {
   const tradingStore = useTradingStore();

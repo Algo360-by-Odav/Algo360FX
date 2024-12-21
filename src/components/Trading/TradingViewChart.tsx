@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useTradingStore } from '../../hooks/useTradingStore';
+import { useTradingStore } from '@/hooks/useTradingStore';
 import { Box } from '@mui/material';
 import { createChart, IChartApi, ISeriesApi } from 'lightweight-charts';
 
