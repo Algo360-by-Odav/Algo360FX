@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { CssBaseline } from '@mui/material';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import App from './App';
 import { RootStore } from './stores/RootStore';
 import { RootStoreProvider } from './stores/RootStoreContext';
@@ -29,14 +29,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <RootStoreProvider store={rootStore}>
-        <BrowserRouter>
+        <HashRouter>
           <AuthProvider>
             <SearchProvider>
               <CssBaseline />
               <App />
             </SearchProvider>
           </AuthProvider>
-        </BrowserRouter>
+        </HashRouter>
       </RootStoreProvider>
     </ErrorBoundary>
   </React.StrictMode>
