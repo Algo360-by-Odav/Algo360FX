@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import TradingViewChart from '@components/trading/TradingViewChart';
 import { formatCurrency, formatNumber, formatPrice } from '@/utils/formatters';
-import WebSocketService from '@/services/websocket';
+import { WebSocketService } from '@/services/websocketService';
 import SymbolSelector from '@components/trading/SymbolSelector';
 import OrderEntry from '@components/trading/OrderEntry';
 

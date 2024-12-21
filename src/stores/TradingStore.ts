@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { RootStore } from './RootStore';
 import TradingService, { Order, Position, OrderSide, OrderType, OrderStatus } from '@/services/trading';
-import WebSocketService from '@/services/websocket';
+import { WebSocketService } from '@/services/websocketService';
 
 export interface MarketData {
   symbol: string;
