@@ -1,6 +1,6 @@
 import { useContext } from 'react';
-import { RootStoreContext } from '../stores/RootStoreContext';
-import { RootStore } from '../stores/RootStore';
+import { RootStoreContext } from '@/stores/RootStoreContext';
+import { RootStore } from '@/stores/RootStore';
 
 export const useStore = (): RootStore => {
   const store = useContext(RootStoreContext);

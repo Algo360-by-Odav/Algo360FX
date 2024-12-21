@@ -1,5 +1,5 @@
 import News, { INews } from '../models/News';
-import { NewsItem } from '../types/news';
+import { NewsItem } from '@/types/news';
 
 interface PaginatedResponse<T> {
   data: T[];

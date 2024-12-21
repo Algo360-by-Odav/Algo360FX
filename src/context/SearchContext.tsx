@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
-import { SearchResult, SearchFilter, searchService } from '../services/search/SearchService';
-import { debounce } from '../utils/debounce';
+import { SearchResult, SearchFilter, searchService } from '@/services/search/SearchService';
+import { debounce } from '@/utils/debounce';
 import { useNavigate } from 'react-router-dom';
 
 interface SearchContextType {

@@ -7,7 +7,7 @@ import {
   TimeFrame,
   JournalEntry,
   EquityCurve,
-} from '../types/trading';
+} from '@/types/trading';
 
 export class AnalyticsStore {
   private tradeHistory: Trade[] = [];

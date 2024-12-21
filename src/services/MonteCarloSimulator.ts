@@ -1,4 +1,4 @@
-import { Trade } from '../types/trading';
+import { Trade } from '@/types/trading';
 
 export interface MonteCarloResult {
   confidenceIntervals: {

@@ -45,11 +45,11 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
-import { useRootStore } from '../stores/RootStoreContext';
+import { useRootStore } from '@/stores/RootStoreContext';
 import { useSearch } from '../context/SearchContext';
-import SearchResults from '../components/SearchResults/SearchResults';
-import useHFTInitialize from '../hooks/useHFTInitialize';
-import MobileNavigation from '../components/MobileNavigation';
+import SearchResults from '@components/SearchResults/SearchResults';
+import useHFTInitialize from '@/hooks/useHFTInitialize';
+import MobileNavigation from '@components/MobileNavigation';
 
 const DRAWER_WIDTH = 240;
 

@@ -4,8 +4,8 @@ import {
   OptimizationConfig,
   OptimizationResultNew,
   TradingStrategyNew,
-} from '../types/optimization';
-import { OptimizationWebSocket } from '../services/optimizationWebSocket';
+} from '@/types/optimization';
+import { OptimizationWebSocket } from '@/services/optimizationWebSocket';
 
 export class OptimizationStore {
   strategies: TradingStrategyNew[] = [];

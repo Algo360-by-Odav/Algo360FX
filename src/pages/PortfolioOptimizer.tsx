@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import PortfolioOptimizerComponent from '../components/Portfolio/PortfolioOptimizer';
+import PortfolioOptimizerComponent from '@components/Portfolio/PortfolioOptimizer';
 import { observer } from 'mobx-react-lite';
 
 const PortfolioOptimizer: React.FC = observer(() => {

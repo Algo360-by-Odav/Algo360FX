@@ -1,7 +1,7 @@
 import { makeAutoObservable } from 'mobx';
 import { DynamicRiskParams, RiskLimits } from './types';
-import { Portfolio, Position } from '../types/trading';
-import { calculateVolatility } from '../utils/statistics';
+import { Portfolio, Position } from '@/types/trading';
+import { calculateVolatility } from '@/utils/statistics';
 
 interface PositionSizeConfig {
   baseRiskPerTrade: number;

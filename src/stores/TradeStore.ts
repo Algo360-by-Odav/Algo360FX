@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { RootStore } from './RootStore';
-import { Trade, Portfolio } from '../types/trading';
-import { api } from '../services/api';
+import { Trade, Portfolio } from '@/types/trading';
+import { api } from '@/services/api';
 
 export class TradeStore {
   trades: Trade[] = [];

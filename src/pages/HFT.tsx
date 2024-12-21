@@ -14,8 +14,8 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { observer } from 'mobx-react-lite';
-import { useRootStore } from '../hooks/useRootStore';
-import ChartWidget from '../components/Chart/ChartWidget';
+import { useRootStore } from '@/hooks/useRootStore';
+import ChartWidget from '@components/Chart/ChartWidget';
 
 interface Strategy {
   id: string;

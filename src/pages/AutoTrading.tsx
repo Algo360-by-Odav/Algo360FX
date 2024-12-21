@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Box, Container, Grid, Tab, Tabs, useTheme } from '@mui/material';
 import { observer } from 'mobx-react-lite';
-import ErrorBoundary from '../components/error/ErrorBoundary';
-import { useRootStoreContext } from '../stores/RootStoreContext';
+import ErrorBoundary from '@components/error/ErrorBoundary';
+import { useRootStoreContext } from '@/stores/RootStoreContext';
 
 // Import components directly without lazy loading
 import {
@@ -21,7 +21,7 @@ import {
   MarketAnalysisWidget,
   StrategyComparisonWidget,
   AutomatedStrategySelectionWidget,
-} from '../components/AutoTrading';
+} from '@components/AutoTrading';
 
 interface TabPanelProps {
   children?: React.ReactNode;

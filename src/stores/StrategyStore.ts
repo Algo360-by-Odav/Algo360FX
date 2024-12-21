@@ -1,6 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { RootStore } from './RootStore';
-import { api } from '../services/api';
+import { api } from '@/services/api';
 
 export class StrategyStore {
   loading: boolean = false;

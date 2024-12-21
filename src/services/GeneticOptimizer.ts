@@ -1,6 +1,6 @@
 import { BacktestService } from './BacktestService';
 import { PerformanceMetricsService, PerformanceMetrics } from './PerformanceMetricsService';
-import { Strategy, StrategyParameters, Trade } from '../types/trading';
+import { Strategy, StrategyParameters, Trade } from '@/types/trading';
 
 interface Individual {
   chromosome: StrategyParameters;

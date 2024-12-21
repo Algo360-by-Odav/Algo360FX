@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { offlineStorage } from '../services/OfflineStorage';
-import { syncService } from '../services/SyncService';
+import { offlineStorage } from '@/services/OfflineStorage';
+import { syncService } from '@/services/SyncService';
 
 export function useOfflineCapability() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);

@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import { AlgoTradingService, StrategyConfig, TradeSignal } from '../services/AlgoTradingService';
+import { AlgoTradingService, StrategyConfig, TradeSignal } from '@/services/AlgoTradingService';
 import { RootStore } from './RootStore';
 
 export interface Strategy {

@@ -1,6 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import { api } from '../services/api';
-import { UserPreferences } from '../types/user';
+import { api } from '@/services/api';
+import { UserPreferences } from '@/types/user';
 import { RootStore } from './RootStore';
 
 const DEFAULT_PREFERENCES: UserPreferences = {

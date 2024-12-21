@@ -136,6 +136,13 @@ const LoginForm: React.FC = observer(() => {
             0 4px 30px rgba(0, 0, 0, 0.1),
             inset 0 0 60px rgba(255, 255, 255, 0.05)
           `,
+          transition: 'box-shadow 0.3s ease-in-out',
+          '&:hover': {
+            boxShadow: `
+              0 6px 40px rgba(0, 0, 0, 0.15),
+              inset 0 0 80px rgba(255, 255, 255, 0.07)
+            `
+          },
           '&::before': {
             content: '""',
             position: 'absolute',
@@ -150,13 +157,6 @@ const LoginForm: React.FC = observer(() => {
             maskComposite: 'exclude',
             pointerEvents: 'none',
           },
-          '&:hover': {
-            boxShadow: `
-              0 4px 30px rgba(0, 0, 0, 0.15),
-              inset 0 0 60px rgba(255, 255, 255, 0.07)
-            `,
-          },
-          transition: 'all 0.3s ease',
         }}
       >
         <Box
@@ -302,14 +302,13 @@ const LoginForm: React.FC = observer(() => {
               fontSize: '1.1rem',
               fontWeight: 500,
               background: 'linear-gradient(135deg, #9333ea 0%, #4f46e5 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #7e22ce 0%, #4338ca 100%)',
-              },
+              transition: 'all 0.3s ease',
               boxShadow: '0 4px 15px rgba(79, 70, 229, 0.4)',
               '&:hover': {
+                transform: 'translateY(-2px)',
                 boxShadow: '0 6px 20px rgba(79, 70, 229, 0.6)',
+                background: 'linear-gradient(135deg, #4338CA, #4F46E5)',
               },
-              transition: 'all 0.3s ease',
             }}
           >
             {authStore.isLoading ? (

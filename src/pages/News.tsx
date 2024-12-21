@@ -23,7 +23,7 @@ import {
   TrendingDown,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import NewsFeedWidget from '../components/News/NewsFeedWidget';
+import NewsFeedWidget from '@components/News/NewsFeedWidget';
 
 interface TabPanelProps {
   children?: React.ReactNode;

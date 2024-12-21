@@ -4,8 +4,8 @@ import {
   RiskAdjustedMetrics,
   CurrencyRisk
 } from './types';
-import { Portfolio, Position } from '../types/trading';
-import { calculateVolatility, calculateCorrelation } from '../utils/statistics';
+import { Portfolio, Position } from '@/types/trading';
+import { calculateVolatility, calculateCorrelation } from '@/utils/statistics';
 
 export class RiskAnalyzer {
   private historicalData: Map<string, number[]> = new Map();

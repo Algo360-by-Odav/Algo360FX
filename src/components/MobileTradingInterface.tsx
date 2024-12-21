@@ -22,7 +22,7 @@ import {
   WifiOff as OfflineIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { useOfflineCapability } from '../hooks/useOfflineCapability';
+import { useOfflineCapability } from '@/hooks/useOfflineCapability';
 
 interface MobileTradingInterfaceProps {
   symbol: string;

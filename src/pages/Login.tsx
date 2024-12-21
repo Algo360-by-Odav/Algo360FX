@@ -17,7 +17,7 @@ import {
   Google,
   GitHub,
 } from '@mui/icons-material';
-import { useAuthStore } from '../stores/AuthStore';
+import { useAuthStore } from '@/stores/AuthStore';
 import '../styles/auth.css';
 
 const Login: React.FC = observer(() => {

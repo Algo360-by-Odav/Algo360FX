@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import NewsService from '../services/newsService';
+import NewsService from '@/services/newsService';
 import SearchBar from './SearchBar';
-import { NewsItem } from '../types/news';
-import websocketService from '../services/websocketService';
+import { NewsItem } from '@/types/news';
+import websocketService from '@/services/websocketService';
 import './NewsFeed.css';
-import soundManager from '../utils/sound';
+import soundManager from '@/utils/sound';
 
 interface NewsFeedProps {
   category?: string;

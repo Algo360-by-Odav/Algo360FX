@@ -6,7 +6,7 @@ import {
   Device,
   ActivityLogEntry,
   UpdateProfileData,
-} from '../services/api/userService';
+} from '@/services/api/userService';
 
 export class UserStore {
   profile: UserProfile | null = null;

@@ -41,9 +41,9 @@ import {
   Settings as SettingsIcon,
   Timeline as TimelineIcon,
 } from '@mui/icons-material';
+import TradingViewChart from '@components/Trading/TradingViewChart';
 import { observer } from 'mobx-react-lite';
-import TradingViewChart from '../components/trading/TradingViewChart';
-import { useTradingStore } from '../hooks/useTradingStore';
+import { useTradingStore } from '@/hooks/useTradingStore';
 
 interface Strategy {
   id: string;

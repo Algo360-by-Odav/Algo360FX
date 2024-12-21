@@ -14,9 +14,9 @@ import {
   useTheme,
 } from '@mui/material';
 import { observer } from 'mobx-react-lite';
-import PerformanceAnalyticsWidget from '../components/Analytics/PerformanceAnalyticsWidget';
-import RiskCalculatorWidget from '../components/Risk/RiskCalculatorWidget';
-import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard';
+import PerformanceAnalyticsWidget from '@components/Analytics/PerformanceAnalyticsWidget';
+import RiskCalculatorWidget from '@components/Risk/RiskCalculatorWidget';
+import AnalyticsDashboard from '@components/dashboard/AnalyticsDashboard';
 
 interface TabPanelProps {
   children?: React.ReactNode;

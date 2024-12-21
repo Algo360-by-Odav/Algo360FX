@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { RootStore } from './RootStore';
-import { api } from '../services/api';
-import { Candle, TimeFrame, MarketData, OrderBook, Ticker } from '../types/trading';
+import { api } from '@/services/api';
+import { Candle, TimeFrame, MarketData, OrderBook, Ticker } from '@/types/trading';
 
 interface PriceSubscription {
   symbol: string;

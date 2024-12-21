@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import AdvancedStrategyMarketplace from '../components/Strategy/AdvancedStrategyMarketplace';
+import AdvancedStrategyMarketplace from '@components/Strategy/AdvancedStrategyMarketplace';
 import { observer } from 'mobx-react-lite';
 
 const StrategyMarketplace: React.FC = observer(() => {

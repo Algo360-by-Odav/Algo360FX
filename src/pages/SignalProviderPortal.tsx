@@ -26,10 +26,10 @@ import {
   Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import ErrorBoundary from '../components/error/ErrorBoundary';
-import { useRootStoreContext } from '../stores/RootStoreContext';
-import SignalManagement from '../components/SignalManagement';
-import PerformanceChart from '../components/PerformanceChart';
+import ErrorBoundary from '@components/error/ErrorBoundary';
+import { useRootStoreContext } from '@/stores/RootStoreContext';
+import SignalManagement from '@components/SignalManagement';
+import PerformanceChart from '@components/PerformanceChart';
 
 interface TabPanelProps {
   children?: React.ReactNode;

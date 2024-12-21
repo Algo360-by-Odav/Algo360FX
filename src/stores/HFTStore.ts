@@ -16,7 +16,7 @@ import {
   calculateCorrelation,
   calculateBeta,
   calculateDrawdownMetrics,
-} from '../utils/statistics';
+} from '@/utils/statistics';
 
 export class HFTStore {
   private signalBuffer: Map<string, HFTSignal[]> = new Map();

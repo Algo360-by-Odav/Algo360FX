@@ -1,6 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { RootStore } from './RootStore';
-import { Trade, Position, RiskMetrics, PositionSizing } from '../types/trading';
+import { Trade, Position, RiskMetrics, PositionSizing } from '@/types/trading';
 
 export class RiskManagementStore {
   private maxDrawdown: number = 0;

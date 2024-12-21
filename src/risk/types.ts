@@ -1,4 +1,4 @@
-import { Matrix } from '../utils/matrix';
+import { Matrix } from '@/utils/matrix';
 
 export interface PortfolioRiskMetrics {
   volatility: number;

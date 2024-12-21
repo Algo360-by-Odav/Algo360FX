@@ -1,14 +1,14 @@
 import React, { Suspense, lazy } from 'react';
 import { Outlet } from 'react-router-dom';
-import LoadingScreen from '../components/loading/LoadingScreen';
-import IntroAnimation from '../components/intro/IntroAnimation';
-import AuthLayout from '../components/auth/AuthLayout';
-import ProtectedRoute from '../components/auth/ProtectedRoute';
-import LoginForm from '../components/auth/LoginForm';
-import RegisterForm from '../components/auth/RegisterForm';
-import ForgotPasswordForm from '../components/auth/ForgotPasswordForm';
-import ResetPasswordForm from '../components/auth/ResetPasswordForm';
-import AppLayout from '../components/layout/AppLayout';
+import LoadingScreen from '@components/loading/LoadingScreen';
+import IntroAnimation from '@components/intro/IntroAnimation';
+import AuthLayout from '@components/auth/AuthLayout';
+import ProtectedRoute from '@components/auth/ProtectedRoute';
+import LoginForm from '@components/auth/LoginForm';
+import RegisterForm from '@components/auth/RegisterForm';
+import ForgotPasswordForm from '@components/auth/ForgotPasswordForm';
+import ResetPasswordForm from '@components/auth/ResetPasswordForm';
+import AppLayout from '@components/layout/AppLayout';
 
 // Lazy load components
 const Dashboard = lazy(() => import('../pages/Dashboard'));

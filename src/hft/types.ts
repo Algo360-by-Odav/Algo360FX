@@ -1,4 +1,4 @@
-import { Matrix } from '../utils/matrix';
+import { Matrix } from '@/utils/matrix';
 
 export type TimeFrame = '1s' | '5s' | '10s' | '30s' | '1m' | '5m';
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { AuthContext } from '../stores/AuthStore';
-import { useRootStore } from '../hooks/useRootStore';
+import { AuthContext } from '@/stores/AuthStore';
+import { useRootStore } from '@/hooks/useRootStore';
 import { observer } from 'mobx-react-lite';
 
 interface AuthProviderProps {

@@ -26,8 +26,8 @@ import {
   Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import ErrorBoundary from '../components/error/ErrorBoundary';
-import { useRootStoreContext } from '../stores/RootStoreContext';
+import ErrorBoundary from '@components/error/ErrorBoundary';
+import { useRootStoreContext } from '@/stores/RootStoreContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;

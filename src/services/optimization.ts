@@ -3,7 +3,7 @@ import {
   OptimizationResultNew,
   ParameterDistribution,
   PerformanceMetrics,
-} from '../types/optimization';
+} from '@/types/optimization';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 

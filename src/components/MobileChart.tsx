@@ -24,7 +24,7 @@ import {
   Refresh as RefreshIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
-import { useOfflineCapability } from '../hooks/useOfflineCapability';
+import { useOfflineCapability } from '@/hooks/useOfflineCapability';
 import { debounce } from 'lodash';
 
 interface ChartData {

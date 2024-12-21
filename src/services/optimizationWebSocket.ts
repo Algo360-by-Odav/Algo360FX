@@ -1,4 +1,4 @@
-import { OptimizationConfig, OptimizationResultNew } from '../types/optimization';
+import { OptimizationConfig, OptimizationResultNew } from '@/types/optimization';
 
 export class OptimizationWebSocket {
   private ws: WebSocket | null = null;

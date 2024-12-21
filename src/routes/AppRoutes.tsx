@@ -2,12 +2,12 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { CircularProgress, Box } from '@mui/material';
-import { ProtectedRoute } from '../components/auth/ProtectedRoute';
-import { PageTransition } from '../components/transitions/PageTransition';
-import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard';
-import { NetworkStatus } from '../components/common/NetworkStatus';
-import { UserRole } from '../types/user';
-import PermissionGuard from '../components/guards/PermissionGuard';
+import { ProtectedRoute } from '@components/auth/ProtectedRoute';
+import { PageTransition } from '@components/transitions/PageTransition';
+import AnalyticsDashboard from '@components/dashboard/AnalyticsDashboard';
+import { NetworkStatus } from '@components/common/NetworkStatus';
+import { UserRole } from '@/types/user';
+import PermissionGuard from '@components/guards/PermissionGuard';
 
 // Lazy load components
 const Login = React.lazy(() => import('../pages/Login'));

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Grid, Box } from '@mui/material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../stores/RootStoreContext';
-import AccountSummaryWidget from '../components/Account/AccountSummaryWidget';
-import PerformanceAnalyticsWidget from '../components/Analytics/PerformanceAnalyticsWidget';
-import PositionManagerWidget from '../components/Position/PositionManagerWidget';
+import { useRootStoreContext } from '@/stores/RootStoreContext';
+import AccountSummaryWidget from '@components/Account/AccountSummaryWidget';
+import PerformanceAnalyticsWidget from '@components/Analytics/PerformanceAnalyticsWidget';
+import PositionManagerWidget from '@components/Position/PositionManagerWidget';
 
 const Portfolio: React.FC = observer(() => {
   const { tradingStore } = useRootStoreContext();

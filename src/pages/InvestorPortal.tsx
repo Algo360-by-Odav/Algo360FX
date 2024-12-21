@@ -26,11 +26,11 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import ErrorBoundary from '../components/error/ErrorBoundary';
-import { useRootStoreContext } from '../stores/RootStoreContext';
-import PortfolioManagement from '../components/portfolio/PortfolioManagement';
-import PerformanceChart from '../components/charts/PerformanceChart';
-import StockMarket from '../components/stock/StockMarket';
+import ErrorBoundary from '@components/error/ErrorBoundary';
+import { useRootStoreContext } from '@/stores/RootStoreContext';
+import PortfolioManagement from '@components/portfolio/PortfolioManagement';
+import PerformanceChart from '@components/charts/PerformanceChart';
+import StockMarket from '@components/stock/StockMarket';
 
 interface TabPanelProps {
   children?: React.ReactNode;

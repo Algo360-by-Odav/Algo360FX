@@ -7,7 +7,7 @@ import {
   PasswordResetConfirm,
   UpdateProfileData,
   User,
-} from '../types/auth';
+} from '@/types/auth';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3004';
 

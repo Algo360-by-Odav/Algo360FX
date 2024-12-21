@@ -1,4 +1,4 @@
-import { useRootStoreContext } from '../stores/RootStoreContext';
+import { useRootStoreContext } from '@/stores/RootStoreContext';
 
 export const useRootStore = () => {
   return useRootStoreContext();

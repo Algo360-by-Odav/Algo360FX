@@ -9,7 +9,7 @@ import {
   SignalType,
   IndicatorType,
   IndicatorParams,
-} from '../types/algo-trading';
+} from '@/types/algo-trading';
 
 class AlgoTradingService {
   private static instance: AlgoTradingService;

@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { RootStore } from './RootStore';
-import { Theme, ThemeMode, ThemeSettings } from '../types/theme';
-import { apiService } from '../services/api';
+import { Theme, ThemeMode, ThemeSettings } from '@/types/theme';
+import { apiService } from '@/services/api';
 
 const DEFAULT_SETTINGS = {
   theme: {

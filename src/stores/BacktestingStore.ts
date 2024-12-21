@@ -11,7 +11,7 @@ import {
   BacktestConfig,
   StrategyPerformance,
   MarketEnvironment,
-} from '../types/trading';
+} from '@/types/trading';
 
 export class BacktestingStore {
   private historicalData: Map<string, Candle[]> = new Map();

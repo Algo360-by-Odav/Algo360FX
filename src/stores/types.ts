@@ -1,6 +1,6 @@
-import { Strategy, BacktestResult, Trade, Portfolio } from '../types/trading';
-import { Notification } from '../types/notification';
-import { Theme } from '../types/theme';
+import { Strategy, BacktestResult, Trade, Portfolio } from '@/types/trading';
+import { Notification } from '@/types/notification';
+import { Theme } from '@/types/theme';
 
 export interface AuthStore {
   isAuthenticated: boolean;

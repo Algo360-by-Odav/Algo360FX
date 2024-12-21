@@ -14,7 +14,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { useAuthStore } from '../stores/AuthStore';
+import { useAuthStore } from '@/stores/AuthStore';
 import '../styles/auth.css';
 
 const steps = ['Email Verification', 'Reset Code', 'New Password'];

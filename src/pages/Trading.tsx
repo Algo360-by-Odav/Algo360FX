@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Grid, Box } from '@mui/material';
 import { observer } from 'mobx-react-lite';
-import ChartWidget from '../components/Chart/ChartWidget';
-import OrderBookWidget from '../components/OrderBook/OrderBookWidget';
-import QuickTradeWidget from '../components/Trade/QuickTradeWidget';
-import PositionManagerWidget from '../components/Position/PositionManagerWidget';
-import RiskCalculatorWidget from '../components/Risk/RiskCalculatorWidget';
-import { useResponsive } from '../hooks/useResponsive';
+import ChartWidget from '@components/Chart/ChartWidget';
+import OrderBookWidget from '@components/OrderBook/OrderBookWidget';
+import QuickTradeWidget from '@components/Trade/QuickTradeWidget';
+import PositionManagerWidget from '@components/Position/PositionManagerWidget';
+import RiskCalculatorWidget from '@components/Risk/RiskCalculatorWidget';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const Trading: React.FC = observer(() => {
   const { deviceType } = useResponsive('up', 'xs');

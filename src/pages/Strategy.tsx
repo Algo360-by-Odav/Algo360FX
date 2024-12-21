@@ -1,7 +1,7 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { Box, Typography, Paper, Grid } from '@mui/material';
-import { useRootStore } from '../hooks/useRootStore';
+import { useRootStore } from '@/hooks/useRootStore';
 
 const Strategy = observer(() => {
   const { strategyStore } = useRootStore();

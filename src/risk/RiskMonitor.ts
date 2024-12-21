@@ -6,8 +6,8 @@ import {
   RiskLimits,
   DynamicRiskParams
 } from './types';
-import { Portfolio } from '../types/trading';
-import { calculateVolatility, calculateCorrelation } from '../utils/statistics';
+import { Portfolio } from '@/types/trading';
+import { calculateVolatility, calculateCorrelation } from '@/utils/statistics';
 
 export class RiskMonitor {
   private config: RiskMonitorConfig;

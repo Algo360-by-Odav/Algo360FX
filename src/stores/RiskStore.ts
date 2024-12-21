@@ -15,8 +15,8 @@ import {
   calculateDrawdownMetrics,
   calculateCorrelationMatrix,
   calculateEWMA,
-} from '../utils/statistics';
-import { Matrix, createMatrix } from '../utils/matrix';
+} from '@/utils/statistics';
+import { Matrix, createMatrix } from '@/utils/matrix';
 
 export class RiskStore {
   private monitoringInterval: NodeJS.Timer | null = null;

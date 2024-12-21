@@ -12,8 +12,8 @@ import {
 } from '@mui/material';
 import { Search, Star, StarBorder } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import ChartWidget from '../components/Chart/ChartWidget';
-import OrderBookWidget from '../components/OrderBook/OrderBookWidget';
+import ChartWidget from '@components/Chart/ChartWidget';
+import OrderBookWidget from '@components/OrderBook/OrderBookWidget';
 
 interface TabPanelProps {
   children?: React.ReactNode;

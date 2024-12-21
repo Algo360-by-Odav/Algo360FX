@@ -2,7 +2,7 @@ import {
   StrategyType,
   IndicatorType,
   TradingStrategy,
-} from '../types/algo-trading';
+} from '@/types/algo-trading';
 
 export const strategyTemplates: Partial<TradingStrategy>[] = [
   {

@@ -2,9 +2,9 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import NotificationService, {
   Notification,
   NotificationPreferences,
-} from '../services/NotificationService';
+} from '@/services/NotificationService';
 import { v4 as uuidv4 } from 'uuid';
-import { NotificationType } from '../types/notification';
+import { NotificationType } from '@/types/notification';
 
 export class NotificationStore {
   notifications: Notification[] = [];

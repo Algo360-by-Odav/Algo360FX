@@ -2,7 +2,7 @@ import React from 'react';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { observer } from 'mobx-react-lite';
-import { useRootStore } from '../hooks/useRootStore';
+import { useRootStore } from '@/hooks/useRootStore';
 import { createTheme } from './createTheme';
 
 interface ThemeProviderProps {

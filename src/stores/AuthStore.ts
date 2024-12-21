@@ -1,8 +1,8 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import { api } from '../services/api';
+import { api } from '@/services/api';
 import { config } from '../config/config';
 import { createContext, useContext } from 'react';
-import { User, UserRole, SignupData } from '../types/user';
+import { User, UserRole, SignupData } from '@/types/user';
 import { RootStore } from './RootStore';
 
 interface User {

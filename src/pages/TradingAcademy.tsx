@@ -33,10 +33,10 @@ import {
   Quiz as QuizIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import InteractiveTradingCourses from '../components/Education/InteractiveTradingCourses';
-import TradingVideos from '../components/Education/TradingVideos';
-import TradingArticles from '../components/Education/TradingArticles';
-import TradingQuizzes from '../components/Education/TradingQuizzes';
+import InteractiveTradingCourses from '@components/Education/InteractiveTradingCourses';
+import TradingVideos from '@components/Education/TradingVideos';
+import TradingArticles from '@components/Education/TradingArticles';
+import TradingQuizzes from '@components/Education/TradingQuizzes';
 
 interface TabPanelProps {
   children?: React.ReactNode;

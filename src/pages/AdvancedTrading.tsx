@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Grid, Typography } from '@mui/material';
-import AdvancedChart from '../components/Trading/AdvancedChart';
+import AdvancedChart from '@components/Trading/AdvancedChart';
 import { observer } from 'mobx-react-lite';
 
 const AdvancedTrading: React.FC = observer(() => {
