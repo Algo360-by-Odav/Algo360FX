@@ -15,8 +15,8 @@ import {
 } from '@mui/material';
 import { Close, TrendingUp, TrendingDown } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
-import NumberTicker from '../common/NumberTicker';
+import { useRootStoreContext } from '@/stores/RootStoreContext';
+import NumberTicker from '@components/Common/NumberTicker';
 
 const PositionManagerWidget: React.FC = observer(() => {
   const theme = useTheme();
