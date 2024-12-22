@@ -7,7 +7,7 @@ interface Config {
 const isDevelopment = import.meta.env.MODE === 'development';
 
 export const config: Config = {
-  apiBaseUrl: isDevelopment ? 'http://localhost:3000/api' : '/api',
-  wsBaseUrl: isDevelopment ? 'ws://localhost:3000' : window.location.origin.replace(/^http/, 'ws'),
+  apiBaseUrl: isDevelopment ? 'http://localhost:5000/api' : '/api',
+  wsBaseUrl: isDevelopment ? 'ws://localhost:5000' : window.location.origin.replace(/^http/, 'ws'),
   env: import.meta.env.MODE || 'development',
 };

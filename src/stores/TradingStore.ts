@@ -52,7 +52,7 @@ export class TradingStore {
     this.isInitialized = true;
 
     // Add sample data in development
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       this.initializeSampleData();
     }
   }
@@ -95,47 +95,46 @@ export class TradingStore {
   }
 
   private setupWebSocket() {
-    const ws = WebSocketService;
+    // Connect to WebSocket server using the config
+    WebSocketService.connect();
 
-    ws.on('connect', () => {
+    // Subscribe to connection status changes
+    WebSocketService.subscribeToStatus((status) => {
       runInAction(() => {
-        this.isConnected = true;
-        this.error = null;
+        this.isConnected = status === 'connected';
+        if (!this.isConnected) {
+          this.error = 'WebSocket disconnected';
+        } else {
+          this.error = null;
+        }
       });
     });
 
-    ws.on('disconnect', () => {
-      runInAction(() => {
-        this.isConnected = false;
-      });
-    });
-
-    // Position updates
-    ws.on('position_update', (position: Position) => {
-      runInAction(() => {
-        this._positions.set(position.symbol, position);
-      });
-    });
-
-    // Order updates
-    ws.on('order_update', (order: Order) => {
-      runInAction(() => {
-        this._orders.set(order.id, order);
-      });
-    });
-
-    // Market data updates
-    ws.on('market_data', (data: MarketData) => {
+    // Subscribe to market data updates
+    WebSocketService.subscribe('market_data', (data: MarketData) => {
       runInAction(() => {
         this.marketData.set(data.symbol, data);
-        console.log(`Received market data update for ${data.symbol}: ${data.bid} / ${data.ask}`);
       });
     });
 
-    // Account updates
-    ws.on('account_update', (accountInfo: AccountInfo) => {
+    // Subscribe to account updates
+    WebSocketService.subscribe('account_update', (data: AccountInfo) => {
       runInAction(() => {
-        this.accountInfo = accountInfo;
+        this.accountInfo = data;
+      });
+    });
+
+    // Subscribe to position updates
+    WebSocketService.subscribe('position_update', (data: Position) => {
+      runInAction(() => {
+        this._positions.set(data.symbol, data);
+      });
+    });
+
+    // Subscribe to order updates
+    WebSocketService.subscribe('order_update', (data: Order) => {
+      runInAction(() => {
+        this._orders.set(data.id, data);
       });
     });
   }

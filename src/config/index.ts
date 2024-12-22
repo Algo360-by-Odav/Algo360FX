@@ -1,6 +1,6 @@
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3004/api';
-export const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3004';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+export const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
 
 // Authentication
 export const AUTH_TOKEN_KEY = 'algo360fx_auth_token';

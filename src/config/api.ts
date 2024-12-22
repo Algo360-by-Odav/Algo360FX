@@ -1,7 +1,7 @@
 export const API_CONFIG = {
-  BASE_URL: process.env.VITE_API_URL || 'http://localhost:5000/api',
-  WS_URL: process.env.VITE_WS_URL || 'http://localhost:5000',
-  MT5_WS_URL: process.env.VITE_MT5_WS_URL || 'ws://localhost:6777',
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  WS_URL: import.meta.env.VITE_WS_URL || 'http://localhost:5000',
+  MT5_WS_URL: import.meta.env.VITE_MT5_WS_URL || 'ws://localhost:6777',
   ENDPOINTS: {
     AUTH: {
       LOGIN: '/auth/login',
