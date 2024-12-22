@@ -8,7 +8,11 @@ import { RootStoreProvider } from './stores/RootStoreContext';
 import { SearchProvider } from './context/SearchContext';
 import AuthProvider from './providers/AuthProvider';
 import ErrorBoundary from './components/error/ErrorBoundary';
+import { initSentry } from './utils/sentry';
 import './styles/global.css';
+
+// Initialize Sentry
+initSentry();
 
 // Initialize the root store
 const rootStore = new RootStore();
