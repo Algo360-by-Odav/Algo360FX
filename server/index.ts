@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import { json } from 'body-parser';
-import { config } from '../src/config/config';
 import { Server } from 'socket.io';
 import http from 'http';
 
