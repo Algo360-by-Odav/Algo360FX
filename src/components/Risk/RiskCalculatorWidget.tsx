@@ -20,7 +20,7 @@ import {
   TrendingDown,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import NumberTicker from '../common/NumberTicker';
+import NumberTicker from '@components/Common/NumberTicker';
 
 interface RiskCalculation {
   positionSize: number;
