@@ -18,11 +18,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import TradingViewChart from '@components/trading/TradingViewChart';
+import TradingViewChart from '@components/Trading/TradingViewChart';
 import { formatCurrency, formatNumber, formatPrice } from '@/utils/formatters';
 import { WebSocketService } from '@/services/websocketService';
-import SymbolSelector from '@components/trading/SymbolSelector';
-import OrderEntry from '@components/trading/OrderEntry';
+import SymbolSelector from '@components/Trading/SymbolSelector';
+import OrderEntry from '@components/Trading/OrderEntry';
 
 const TradingDashboard = observer(() => {
   const tradingStore = useTradingStore();
