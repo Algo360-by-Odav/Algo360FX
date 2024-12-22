@@ -28,8 +28,8 @@ import {
 import { observer } from 'mobx-react-lite';
 import ErrorBoundary from '@components/error/ErrorBoundary';
 import { useRootStoreContext } from '@/stores/RootStoreContext';
-import PortfolioManagement from '@components/portfolio/PortfolioManagement';
-import PerformanceChart from '@components/charts/PerformanceChart';
+import PortfolioManagement from '@components/Portfolio/PortfolioManagement';
+import PerformanceChart from '@components/PerformanceChart';
 import StockMarket from '@components/stock/StockMarket';
 
 interface TabPanelProps {
