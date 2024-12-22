@@ -49,7 +49,7 @@ import { useRootStore } from '@/stores/RootStoreContext';
 import { useSearch } from '../context/SearchContext';
 import SearchResults from '@components/SearchResults/SearchResults';
 import useHFTInitialize from '@/hooks/useHFTInitialize';
-import MobileNavigation from '@components/MobileNavigation';
+import { MobileNavigation } from '@components/MobileNavigation';
 
 const DRAWER_WIDTH = 240;
 
