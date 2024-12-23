@@ -44,9 +44,21 @@ export default defineConfig(({ command, mode }) => {
             vendor: ['react', 'react-dom', 'react-router-dom'],
             mui: ['@mui/material', '@mui/icons-material'],
             charts: ['lightweight-charts', 'recharts']
-          }
+          },
+          assetFileNames: (assetInfo) => {
+            let extType = assetInfo.name.split('.').at(1);
+            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
+              extType = 'img';
+            }
+            return `assets/[name]-[hash][extname]`;
+          },
+          chunkFileNames: 'assets/[name]-[hash].js',
+          entryFileNames: 'assets/[name]-[hash].js'
         }
-      }
+      },
+      target: 'esnext',
+      cssCodeSplit: true,
+      assetsInlineLimit: 4096
     },
     server: {
       port: 5173,
