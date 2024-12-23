@@ -9,55 +9,30 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist"
+        "distDir": "dist",
+        "zeroConfig": true
       }
     }
   ],
   "routes": [
     {
-      "src": "/assets/(.*)",
+      "src": "^/assets/(.*)\\.(js|css)$",
+      "dest": "/assets/$1.$2",
       "headers": {
-        "cache-control": "public, max-age=31536000, immutable",
-        "content-type": "application/javascript"
-      },
-      "continue": true
-    },
-    {
-      "src": "/assets/.*\\.css$",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable",
-        "content-type": "text/css"
-      },
-      "continue": true
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/api/(.*)",
-      "dest": "server/index.ts"
+      "dest": "/server/index.ts"
     },
     {
       "src": "/ws",
-      "dest": "server/index.ts"
-    },
-    {
-      "handle": "filesystem"
+      "dest": "/server/index.ts"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/$1"
     }
-  ],
-  "headers": [
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }

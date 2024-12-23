@@ -79,7 +79,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
+    "vercel-build": "npm install && npm run build",
     "preview": "vite preview",
     "build:server": "tsc -p src/server/tsconfig.json",
     "start:server": "node dist/server/mt5bridge.js",
