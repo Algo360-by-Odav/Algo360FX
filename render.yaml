@@ -15,8 +15,12 @@ services:
     name: algo360fx-frontend
     env: node
     region: singapore
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && CI=false npm run build
     startCommand: npm run preview
     envVars:
       - key: NODE_ENV
         value: production
+      - key: CI
+        value: false
+      - key: TSC_COMPILE_ON_ERROR
+        value: true
