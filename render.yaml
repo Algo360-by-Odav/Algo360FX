@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: algo360fx-api
+    env: node
+    region: singapore
+    buildCommand: cd server && npm install && npm run build
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+
+  - type: web
+    name: algo360fx-frontend
+    env: node
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: npm run preview
+    envVars:
+      - key: NODE_ENV
+        value: production
