@@ -8,15 +8,11 @@ services:
     startCommand: cd server && npm start
     healthCheckPath: /api/health
     autoDeploy: true
-    disk:
-      name: data
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 8080
+        value: "8080"
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
@@ -29,24 +25,22 @@ services:
       - key: CORS_ORIGIN
         value: https://algo360fx-frontend.onrender.com
       - key: WS_ENABLED
-        value: true
+        value: "true"
 
   - type: web
     name: algo360fx-frontend
     env: node
     region: singapore
     plan: starter
-    buildCommand: npm install && CI=false npm run build
-    startCommand: npm run preview
+    buildCommand: npm install && npm run build
+    startCommand: npm run preview -- --port $PORT
     healthCheckPath: /
     autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
-      - key: CI
-        value: false
-      - key: TSC_COMPILE_ON_ERROR
-        value: true
+      - key: PORT
+        value: "10000"
       - key: VITE_API_URL
         value: https://algo360fx-api.onrender.com
       - key: VITE_WS_URL
@@ -59,6 +53,6 @@ services:
     region: singapore
     plan: starter
     maxmemoryPolicy: noeviction
-    ipAllowList: 
+    ipAllowList:
       - source: 0.0.0.0/0
         description: everywhere
