@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { check, validationResult } from 'express-validator';
+import { body, validationResult } from 'express-validator/check';
 import bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { config } from '../config/config';
@@ -19,7 +19,7 @@ const mockSendEmail = async (to: string, code: string) => {
 
 // Send verification code
 router.post('/verify/send', 
-  check('email').isEmail(),
+  body('email').isEmail(),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -53,8 +53,8 @@ router.post('/verify/send',
 // Verify code
 router.post('/verify/code',
   [
-    check('email').isEmail(),
-    check('code').isLength({ min: 6, max: 6 }),
+    body('email').isEmail(),
+    body('code').isLength({ min: 6, max: 6 }),
   ],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -98,11 +98,11 @@ router.post('/verify/code',
 // Register new user
 router.post('/register',
   [
-    check('email').isEmail(),
-    check('password').isLength({ min: 8 }),
-    check('firstName').notEmpty(),
-    check('lastName').notEmpty(),
-    check('verificationCode').notEmpty(),
+    body('email').isEmail(),
+    body('password').isLength({ min: 8 }),
+    body('firstName').notEmpty(),
+    body('lastName').notEmpty(),
+    body('verificationCode').notEmpty(),
   ],
   async (req: Request, res: Response) => {
     console.log('Registration request body:', req.body);
@@ -207,8 +207,8 @@ router.post('/register',
 // Login
 router.post('/login',
   [
-    check('email').isEmail(),
-    check('password').exists(),
+    body('email').isEmail(),
+    body('password').exists(),
   ],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);

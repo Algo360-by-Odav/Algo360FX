@@ -25,7 +25,9 @@ export class RiskManagement {
   }
 
   public calculatePortfolioRisk(): number {
-    return this.accountBalance * this.maxRiskPerTrade;
+    const maxRiskAmount = this.accountBalance * this.maxRiskPerTrade;
+    const maxDrawdownAmount = this.accountBalance * this.maxDrawdown;
+    return Math.min(maxRiskAmount, maxDrawdownAmount);
   }
 
   public async analyzePosition(position: Position): Promise<RiskMetrics> {

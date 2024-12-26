@@ -10,17 +10,17 @@ export class TechnicalAnalysis {
     return response.data;
   }
 
-  public async analyze(symbol: string, timeframe: string, indicators: string[] = []): Promise<Record<string, any>> {
+  public async analyze(symbol: string, timeframe: string, requestedIndicators: string[] = []): Promise<Record<string, any>> {
     const historicalData = await this.getHistoricalData(symbol, timeframe);
     const analysis: Record<string, any> = {};
 
     // Calculate indicators
-    const technicalIndicators = this.calculateIndicators(historicalData);
+    const technicalIndicators = this.calculateIndicators(historicalData, requestedIndicators);
     analysis.indicators = technicalIndicators;
 
     // Add trend analysis
-    analysis.trend = this.analyzeTrend(historicalData, technicalIndicators);
-    
+    analysis.trend = this.analyzeTrend(historicalData, Object.values(technicalIndicators).flat());
+
     // Add support/resistance levels
     analysis.levels = this.findKeyLevels(historicalData);
 
@@ -30,29 +30,54 @@ export class TechnicalAnalysis {
     return analysis;
   }
 
-  private calculateIndicators(marketData: MarketData[]): TechnicalIndicator[] {
-    const closePrices = marketData.map(d => d.close);
+  private calculateIndicators(data: MarketData[], requestedIndicators: string[] = []): Record<string, TechnicalIndicator[]> {
+    const indicators: Record<string, TechnicalIndicator[]> = {};
+    
+    // Filter and calculate only requested indicators, or all if none specified
+    const calculateAll = requestedIndicators.length === 0;
+    
+    if (calculateAll || requestedIndicators.includes('sma')) {
+      indicators.sma = this.calculateSMA(data);
+    }
+    
+    if (calculateAll || requestedIndicators.includes('rsi')) {
+      indicators.rsi = this.calculateRSI(data);
+    }
+    
+    if (calculateAll || requestedIndicators.includes('macd')) {
+      indicators.macd = this.calculateMACD(data);
+    }
+    
+    if (calculateAll || requestedIndicators.includes('bollinger')) {
+      indicators.bollinger = this.calculateBollingerBands(data);
+    }
+    
+    return indicators;
+  }
+
+  private calculateSMA(data: MarketData[]): TechnicalIndicator[] {
+    const closePrices = data.map(d => d.close);
     
     return [
       {
         name: 'SMA',
-        value: this.calculateSMA(closePrices, 20),
+        value: this.calculateSMAValue(closePrices, 20),
         period: 20
       },
       {
-        name: 'RSI',
-        value: this.calculateRSI(closePrices, 14),
-        period: 14
+        name: 'SMA',
+        value: this.calculateSMAValue(closePrices, 50),
+        period: 50
       },
       {
-        name: 'MACD',
-        value: this.calculateMACD(closePrices).histogram,
-        period: 26
+        name: 'SMA',
+        value: this.calculateSMAValue(closePrices, 200),
+        period: 200
       }
     ];
   }
 
-  private calculateSMA(data: number[], period: number): number {
+  private calculateSMAValue(data: number[], period: number): number {
     const input = {
       values: data,
       period
@@ -61,7 +86,19 @@ export class TechnicalAnalysis {
     return results[results.length - 1] || 0;
   }
 
-  private calculateRSI(data: number[], period: number): number {
+  private calculateRSI(data: MarketData[]): TechnicalIndicator[] {
+    const closePrices = data.map(d => d.close);
+    
+    return [
+      {
+        name: 'RSI',
+        value: this.calculateRSIValue(closePrices, 14),
+        period: 14
+      }
+    ];
+  }
+
+  private calculateRSIValue(data: number[], period: number): number {
     const input = {
       values: data,
       period
@@ -70,7 +107,19 @@ export class TechnicalAnalysis {
     return results[results.length - 1] || 0;
   }
 
-  private calculateMACD(data: number[]): { histogram: number } {
+  private calculateMACD(data: MarketData[]): TechnicalIndicator[] {
+    const closePrices = data.map(d => d.close);
+    
+    return [
+      {
+        name: 'MACD',
+        value: this.calculateMACDValue(closePrices).histogram,
+        period: 26
+      }
+    ];
+  }
+
+  private calculateMACDValue(data: number[]): { histogram: number } {
     const input = {
       values: data,
       fastPeriod: 12,
@@ -85,20 +134,37 @@ export class TechnicalAnalysis {
     };
   }
 
-  calculateBollingerBands(data: number[], period: number = 20, stdDev: number = 2) {
+  private calculateBollingerBands(data: MarketData[]): TechnicalIndicator[] {
+    const closePrices = data.map(d => d.close);
+    
+    return [
+      {
+        name: 'Bollinger Bands',
+        value: this.calculateBollingerBandsValue(closePrices),
+        period: 20
+      }
+    ];
+  }
+
+  private calculateBollingerBandsValue(data: number[]): { upper: number, middle: number, lower: number } {
     const input = {
-      period,
+      period: 20,
       values: data,
-      stdDev
+      stdDev: 2
     };
-    return BollingerBands.calculate(input);
+    const results = BollingerBands.calculate(input);
+    return {
+      upper: results[results.length - 1]?.upper || 0,
+      middle: results[results.length - 1]?.middle || 0,
+      lower: results[results.length - 1]?.lower || 0
+    };
   }
 
   private analyzeTrend(data: MarketData[], indicators: TechnicalIndicator[]) {
     const closes = data.map(d => d.close);
-    const sma20 = this.calculateSMA(closes, 20);
-    const sma50 = this.calculateSMA(closes, 50);
-    const sma200 = this.calculateSMA(closes, 200);
+    const sma20 = indicators.find(i => i.name === 'SMA' && i.period === 20)?.value;
+    const sma50 = indicators.find(i => i.name === 'SMA' && i.period === 50)?.value;
+    const sma200 = indicators.find(i => i.name === 'SMA' && i.period === 200)?.value;
     
     return {
       shortTerm: closes[closes.length - 1] > sma20 ? 'bullish' : 'bearish',
@@ -110,7 +176,7 @@ export class TechnicalAnalysis {
 
   private calculateTrendStrength(data: MarketData[]) {
     const closes = data.map(d => d.close);
-    const sma20 = this.calculateSMA(closes, 20);
+    const sma20 = this.calculateSMAValue(closes, 20);
     return closes[closes.length - 1] > sma20 ? 'strong' : 'weak';
   }
 
@@ -128,7 +194,7 @@ export class TechnicalAnalysis {
     const patterns = [];
     
     // Simple trend pattern detection
-    const sma20 = this.calculateSMA(closes, 20);
+    const sma20 = this.calculateSMAValue(closes, 20);
     if (closes[closes.length - 1] > sma20) {
       patterns.push('uptrend');
     } else {
