@@ -5,7 +5,7 @@ import {
   OptimizationResultNew,
   TradingStrategyNew,
 } from '@/types/optimization';
-import { OptimizationWebSocketService } from '@/services/optimization-web-socket.service';
+import { OptimizationService } from '@/services/optimization.service';
 
 export class OptimizationStore {
   strategies: TradingStrategyNew[] = [];
@@ -13,80 +13,73 @@ export class OptimizationStore {
   currentOptimization: string | null = null;
   error: string | null = null;
   optimizationProgress: number = 0;
-  private webSocket: OptimizationWebSocketService;
+  private optimizationService: OptimizationService;
 
   constructor(private rootStore: RootStore) {
     makeAutoObservable(this);
-    this.webSocket = new OptimizationWebSocketService();
-    this.initializeWebSocket();
+    this.optimizationService = new OptimizationService();
+    this.initializeOptimizationService();
   }
 
-  private async initializeWebSocket() {
-    try {
-      await this.webSocket.connect();
+  private initializeOptimizationService() {
+    this.optimizationService.onProgress((progress: number) => {
       runInAction(() => {
-        this.error = null;
+        this.optimizationProgress = progress;
       });
-    } catch (error) {
-      console.error('Failed to connect to optimization WebSocket:', error);
-      runInAction(() => {
-        this.error = 'Failed to connect to optimization service. Please check your connection and try again.';
-      });
-    }
+    });
+
+    this.optimizationService.onResult((result: OptimizationResultNew) => {
+      this.handleOptimizationResult(result);
+    });
+
+    this.optimizationService.onError((error: string) => {
+      this.handleOptimizationError(error);
+    });
   }
 
-  setStrategies(strategies: TradingStrategyNew[]) {
-    this.strategies = strategies;
-  }
-
-  async startOptimization(strategyId: string, config: OptimizationConfig) {
+  startOptimization = async (strategyId: string, config: OptimizationConfig) => {
     try {
       this.isOptimizing = true;
-      this.currentOptimization = strategyId;
       this.error = null;
       this.optimizationProgress = 0;
-
-      const optimizationId = await this.webSocket.startOptimization(strategyId, config);
-
-      // Set up progress handler
-      this.webSocket.onProgress(optimizationId, (progress) => {
-        runInAction(() => {
-          this.optimizationProgress = progress;
-        });
-      });
-
-      // Set up result handler
-      this.webSocket.onResult(optimizationId, (result) => {
-        runInAction(() => {
-          const strategy = this.strategies.find(s => s.id === strategyId);
-          if (strategy) {
-            strategy.results = result;
-          }
-          this.isOptimizing = false;
-          this.currentOptimization = null;
-          this.optimizationProgress = 100;
-        });
-        this.webSocket.removeHandlers(optimizationId);
-      });
-
-      // Set up error handler
-      this.webSocket.onError(optimizationId, (error) => {
-        runInAction(() => {
-          this.error = error;
-          this.isOptimizing = false;
-          this.currentOptimization = null;
-        });
-        this.webSocket.removeHandlers(optimizationId);
-      });
-
+      this.currentOptimization = strategyId;
+      
+      await this.optimizationService.startOptimization(strategyId, config);
     } catch (error) {
-      runInAction(() => {
-        this.error = error instanceof Error ? error.message : 'An error occurred during optimization';
-        this.isOptimizing = false;
-        this.currentOptimization = null;
-      });
+      this.handleOptimizationError(error instanceof Error ? error.message : 'Unknown error');
     }
-  }
+  };
+
+  stopOptimization = () => {
+    if (this.isOptimizing) {
+      this.optimizationService.stopOptimization();
+      this.isOptimizing = false;
+      this.currentOptimization = null;
+      this.optimizationProgress = 0;
+    }
+  };
+
+  private handleOptimizationResult = (result: OptimizationResultNew) => {
+    runInAction(() => {
+      this.isOptimizing = false;
+      this.currentOptimization = null;
+      this.optimizationProgress = 100;
+
+      const strategy = this.strategies.find(s => s.id === result.strategyId);
+      if (strategy) {
+        strategy.results = result;
+      }
+    });
+  };
+
+  private handleOptimizationError = (error: string) => {
+    runInAction(() => {
+      this.isOptimizing = false;
+      this.currentOptimization = null;
+      this.error = error;
+      this.optimizationProgress = 0;
+    });
+  };
 
   getStrategy(id: string): TradingStrategyNew | undefined {
     return this.strategies.find(s => s.id === id);
@@ -107,8 +100,7 @@ export class OptimizationStore {
     this.strategies = this.strategies.filter(s => s.id !== id);
   }
 
-  // Clean up WebSocket connection when store is destroyed
-  dispose() {
-    this.webSocket.disconnect();
-  }
+  cleanup = () => {
+    this.optimizationService.disconnect();
+  };
 }
