@@ -1,5 +1,4 @@
 import { io, Socket } from 'socket.io-client';
-import { config } from '../config/config';
 
 export class OptimizationWebSocketService {
   private socket: Socket | null = null;
@@ -10,12 +9,15 @@ export class OptimizationWebSocketService {
 
   private connect() {
     if (!this.socket) {
-      this.socket = io(`${config.wsBaseUrl}/optimization`, {
-        path: import.meta.env.VITE_WS_PATH || '/ws',
+      const wsUrl = import.meta.env.VITE_WS_URL || 'wss://algo360fx-frontend.onrender.com';
+      
+      this.socket = io(wsUrl, {
+        path: '/ws',
         transports: ['websocket'],
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
+        secure: true
       });
 
       this.setupEventHandlers();
