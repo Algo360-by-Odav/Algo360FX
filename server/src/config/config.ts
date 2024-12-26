@@ -14,6 +14,11 @@ interface Config {
   OPENAI_API_KEY?: string;
   META_API_TOKEN?: string;
   MT5_ACCOUNT_ID?: string;
+  env: {
+    MARKET_API?: string;
+    NEWS_API_KEY?: string;
+    MARKET_API_KEY?: string;
+  };
 }
 
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -33,7 +38,12 @@ export const config: Config = {
   SSL_ENABLED: process.env.SSL_ENABLED === 'true',
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   META_API_TOKEN: process.env.META_API_TOKEN,
-  MT5_ACCOUNT_ID: process.env.MT5_ACCOUNT_ID
+  MT5_ACCOUNT_ID: process.env.MT5_ACCOUNT_ID,
+  env: {
+    MARKET_API: process.env.MARKET_API,
+    NEWS_API_KEY: process.env.NEWS_API_KEY,
+    MARKET_API_KEY: process.env.MARKET_API_KEY
+  }
 };
 
 export const isDevMode = isDevelopment;

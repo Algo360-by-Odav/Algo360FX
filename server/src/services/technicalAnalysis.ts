@@ -203,19 +203,4 @@ export class TechnicalAnalysis {
       support: Math.min(...lows)
     };
   }
-
-  private detectPatterns(data: MarketData[]) {
-    const closes = data.map(d => d.close);
-    const patterns = [];
-    
-    // Simple trend pattern detection
-    const sma20 = this.calculateSMAValue(closes, 20);
-    if (closes[closes.length - 1] > sma20) {
-      patterns.push('uptrend');
-    } else {
-      patterns.push('downtrend');
-    }
-    
-    return patterns;
-  }
 }
