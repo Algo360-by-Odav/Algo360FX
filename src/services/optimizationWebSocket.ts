@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { config } from '../config/config';
 
-class OptimizationWebSocketService {
+export class OptimizationWebSocketService {
   private socket: Socket | null = null;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
@@ -104,4 +104,4 @@ class OptimizationWebSocketService {
   }
 }
 
-export default new OptimizationWebSocketService();
+export const optimizationWebSocket = new OptimizationWebSocketService();
