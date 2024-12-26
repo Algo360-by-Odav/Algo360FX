@@ -4,7 +4,11 @@ services:
     env: node
     region: singapore
     plan: starter
-    buildCommand: cd api && npm ci --production=false && npm run build
+    buildCommand: |
+      cd api
+      npm install
+      npx prisma generate
+      npm run build
     startCommand: cd api && npm run start:prod
     healthCheckPath: /health
     envVars:
@@ -45,6 +49,16 @@ services:
         value: "31536000"
       - key: CSP_ENABLED
         value: "true"
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: ENABLE_METRICS
+        value: "true"
+      - key: METRICS_PORT
+        value: "9090"
     autoDeploy: true
     domains:
       - api.algo360fx.com
@@ -69,6 +83,12 @@ services:
         value: wss://api.algo360fx.com
       - key: VITE_WS_PATH
         value: /ws
+      - key: VITE_SENTRY_DSN
+        sync: false
+      - key: VITE_SENTRY_ENVIRONMENT
+        value: production
+      - key: VITE_ENABLE_ANALYTICS
+        value: "true"
     headers:
       - path: /*
         name: Cache-Control
