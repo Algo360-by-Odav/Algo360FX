@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import OpenAI from 'openai';
 import { z } from 'zod';
-import { validateRequest } from '../middleware/validateRequest';
-import { config } from '../config/config';
+import { validateRequest } from '@/middleware/validateRequest';
+import { config } from '@/config/config';
 
 const router = Router();
 const openai = new OpenAI({ apiKey: config.openaiApiKey });
