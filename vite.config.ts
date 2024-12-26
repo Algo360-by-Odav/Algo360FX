@@ -13,50 +13,35 @@ export default defineConfig(({ command, mode }) => {
   
   return {
     base: '/',
+    plugins: [react()],
     server: {
-      port: 5173,
+      port: parseInt(process.env.PORT || '5173'),
+      host: process.env.HOST || 'localhost',
       strictPort: true,
       proxy: {
         '/api': {
-          target: 'http://localhost:5000',
+          target: process.env.VITE_API_URL || 'http://localhost:5000',
           changeOrigin: true,
           secure: false
         },
         '/ws': {
-          target: 'ws://localhost:5000',
+          target: process.env.VITE_WS_URL || 'ws://localhost:5000',
           ws: true,
           secure: false
         }
       }
     },
-    plugins: [
-      react({
-        babel: {
-          plugins: [
-            ['@babel/plugin-proposal-decorators', { legacy: true }],
-            ['@babel/plugin-proposal-class-properties', { loose: true }]
-          ]
-        }
-      })
-    ],
-    resolve: {
-      alias: {
-        '@': resolve(__dirname, './src'),
-        '@components': resolve(__dirname, './src/components'),
-        '@pages': resolve(__dirname, './src/pages'),
-        '@stores': resolve(__dirname, './src/stores'),
-        '@theme': resolve(__dirname, './src/theme'),
-        '@utils': resolve(__dirname, './src/utils'),
-        '@config': resolve(__dirname, './src/config'),
-        '@websocket': resolve(__dirname, './src/websocket'),
-        '@sentry/tracing': resolve(__dirname, 'node_modules/@sentry/tracing'),
-        '@sentry/react': resolve(__dirname, 'node_modules/@sentry/react')
-      }
+    preview: {
+      port: parseInt(process.env.PORT || '5173'),
+      host: process.env.HOST || 'localhost',
+      strictPort: true
     },
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      sourcemap: true,
+      sourcemap: false,
+      minify: 'terser',
+      target: 'esnext',
       rollupOptions: {
         output: {
           manualChunks: {
@@ -65,36 +50,21 @@ export default defineConfig(({ command, mode }) => {
               'react-dom',
               'react-router-dom',
               '@mui/material',
-              '@mui/icons-material',
-              'mobx',
-              'mobx-react-lite'
+              '@emotion/react',
+              '@emotion/styled'
             ]
-          },
-          assetFileNames: (assetInfo) => {
-            let extType = assetInfo.name.split('.').at(1);
-            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
-              extType = 'img';
-            } else if (/woff|woff2/.test(extType)) {
-              extType = 'fonts';
-            }
-            return `assets/${extType}/[name]-[hash][extname]`;
           },
           chunkFileNames: 'assets/js/[name]-[hash].js',
           entryFileNames: 'assets/js/[name]-[hash].js',
+          assetFileNames: 'assets/[ext]/[name]-[hash].[ext]'
         }
       },
-      chunkSizeWarningLimit: 1600,
+      chunkSizeWarningLimit: 1600
     },
-    optimizeDeps: {
-      include: [
-        'react',
-        'react-dom',
-        'react-router-dom',
-        '@mui/material',
-        '@mui/icons-material',
-        'mobx',
-        'mobx-react-lite'
-      ]
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, './src')
+      }
     }
   };
 });
