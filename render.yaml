@@ -22,7 +22,14 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: REDIS_URL
-        sync: false
+        fromService:
+          type: redis
+          name: algo360fx-redis
+          property: connectionString
+      - key: CORS_ORIGIN
+        value: https://algo360fx-frontend.onrender.com
+      - key: WS_ENABLED
+        value: true
 
   - type: web
     name: algo360fx-frontend
@@ -44,12 +51,14 @@ services:
         value: https://algo360fx-api.onrender.com
       - key: VITE_WS_URL
         value: wss://algo360fx-api.onrender.com
+      - key: VITE_APP_ENV
+        value: production
 
   - type: redis
     name: algo360fx-redis
     region: singapore
     plan: starter
     maxmemoryPolicy: noeviction
-    ipAllowList:
+    ipAllowList: 
       - source: 0.0.0.0/0
         description: everywhere
