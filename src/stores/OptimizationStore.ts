@@ -5,7 +5,7 @@ import {
   OptimizationResultNew,
   TradingStrategyNew,
 } from '@/types/optimization';
-import { OptimizationWebSocketService } from '@/services/optimizationWebSocket';
+import { OptimizationWebSocketService } from '@/services/optimization-web-socket.service';
 
 export class OptimizationStore {
   strategies: TradingStrategyNew[] = [];
