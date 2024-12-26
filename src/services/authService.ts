@@ -8,8 +8,9 @@ import {
   UpdateProfileData,
   User,
 } from '@/types/auth';
+import { config } from '../config/config';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3004';
+const API_URL = `${config.apiBaseUrl}/auth`;
 
 class AuthService {
   private static instance: AuthService;
@@ -84,13 +85,13 @@ class AuthService {
   }
 
   public async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await axios.post<AuthResponse>(`${API_URL}/auth/login`, credentials);
+    const response = await axios.post<AuthResponse>(`${API_URL}/login`, credentials);
     this.setTokens(response.data.token, response.data.refreshToken);
     return response.data;
   }
 
   public async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await axios.post<AuthResponse>(`${API_URL}/auth/register`, data);
+    const response = await axios.post<AuthResponse>(`${API_URL}/register`, data);
     this.setTokens(response.data.token, response.data.refreshToken);
     return response.data;
   }
@@ -98,7 +99,7 @@ class AuthService {
   public async logout(): Promise<void> {
     if (this.refreshToken) {
       try {
-        await axios.post(`${API_URL}/auth/logout`, {
+        await axios.post(`${API_URL}/logout`, {
           refreshToken: this.refreshToken,
         });
       } catch (error) {
@@ -113,7 +114,7 @@ class AuthService {
       throw new Error('No refresh token available');
     }
 
-    const response = await axios.post<AuthResponse>(`${API_URL}/auth/refresh-token`, {
+    const response = await axios.post<AuthResponse>(`${API_URL}/refresh-token`, {
       refreshToken: this.refreshToken,
     });
 
@@ -121,28 +122,28 @@ class AuthService {
   }
 
   public async requestPasswordReset(data: PasswordResetRequest): Promise<void> {
-    await axios.post(`${API_URL}/auth/forgot-password`, data);
+    await axios.post(`${API_URL}/forgot-password`, data);
   }
 
   public async resetPassword(data: PasswordResetConfirm): Promise<void> {
-    await axios.post(`${API_URL}/auth/reset-password`, data);
+    await axios.post(`${API_URL}/reset-password`, data);
   }
 
   public async verifyEmail(token: string): Promise<void> {
-    await axios.post(`${API_URL}/auth/verify-email`, { token });
+    await axios.post(`${API_URL}/verify-email`, { token });
   }
 
   public async resendVerificationEmail(email: string): Promise<void> {
-    await axios.post(`${API_URL}/auth/resend-verification`, { email });
+    await axios.post(`${API_URL}/resend-verification`, { email });
   }
 
   public async updateProfile(data: UpdateProfileData): Promise<User> {
-    const response = await axios.put<User>(`${API_URL}/auth/profile`, data);
+    const response = await axios.put<User>(`${API_URL}/profile`, data);
     return response.data;
   }
 
   public async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await axios.post(`${API_URL}/auth/change-password`, {
+    await axios.post(`${API_URL}/change-password`, {
       currentPassword,
       newPassword,
     });
@@ -150,17 +151,17 @@ class AuthService {
 
   public async enable2FA(): Promise<{ secret: string; qrCode: string }> {
     const response = await axios.post<{ secret: string; qrCode: string }>(
-      `${API_URL}/auth/2fa/enable`
+      `${API_URL}/2fa/enable`
     );
     return response.data;
   }
 
   public async verify2FA(token: string): Promise<void> {
-    await axios.post(`${API_URL}/auth/2fa/verify`, { token });
+    await axios.post(`${API_URL}/2fa/verify`, { token });
   }
 
   public async disable2FA(token: string): Promise<void> {
-    await axios.post(`${API_URL}/auth/2fa/disable`, { token });
+    await axios.post(`${API_URL}/2fa/disable`, { token });
   }
 
   public isAuthenticated(): boolean {

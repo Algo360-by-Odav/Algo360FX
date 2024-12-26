@@ -1,47 +1,40 @@
 import { io, Socket } from 'socket.io-client';
-import { OptimizationConfig, OptimizationResultNew } from '@/types/optimization';
+import { config } from '../config/config';
 
-export class OptimizationWebSocket {
+class OptimizationWebSocketService {
   private socket: Socket | null = null;
-  private readonly url: string;
-  private messageHandlers: Map<string, (data: any) => void> = new Map();
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 5;
+  private wsUrl: string;
 
-  constructor(url: string = import.meta.env.VITE_OPTIMIZATION_WS_URL || 'http://localhost:5000') {
-    this.url = url;
+  constructor() {
+    this.wsUrl = import.meta.env.VITE_WS_URL || config.wsBaseUrl;
   }
 
-  async connect(): Promise<void> {
+  connect() {
     if (this.socket?.connected) {
       return;
     }
 
-    console.log('Connecting to optimization Socket.IO at', this.url);
+    console.log('Connecting to optimization Socket.IO at', this.wsUrl);
 
-    try {
-      this.socket = io(this.url, {
-        path: '/ws',
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 20000,
-        transports: ['websocket'],
-        forceNew: true,
-        autoConnect: true
-      });
-      
-      this.setupSocketHandlers();
-    } catch (error) {
-      console.error('Failed to connect to WebSocket:', error);
-      throw error;
-    }
-  }
-
-  private setupSocketHandlers(): void {
-    if (!this.socket) return;
+    this.socket = io(this.wsUrl, {
+      path: import.meta.env.VITE_WS_PATH || '/ws',
+      namespace: '/optimization',
+      reconnection: true,
+      reconnectionAttempts: this.maxReconnectAttempts,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      transports: ['websocket'],
+      forceNew: true,
+      autoConnect: true,
+      secure: true
+    });
 
     this.socket.on('connect', () => {
       console.log('Optimization Socket.IO connected');
+      this.reconnectAttempts = 0;
     });
 
     this.socket.on('disconnect', () => {
@@ -50,81 +43,65 @@ export class OptimizationWebSocket {
 
     this.socket.on('connect_error', (error) => {
       console.error('Optimization Socket.IO connection error:', error);
+      this.handleReconnect();
     });
 
+    this.socket.on('error', (error) => {
+      console.error('Optimization Socket.IO error:', error);
+    });
+
+    // Subscribe to optimization events
     this.socket.on('optimization_progress', (data) => {
-      const handler = this.messageHandlers.get('optimization_progress');
-      if (handler) {
-        handler(data);
-      }
+      console.log('Optimization progress:', data);
     });
 
-    this.socket.on('optimization_completed', (data) => {
-      const handler = this.messageHandlers.get('optimization_complete');
-      if (handler) {
-        handler(data);
-      }
+    this.socket.on('optimization_complete', (data) => {
+      console.log('Optimization complete:', data);
     });
 
-    this.socket.on('error', (data) => {
-      const handler = this.messageHandlers.get('optimization_error');
-      if (handler) {
-        handler(data);
-      }
+    this.socket.on('optimization_error', (error) => {
+      console.error('Optimization error:', error);
     });
   }
 
-  disconnect(): void {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
+  private handleReconnect() {
+    this.reconnectAttempts++;
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log('Max reconnection attempts reached');
+      return;
     }
+
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
+    setTimeout(() => {
+      this.connect();
+    }, delay);
   }
 
-  onMessage(type: string, handler: (data: any) => void): void {
-    this.messageHandlers.set(type, handler);
-  }
-
-  removeMessageHandler(type: string): void {
-    this.messageHandlers.delete(type);
-  }
-
-  startOptimization(config: OptimizationConfig): void {
+  startOptimization(params: any) {
     if (!this.socket?.connected) {
-      throw new Error('WebSocket is not connected');
+      console.warn('Socket not connected. Cannot start optimization.');
+      return;
     }
-    this.socket.emit('start_optimization', config);
+    this.socket.emit('start_optimization', params);
   }
 
-  stopOptimization(optimizationId: string): void {
+  stopOptimization() {
     if (!this.socket?.connected) {
-      throw new Error('WebSocket is not connected');
+      console.warn('Socket not connected. Cannot stop optimization.');
+      return;
     }
-    this.socket.emit('stop_optimization', optimizationId);
+    this.socket.emit('stop_optimization');
+  }
+
+  disconnect() {
+    this.socket?.disconnect();
+    this.socket = null;
+    this.reconnectAttempts = 0;
   }
 
   isConnected(): boolean {
     return this.socket?.connected || false;
   }
-
-  public onOptimizationProgress(handler: (data: { optimizationId: string; progress: number }) => void): void {
-    this.messageHandlers.set('optimization_progress', handler);
-  }
-
-  public onOptimizationComplete(handler: (data: { optimizationId: string; result: OptimizationResultNew }) => void): void {
-    this.messageHandlers.set('optimization_complete', handler);
-  }
-
-  public onOptimizationError(handler: (data: { optimizationId: string; error: string }) => void): void {
-    this.messageHandlers.set('optimization_error', handler);
-  }
-
-  public close(): void {
-    if (this.socket) {
-      this.socket.close();
-      this.socket = null;
-    }
-  }
 }
 
-export default new OptimizationWebSocket();
+export default new OptimizationWebSocketService();

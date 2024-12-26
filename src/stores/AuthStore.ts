@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { api } from '@/services/api';
 import { config } from '../config/config';
-import { createContext, useContext } from 'react';
+import { createContext } from 'react';
 import { User, UserRole, SignupData } from '@/types/user';
 import { RootStore } from './RootStore';
 
@@ -37,48 +37,12 @@ export class AuthStore {
   async checkAuth() {
     this.setLoading(true);
     try {
-      if (config.env === 'development') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const response = await api.get('/auth/me');
         runInAction(() => {
-          this.setUser({
-            id: '1',
-            email: 'demo@algo360fx.com',
-            name: 'Demo User',
-            firstName: 'Demo',
-            lastName: 'User',
-            role: UserRole.ADMIN,
-            isVerified: true,
-            status: 'active',
-            preferences: {
-              theme: 'light',
-              notifications: {
-                email: true,
-                push: true,
-                sms: false,
-              },
-              tradingPreferences: {
-                defaultLeverage: 100,
-                riskLevel: 'medium',
-                autoTrade: false,
-              },
-              displayPreferences: {
-                chartType: 'candlestick',
-                timeframe: '1h',
-                indicators: [],
-              },
-            },
-            permissions: ['read:all', 'write:all'],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
+          this.setUser(response.data);
         });
-      } else {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const response = await api.get('/auth/me');
-          runInAction(() => {
-            this.setUser(response.data);
-          });
-        }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -98,8 +62,8 @@ export class AuthStore {
       runInAction(() => {
         this.setUser(user);
       });
-    } catch (error) {
-      this.setError('Invalid email or password');
+    } catch (error: any) {
+      this.setError(error.message || 'Invalid email or password');
       throw error;
     } finally {
       this.setLoading(false);
@@ -110,25 +74,36 @@ export class AuthStore {
     this.setLoading(true);
     this.setError(null);
     try {
-      const response = await api.post('/auth/register', data);
+      const response = await api.post('/auth/register', {
+        ...data,
+        firstName: data.firstName || undefined,
+        lastName: data.lastName || undefined,
+      });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       runInAction(() => {
         this.setUser(user);
         this.verificationSent = true;
       });
-    } catch (error) {
-      this.setError('Registration failed');
-      throw error;
+    } catch (error: any) {
+      const errorMessage = error.message || 'Registration failed. Please try again.';
+      this.setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       this.setLoading(false);
     }
   }
 
   async logout() {
-    localStorage.removeItem('token');
-    this.setUser(null);
-    this.rootStore.resetStores();
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      this.setUser(null);
+      this.rootStore.resetStores();
+    }
   }
 
   async verifyEmail(token: string) {
@@ -141,8 +116,8 @@ export class AuthStore {
           this.user.isVerified = true;
         }
       });
-    } catch (error) {
-      this.setError('Email verification failed');
+    } catch (error: any) {
+      this.setError(error.message || 'Email verification failed');
       throw error;
     } finally {
       this.setLoading(false);
@@ -157,8 +132,8 @@ export class AuthStore {
       runInAction(() => {
         this.verificationSent = true;
       });
-    } catch (error) {
-      this.setError('Failed to resend verification email');
+    } catch (error: any) {
+      this.setError(error.message || 'Failed to resend verification email');
       throw error;
     } finally {
       this.setLoading(false);
@@ -170,8 +145,8 @@ export class AuthStore {
     this.setError(null);
     try {
       await api.post('/auth/forgot-password', { email });
-    } catch (error) {
-      this.setError('Failed to send reset email');
+    } catch (error: any) {
+      this.setError(error.message || 'Failed to request password reset');
       throw error;
     } finally {
       this.setLoading(false);
@@ -183,8 +158,8 @@ export class AuthStore {
     this.setError(null);
     try {
       await api.post('/auth/reset-password', { token, newPassword });
-    } catch (error) {
-      this.setError('Failed to reset password');
+    } catch (error: any) {
+      this.setError(error.message || 'Failed to reset password');
       throw error;
     } finally {
       this.setLoading(false);
@@ -193,13 +168,5 @@ export class AuthStore {
 }
 
 const AuthContext = createContext<AuthStore | null>(null);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === null) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
 
 export { AuthContext };

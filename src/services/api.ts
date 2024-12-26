@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { config } from '../config/config';
 
 const api = axios.create({
@@ -19,6 +19,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
@@ -26,13 +27,24 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  async (error: AxiosError) => {
     if (error.response?.status === 401) {
       // Handle unauthorized access
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
-    return Promise.reject(error);
+
+    // Extract error message
+    let errorMessage = 'An error occurred';
+    if (error.response?.data && typeof error.response.data === 'object') {
+      const data = error.response.data as any;
+      errorMessage = data.message || data.error || errorMessage;
+    }
+
+    // Create a new error with the extracted message
+    const enhancedError = new Error(errorMessage);
+    enhancedError.name = error.name;
+    return Promise.reject(enhancedError);
   }
 );
 
