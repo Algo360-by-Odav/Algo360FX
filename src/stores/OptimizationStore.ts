@@ -5,7 +5,7 @@ import {
   OptimizationResultNew,
   TradingStrategyNew,
 } from '@/types/optimization';
-import { OptimizationService } from '@/services/optimization.service';
+import { OptimizationService } from '@/services/optimization';
 
 export class OptimizationStore {
   strategies: TradingStrategyNew[] = [];
