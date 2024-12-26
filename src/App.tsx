@@ -51,10 +51,11 @@ function App() {
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             {/* Public Routes */}
-            <Route path="/intro" element={<IntroAnimation />} />
+            <Route path="/" element={<IntroAnimation />} />
             
             {/* Auth Routes */}
             <Route path="/auth" element={<AuthLayout />}>
+              <Route index element={<Navigate to="/auth/login" replace />} />
               <Route path="login" element={<LoginForm />} />
               <Route path="register" element={<RegisterForm />} />
               <Route path="forgot-password" element={<ForgotPasswordForm />} />
@@ -93,9 +94,6 @@ function App() {
                 </Routes>
               } />} />
             </Route>
-
-            {/* Root redirect */}
-            <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
             
             {/* Catch all */}
             <Route path="*" element={<NotFound />} />
