@@ -23,19 +23,44 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
       },
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
-          charts: ['recharts', 'lightweight-charts', 'chart.js'],
-          state: ['mobx', 'mobx-react-lite'],
-        },
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor';
+            }
+            if (id.includes('@mui') || id.includes('@emotion')) {
+              return 'ui';
+            }
+            if (id.includes('recharts') || id.includes('lightweight-charts') || id.includes('chart.js')) {
+              return 'charts';
+            }
+            if (id.includes('mobx')) {
+              return 'state';
+            }
+          } else {
+            if (id.includes('/pages/Analytics/') || id.includes('/components/analytics/')) {
+              return 'analytics';
+            }
+            if (id.includes('/pages/Trading/') || id.includes('/components/trading/')) {
+              return 'trading';
+            }
+            if (id.includes('/pages/AutoTrading/') || id.includes('/components/autoTrading/')) {
+              return 'autoTrading';
+            }
+          }
+        }
       },
     },
+    envDir: '.',
+    define: {
+      'process.env.NODE_ENV': '"production"'
+    }
   },
   resolve: {
     alias: {
