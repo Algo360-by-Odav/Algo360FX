@@ -95,15 +95,17 @@ export class BacktestingStore {
           const positionSize = this.calculatePositionSize(equity, config.riskPerTrade, entrySignal.price, entrySignal.stopLoss);
           currentPosition = {
             id: `${strategy.id}_${trades.length}`,
-            strategyId: strategy.id,
             symbol: strategy.symbol,
-            side: entrySignal.side,
+            type: 'MARKET',
+            side: entrySignal.side === 'LONG' ? 'BUY' : 'SELL',
+            size: positionSize,
+            price: entrySignal.price,
+            status: 'OPEN',
+            entryTime: new Date(currentCandle.timestamp),
             entryPrice: entrySignal.price,
             stopLoss: entrySignal.stopLoss,
             takeProfit: entrySignal.takeProfit,
-            size: positionSize,
-            entryTime: currentCandle.timestamp,
-            status: 'open',
+            leverage: config.leverage
           };
         }
       }
@@ -311,6 +313,153 @@ export class BacktestingStore {
       (1 - (performance.maxDrawdown || 0)) * weights.maxDrawdown +
       (performance.winRate || 0) * weights.winRate
     );
+  }
+
+  private evaluateEntryRules(
+    strategy: Strategy,
+    currentCandle: Candle,
+    lookback: Candle[],
+    marketEnv: MarketEnvironment
+  ): { side: 'LONG' | 'SHORT'; price: number; stopLoss: number; takeProfit: number } | null {
+    // Implement entry rule evaluation based on strategy type
+    switch (strategy.type) {
+      case 'TREND_FOLLOWING':
+        return this.evaluateTrendFollowingEntry(strategy, currentCandle, lookback, marketEnv);
+      case 'MEAN_REVERSION':
+        return this.evaluateMeanReversionEntry(strategy, currentCandle, lookback, marketEnv);
+      case 'BREAKOUT':
+        return this.evaluateBreakoutEntry(strategy, currentCandle, lookback, marketEnv);
+      case 'CUSTOM':
+        return this.evaluateCustomEntry(strategy, currentCandle, lookback, marketEnv);
+      default:
+        return null;
+    }
+  }
+
+  private evaluateExitRules(
+    strategy: Strategy,
+    position: Trade,
+    currentCandle: Candle,
+    lookback: Candle[],
+    marketEnv: MarketEnvironment
+  ): { price: number } | null {
+    // Check stop loss and take profit
+    if (position.stopLoss) {
+      if (position.side === 'BUY' && currentCandle.low <= position.stopLoss) {
+        return { price: position.stopLoss };
+      }
+      if (position.side === 'SELL' && currentCandle.high >= position.stopLoss) {
+        return { price: position.stopLoss };
+      }
+    }
+
+    if (position.takeProfit) {
+      if (position.side === 'BUY' && currentCandle.high >= position.takeProfit) {
+        return { price: position.takeProfit };
+      }
+      if (position.side === 'SELL' && currentCandle.low <= position.takeProfit) {
+        return { price: position.takeProfit };
+      }
+    }
+
+    // Implement strategy-specific exit rules
+    switch (strategy.type) {
+      case 'TREND_FOLLOWING':
+        return this.evaluateTrendFollowingExit(strategy, position, currentCandle, lookback, marketEnv);
+      case 'MEAN_REVERSION':
+        return this.evaluateMeanReversionExit(strategy, position, currentCandle, lookback, marketEnv);
+      case 'BREAKOUT':
+        return this.evaluateBreakoutExit(strategy, position, currentCandle, lookback, marketEnv);
+      case 'CUSTOM':
+        return this.evaluateCustomExit(strategy, position, currentCandle, lookback, marketEnv);
+      default:
+        return null;
+    }
+  }
+
+  // Strategy-specific evaluation methods
+  private evaluateTrendFollowingEntry(
+    strategy: Strategy,
+    currentCandle: Candle,
+    lookback: Candle[],
+    marketEnv: MarketEnvironment
+  ): { side: 'LONG' | 'SHORT'; price: number; stopLoss: number; takeProfit: number } | null {
+    // Implement trend following entry logic
+    return null;
+  }
+
+  private evaluateMeanReversionEntry(
+    strategy: Strategy,
+    currentCandle: Candle,
+    lookback: Candle[],
+    marketEnv: MarketEnvironment
+  ): { side: 'LONG' | 'SHORT'; price: number; stopLoss: number; takeProfit: number } | null {
+    // Implement mean reversion entry logic
+    return null;
+  }
+
+  private evaluateBreakoutEntry(
+    strategy: Strategy,
+    currentCandle: Candle,
+    lookback: Candle[],
+    marketEnv: MarketEnvironment
+  ): { side: 'LONG' | 'SHORT'; price: number; stopLoss: number; takeProfit: number } | null {
+    // Implement breakout entry logic
+    return null;
+  }
+
+  private evaluateCustomEntry(
+    strategy: Strategy,
+    currentCandle: Candle,
+    lookback: Candle[],
+    marketEnv: MarketEnvironment
+  ): { side: 'LONG' | 'SHORT'; price: number; stopLoss: number; takeProfit: number } | null {
+    // Implement custom entry logic
+    return null;
+  }
+
+  private evaluateTrendFollowingExit(
+    strategy: Strategy,
+    position: Trade,
+    currentCandle: Candle,
+    lookback: Candle[],
+    marketEnv: MarketEnvironment
+  ): { price: number } | null {
+    // Implement trend following exit logic
+    return null;
+  }
+
+  private evaluateMeanReversionExit(
+    strategy: Strategy,
+    position: Trade,
+    currentCandle: Candle,
+    lookback: Candle[],
+    marketEnv: MarketEnvironment
+  ): { price: number } | null {
+    // Implement mean reversion exit logic
+    return null;
+  }
+
+  private evaluateBreakoutExit(
+    strategy: Strategy,
+    position: Trade,
+    currentCandle: Candle,
+    lookback: Candle[],
+    marketEnv: MarketEnvironment
+  ): { price: number } | null {
+    // Implement breakout exit logic
+    return null;
+  }
+
+  private evaluateCustomExit(
+    strategy: Strategy,
+    position: Trade,
+    currentCandle: Candle,
+    lookback: Candle[],
+    marketEnv: MarketEnvironment
+  ): { price: number } | null {
+    // Implement custom exit logic
+    return null;
   }
 
   // Helper methods

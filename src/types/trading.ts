@@ -2,23 +2,13 @@ export interface Strategy {
   id: string;
   name: string;
   description: string;
-  type: string;
-  parameters: StrategyParameters;
-  rules: TradingRule[];
-  indicators: Indicator[];
-  version: string;
+  type: 'TREND_FOLLOWING' | 'MEAN_REVERSION' | 'BREAKOUT' | 'CUSTOM';
+  timeframe: TimeFrame;
+  symbol: string;
+  parameters: Record<string, number>;
+  enabled: boolean;
   createdAt: Date;
   updatedAt: Date;
-  entryRules: TradingRule[];
-  exitRules: TradingRule[];
-  symbol: string;
-  timeframe: string;
-  riskManagement: {
-    stopLoss: number;
-    takeProfit: number;
-    maxDrawdown: number;
-    positionSize: number;
-  };
 }
 
 export interface StrategyParameters {
@@ -43,34 +33,34 @@ export interface BacktestConfig {
   strategy: Strategy;
   parameters: StrategyParameters;
   symbol: string;
-  timeframe: string;
+  timeframe: TimeFrame;
   startDate: Date;
   endDate: Date;
   initialBalance: number;
   commission: number;
   slippage: number;
   useSpread: boolean;
+  warmupPeriod: number;
+  initialCapital: number;
+  riskPerTrade: number;
+  leverage: number;
 }
 
 export interface BacktestResult {
   trades: Trade[];
-  metrics: PerformanceMetrics;
-  equity: EquityCurve[];
-  equityCurve: EquityCurve[];
-  historicalData: {
-    timestamp: Date;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-  }[];
-  indicators: {
-    [key: string]: {
-      timestamp: Date;
-      value: number;
-    }[];
-  };
+  equityCurve: number[];
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRate: number;
+  totalPnL: number;
+  grossProfit: number;
+  grossLoss: number;
+  profitFactor: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+  initialCapital: number;
+  finalCapital: number;
 }
 
 export interface Trade {
@@ -78,74 +68,49 @@ export interface Trade {
   symbol: string;
   type: 'MARKET' | 'LIMIT' | 'STOP' | 'STOP_LIMIT';
   side: 'BUY' | 'SELL';
-  position: 'LONG' | 'SHORT';
-  openTime: Date;
-  closeTime: Date;
+  size: number;
+  price: number;
+  status: 'OPEN' | 'CLOSED' | 'CANCELLED';
+  entryTime: Date;
+  exitTime?: Date;
   entryPrice: number;
-  exitPrice: number;
-  quantity: number;
+  exitPrice?: number;
   stopLoss?: number;
   takeProfit?: number;
-  commission: number;
-  swap: number;
-  profit: number;
-  pips: number;
-  riskRewardRatio: number;
-  duration: string;
-  status: 'OPEN' | 'CLOSED' | 'CANCELLED';
-  tags?: string[];
-  notes?: string;
+  pnl?: number;
+  commission?: number;
+  leverage?: number;
+  duration?: number;
+}
+
+export interface Position {
+  symbol: string;
+  size: number;
+  price: number;
+  side: 'LONG' | 'SHORT';
+  unrealizedPnl: number;
+  realizedPnl: number;
+  margin: number;
+  leverage: number;
+  liquidationPrice: number;
+  openTime: Date;
 }
 
 export interface Portfolio {
-  id: string;
-  name: string;
-  assets: {
-    symbol: string;
-    allocation: number;
-    currentValue: number;
-  }[];
-  totalValue: number;
-  lastRebalanced: Date;
+  userId: string;
+  balance: number;
+  equity: number;
+  margin: number;
+  freeMargin: number;
+  marginLevel: number;
+  positions: Position[];
 }
 
-export interface RebalanceStrategy {
-  type: 'threshold' | 'periodic' | 'custom';
-  parameters: {
-    threshold?: number;
-    period?: number;
-    customLogic?: string;
-  };
-}
-
-export interface RebalanceTarget {
-  symbol: string;
-  targetAllocation: number;
-}
-
-export interface RebalanceConstraints {
-  minTradeSize: number;
-  maxTradeSize: number;
-  maxSlippage: number;
-  minHoldingPeriod: number;
-}
-
-export interface StrategySignal {
-  timestamp: Date;
-  type: 'ENTRY' | 'EXIT';
-  direction: 'LONG' | 'SHORT';
-  price: number;
-  reason: string;
-}
-
-export interface TimeFrame {
-  value: number;
-  unit: 'minute' | 'hour' | 'day' | 'week' | 'month';
-}
+export type TimeFrame = '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1d' | '1w' | '1M';
 
 export interface Candle {
   timestamp: number;
-  date: Date;
+  time: number;
   open: number;
   high: number;
   low: number;
@@ -153,10 +118,291 @@ export interface Candle {
   volume: number;
 }
 
+export interface MarketData {
+  symbol: string;
+  timestamp: Date;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface OrderBook {
+  symbol: string;
+  timestamp: Date;
+  bids: [number, number][]; // [price, size][]
+  asks: [number, number][]; // [price, size][]
+}
+
+export interface Ticker {
+  symbol: string;
+  timestamp: Date;
+  bid: number;
+  ask: number;
+  last: number;
+  volume: number;
+  change: number;
+  changePercent: number;
+}
+
+export interface CandleData {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface IndicatorResult {
+  values: number[];
+  colors?: string[];
+  labels?: string[];
+}
+
+export interface ChartConfiguration {
+  type: string;
+  data: {
+    labels: string[];
+    datasets: Array<{
+      label: string;
+      data: any[];
+      type?: string;
+      borderColor?: string;
+      backgroundColor?: string;
+      yAxisID?: string;
+      fill?: boolean | string | number;
+    }>;
+  };
+  options: {
+    responsive?: boolean;
+    maintainAspectRatio?: boolean;
+    scales: {
+      x?: {
+        type: string;
+        time?: {
+          unit: 'minute' | 'hour' | 'day';
+        };
+      };
+      y?: {
+        type: string;
+        position: string;
+      };
+      [key: string]: any;
+    };
+    plugins?: {
+      legend?: {
+        position: string;
+      };
+      tooltip?: {
+        mode: string;
+        intersect: boolean;
+      };
+    };
+  };
+}
+
+export interface IndicatorOptions {
+  period?: number;
+  stdDev?: number;
+  fastPeriod?: number;
+  slowPeriod?: number;
+  signalPeriod?: number;
+  source?: 'close' | 'open' | 'high' | 'low' | 'hl2' | 'hlc3' | 'ohlc4';
+  displacement?: number;
+  multiplier?: number;
+}
+
+export interface ChartStyle {
+  backgroundColor: string;
+  textColor: string;
+  gridColor: string;
+  candleUpColor: string;
+  candleDownColor: string;
+  volumeUpColor: string;
+  volumeDownColor: string;
+  lineColors: string[];
+  crosshairColor: string;
+  fontFamily: string;
+}
+
+export interface ChartAnnotation {
+  id: string;
+  type: 'line' | 'text' | 'rectangle' | 'circle' | 'arrow' | 'fibonacci' | 'pitchfork';
+  points: Array<{ x: number; y: number }>;
+  text?: string;
+  style: {
+    color: string;
+    lineWidth: number;
+    fillColor?: string;
+    fontSize?: number;
+    fontFamily?: string;
+    backgroundColor?: string;
+  };
+  visible: boolean;
+}
+
+export interface DrawingTool {
+  type: 'line' | 'text' | 'rectangle' | 'circle' | 'arrow' | 'fibonacci' | 'pitchfork';
+  mode: 'draw' | 'edit' | 'delete';
+  style: {
+    color: string;
+    lineWidth: number;
+    fillColor?: string;
+    fontSize?: number;
+    fontFamily?: string;
+  };
+}
+
+export interface ComparisonSeries {
+  id: string;
+  symbol: string;
+  data: CandleData[];
+  color: string;
+  visible: boolean;
+  type: 'price' | 'percentage';
+  baseValue?: number;
+}
+
+export interface ExtendedChartOptions {
+  // General options
+  showVolume: boolean;
+  showGrid: boolean;
+  showLegend: boolean;
+  showTooltip: boolean;
+  showCrosshair: boolean;
+  theme: 'light' | 'dark' | 'custom';
+  
+  // Zoom and navigation
+  enableZoom: boolean;
+  enablePan: boolean;
+  autoScale: boolean;
+  zoomLevel: number;
+  
+  // Time axis
+  timeFormat: string;
+  showTimeScale: boolean;
+  timeScaleFormat: 'date' | 'time' | 'datetime';
+  
+  // Price axis
+  priceFormat: {
+    precision: number;
+    minMove: number;
+    prefix?: string;
+    suffix?: string;
+  };
+  showPriceScale: boolean;
+  priceScalePosition: 'left' | 'right';
+  
+  // Comparison
+  comparisonMode: 'overlay' | 'separate';
+  normalizeComparison: boolean;
+  
+  // Annotations
+  enableAnnotations: boolean;
+  annotationDefaults: {
+    color: string;
+    lineWidth: number;
+    fillColor: string;
+    fontSize: number;
+    fontFamily: string;
+  };
+  
+  // Drawing tools
+  enableDrawingTools: boolean;
+  drawingDefaults: {
+    color: string;
+    lineWidth: number;
+    fillColor: string;
+    fontSize: number;
+    fontFamily: string;
+  };
+}
+
+export interface ChartCandle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface ChartIndicator {
+  id: string;
+  type: string;
+  parameters: Record<string, any>;
+}
+
+export interface PerformanceMetrics {
+  totalPnL: number;
+  winRate: number;
+  profitFactor: number;
+  sharpeRatio: number;
+  maxDrawdown: number;
+}
+
+export interface EquityCurve {
+  timestamp: string;
+  equity: number;
+  drawdown: number;
+}
+
+export type TimeFrameType = '1M' | '5M' | '15M' | '1H' | '4H' | '1D';
+
+export type ChartType = 
+  | 'candlestick'
+  | 'line'
+  | 'area'
+  | 'bar'
+  | 'scatter'
+  | 'bubble'
+  | 'radar'
+  | 'heikinAshi'
+  | 'renko'
+  | 'kagi';
+
+export interface AreaChartOptions {
+  fillColor?: string;
+  fillOpacity?: number;
+  showPoints?: boolean;
+  curved?: boolean;
+}
+
+export interface ScatterChartOptions {
+  pointSize?: number;
+  pointStyle?: 'circle' | 'cross' | 'crossRot' | 'dash' | 'line' | 'rect' | 'rectRounded' | 'rectRot' | 'star' | 'triangle';
+}
+
+export interface HeikinAshiData {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+export interface RenkoData {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  brickSize: number;
+}
+
+export interface KagiData {
+  timestamp: number;
+  price: number;
+  direction: 'up' | 'down';
+  reversal: boolean;
+}
+
 export interface StrategyContext {
   timestamp: Date;
   symbol: string;
-  timeframe: string;
+  timeframe: TimeFrame;
   data: {
     open: number[];
     high: number[];
@@ -181,48 +427,59 @@ export interface ChartSettings {
   drawingMode: boolean;
 }
 
-export type TimeFrameType = '1M' | '5M' | '15M' | '1H' | '4H' | '1D';
-
-export type ChartType = 'candlestick' | 'line';
-
-export interface ChartCandle {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
+export interface StrategySignal {
+  timestamp: Date;
+  type: 'ENTRY' | 'EXIT';
+  direction: 'LONG' | 'SHORT';
+  price: number;
+  reason: string;
 }
 
-export interface ChartIndicator {
-  id: string;
-  type: string;
-  parameters: Record<string, any>;
-}
-
-export interface DrawingTool {
-  id: string;
-  type: string;
-  coordinates: Array<{ x: number; y: number }>;
-  style?: {
-    color?: string;
-    lineWidth?: number;
-    fillColor?: string;
+export interface RebalanceStrategy {
+  type: 'threshold' | 'periodic' | 'custom';
+  parameters: {
+    threshold?: number;
+    period?: number;
+    customLogic?: string;
   };
 }
 
-export interface PerformanceMetrics {
-  totalPnL: number;
-  winRate: number;
-  profitFactor: number;
-  sharpeRatio: number;
-  maxDrawdown: number;
+export interface RebalanceTarget {
+  symbol: string;
+  targetAllocation: number;
 }
 
-export interface EquityCurve {
-  timestamp: string;
-  equity: number;
-  drawdown: number;
+export interface RebalanceConstraints {
+  minTradeSize: number;
+  maxTradeSize: number;
+  maxSlippage: number;
+  minHoldingPeriod: number;
 }
 
-export type TimeFrame = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'ALL';
+export interface MarketEnvironment {
+  trend: 'uptrend' | 'downtrend' | 'sideways';
+  volatility: number;
+  volume: 'high' | 'normal' | 'low';
+  regime: 'trending' | 'ranging' | 'breakout' | 'reversal';
+}
+
+export interface OptimizationResult {
+  bestByProfitFactor: StrategyPerformance;
+  bestBySharpeRatio: StrategyPerformance;
+  bestByMaxDrawdown: StrategyPerformance;
+  robustParameters: StrategyPerformance[];
+  allResults: StrategyPerformance[];
+}
+
+export interface StrategyParameter {
+  name: string;
+  min: number;
+  max: number;
+  step: number;
+}
+
+export interface StrategyPerformance {
+  parameters: Record<string, number>;
+  performance: BacktestResult;
+  robustness?: number;
+}
