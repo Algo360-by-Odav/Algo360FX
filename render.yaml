@@ -9,6 +9,8 @@ services:
     startCommand: node dist/index.js
     healthCheckPath: /api/health
     autoDeploy: true
+    domains:
+      - api.algo360fx.com
     envVars:
       - key: NODE_ENV
         value: production
@@ -27,6 +29,31 @@ services:
         value: https://algo360fx-frontend.onrender.com
       - key: WS_ENABLED
         value: "true"
+      - key: RATE_LIMIT_WINDOW
+        value: "15"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "100"
+      - key: CACHE_TTL
+        value: "3600"
+      - key: SSL_ENABLED
+        value: "true"
+      - key: SSL_CERT
+        sync: false
+      - key: SSL_KEY
+        sync: false
+      - key: SSL_CA
+        sync: false
+      - key: SECURITY_HEADERS_ENABLED
+        value: "true"
+      - key: HSTS_MAX_AGE
+        value: "31536000"
+      - key: CSP_ENABLED
+        value: "true"
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetMemoryPercent: 80
+      targetCPUPercent: 80
 
   - type: web
     name: algo360fx-frontend
@@ -37,17 +64,33 @@ services:
     startCommand: npm run preview -- --host 0.0.0.0 --port $PORT
     healthCheckPath: /
     autoDeploy: true
+    domains:
+      - algo360fx.com
+      - www.algo360fx.com
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: "3000"
       - key: VITE_API_URL
-        value: https://algo360fx-api.onrender.com
+        value: https://api.algo360fx.com
       - key: VITE_WS_URL
-        value: wss://algo360fx-api.onrender.com
+        value: wss://api.algo360fx.com
       - key: HOST
         value: "0.0.0.0"
+      - key: SSL_ENABLED
+        value: "true"
+      - key: SECURITY_HEADERS_ENABLED
+        value: "true"
+      - key: HSTS_MAX_AGE
+        value: "31536000"
+      - key: CSP_ENABLED
+        value: "true"
+    scaling:
+      minInstances: 1
+      maxInstances: 2
+      targetMemoryPercent: 80
+      targetCPUPercent: 80
 
   - type: redis
     name: algo360fx-redis

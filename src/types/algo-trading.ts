@@ -211,3 +211,34 @@ export interface OptimizationResult {
   }[];
   optimizationTime: number;
 }
+
+export interface StrategyPerformance {
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRate: number;
+  profitFactor: number;
+  sharpeRatio: number;
+  maxDrawdown: number;
+  netProfit: number;
+  roi: number;
+  averageWin: number;
+  averageLoss: number;
+  averageHoldingTime: number;
+  profitPerTrade: number;
+  volatility: number;
+  trades: {
+    id: string;
+    symbol: string;
+    entryDate: Date;
+    exitDate: Date;
+    entryPrice: number;
+    exitPrice: number;
+    quantity: number;
+    pnl: number;
+  }[];
+  equity: {
+    timestamp: Date;
+    value: number;
+  }[];
+}

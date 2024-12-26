@@ -1,5 +1,26 @@
 import { TimeFrame } from './trading';
 
+export enum TimeFrame {
+  M1 = '1m',
+  M5 = '5m',
+  M15 = '15m',
+  M30 = '30m',
+  H1 = '1h',
+  H4 = '4h',
+  D1 = '1d',
+  W1 = '1w',
+  MN1 = '1M'
+}
+
+export enum MarketRegime {
+  TRENDING_UP = 'TRENDING_UP',
+  TRENDING_DOWN = 'TRENDING_DOWN',
+  RANGING = 'RANGING',
+  VOLATILE = 'VOLATILE',
+  BREAKOUT = 'BREAKOUT',
+  REVERSAL = 'REVERSAL'
+}
+
 export interface MarketData {
   symbol: string;
   timestamp: Date;

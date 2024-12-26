@@ -69,6 +69,7 @@ export interface Trade {
   type: 'MARKET' | 'LIMIT' | 'STOP' | 'STOP_LIMIT';
   side: 'BUY' | 'SELL';
   size: number;
+  quantity: number;
   price: number;
   status: 'OPEN' | 'CLOSED' | 'CANCELLED';
   entryTime: Date;
@@ -142,6 +143,14 @@ export interface MarketData {
   low: number;
   close: number;
   volume: number;
+  price: number;
+  bid?: number;
+  ask?: number;
+  prices: number[];
+  spreads?: number[];
+  volumes?: number[];
+  pricePrecision?: number;
+  quantityPrecision?: number;
 }
 
 export interface OrderBook {
@@ -524,4 +533,76 @@ export interface StrategyPerformance {
     profitabilityByTimeframe: Record<TimeFrame, number>;
     profitabilityByMarketCondition: Record<string, number>;
   };
+}
+
+export enum TimeInForce {
+  GTC = 'GTC', // Good Till Cancel
+  IOC = 'IOC', // Immediate or Cancel
+  FOK = 'FOK', // Fill or Kill
+  GTD = 'GTD', // Good Till Date
+  DAY = 'DAY'  // Day Order
+}
+
+export enum ExecutionAlgorithm {
+  MARKET = 'MARKET',
+  TWAP = 'TWAP',    // Time-Weighted Average Price
+  VWAP = 'VWAP',    // Volume-Weighted Average Price
+  POV = 'POV',      // Percentage of Volume
+  IS = 'IS',        // Implementation Shortfall
+  ADAPTIVE = 'ADAPTIVE'
+}
+
+export interface ExecutionMetrics {
+  slippage: number;
+  marketImpact: number;
+  timingCost: number;
+  commissionCost: number;
+  totalCost: number;
+  executionSpeed: number;
+  fillRate: number;
+  priceImprovement: number;
+  volumeParticipation: number;
+  spreadCost: number;
+}
+
+export enum OrderStatus {
+  PENDING = 'PENDING',
+  OPEN = 'OPEN',
+  FILLED = 'FILLED',
+  PARTIALLY_FILLED = 'PARTIALLY_FILLED',
+  CANCELLED = 'CANCELLED',
+  REJECTED = 'REJECTED',
+  EXPIRED = 'EXPIRED'
+}
+
+export enum OrderSide {
+  BUY = 'BUY',
+  SELL = 'SELL'
+}
+
+export enum OrderType {
+  MARKET = 'MARKET',
+  LIMIT = 'LIMIT',
+  STOP = 'STOP',
+  STOP_LIMIT = 'STOP_LIMIT',
+  TRAILING_STOP = 'TRAILING_STOP',
+  OCO = 'OCO'
+}
+
+export interface Order {
+  id: string;
+  symbol: string;
+  type: OrderType;
+  side: OrderSide;
+  quantity: number;
+  price?: number;
+  stopPrice?: number;
+  timeInForce: TimeInForce;
+  status: OrderStatus;
+  filledQuantity: number;
+  remainingQuantity: number;
+  createdAt: Date;
+  updatedAt: Date;
+  clientOrderId?: string;
+  orderTag?: string;
 }

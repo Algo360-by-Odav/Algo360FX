@@ -4,6 +4,8 @@ export enum ModelType {
   RANDOM_FOREST = 'RANDOM_FOREST',
   GRADIENT_BOOST = 'GRADIENT_BOOST',
   NEURAL_NETWORK = 'NEURAL_NETWORK',
+  LSTM = 'LSTM',
+  PRICE_PREDICTION = 'PRICE_PREDICTION'
 }
 
 export interface MLModel {
@@ -11,6 +13,7 @@ export interface MLModel {
   type: ModelType;
   name: string;
   description: string;
+  model: any;
   parameters: any;
   metrics: {
     accuracy: number;
@@ -18,6 +21,7 @@ export interface MLModel {
     recall: number;
     f1Score: number;
   };
+  lastUpdated: Date;
   createdAt: Date;
   updatedAt: Date;
 }
