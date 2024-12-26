@@ -1,74 +1,39 @@
-import { Router } from 'express';
-import { getMetaApiConnection } from '../services/metaapi';
+import express from 'express';
+import { getMarketData, placeMarketOrder } from '../services/metaapi';
+import { auth } from '../middleware/auth';
 
-const router = Router();
+const router = express.Router();
 
 // Get market data for a symbol
-router.get('/:symbol', async (req, res) => {
-  const { symbol } = req.params;
-
-  if (!symbol) {
-    return res.status(400).json({
-      error: 'Missing symbol',
-      details: 'Symbol parameter is required'
-    });
-  }
-
+router.get('/:symbol', auth, async (req, res) => {
   try {
-    // Get MetaAPI connection
-    const connection = await getMetaApiConnection();
-    
-    // Get symbol price
-    const price = await connection.getSymbolPrice(symbol);
-    if (!price) {
-      return res.status(404).json({
-        error: 'Market data not found',
-        details: `No data available for symbol ${symbol}`
-      });
-    }
-
-    return res.json(price);
+    const { symbol } = req.params;
+    const data = await getMarketData(symbol);
+    res.json(data);
   } catch (error) {
     console.error('Error fetching market data:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch market data',
-      details: error.message
-    });
+    res.status(500).json({ error: 'Failed to fetch market data' });
   }
 });
 
-// Get historical candles for a symbol
-router.get('/:symbol/candles', async (req, res) => {
-  const { symbol } = req.params;
-  const { timeframe = '1h', limit = 100 } = req.query;
-
-  if (!symbol) {
-    return res.status(400).json({
-      error: 'Missing symbol',
-      details: 'Symbol parameter is required'
-    });
-  }
-
+// Place a market order
+router.post('/order', auth, async (req, res) => {
   try {
-    // Get MetaAPI connection
-    const connection = await getMetaApiConnection();
-    
-    // Get historical candles
-    const candles = await connection.getHistoricalCandles(symbol, timeframe.toString(), limit.toString());
-    if (!candles || candles.length === 0) {
-      return res.status(404).json({
-        error: 'Historical data not found',
-        details: `No historical data available for symbol ${symbol}`
-      });
+    const { symbol, type, volume } = req.body;
+
+    if (!symbol || !type || !volume) {
+      return res.status(400).json({ error: 'Missing required parameters' });
     }
 
-    return res.json(candles);
+    if (type !== 'buy' && type !== 'sell') {
+      return res.status(400).json({ error: 'Invalid order type' });
+    }
+
+    const order = await placeMarketOrder(symbol, type, volume);
+    res.json(order);
   } catch (error) {
-    console.error('Error fetching historical data:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch historical data',
-      details: error.message
-    });
+    console.error('Error placing market order:', error);
+    res.status(500).json({ error: 'Failed to place market order' });
   }
 });
 
