@@ -6,6 +6,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "target": "es2017",
     "sourceMap": true,
     "outDir": "./dist",
@@ -19,6 +20,11 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@/*": ["src/*"]
-    }
-  }
+    },
+    "typeRoots": [
+      "./node_modules/@types"
+    ]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

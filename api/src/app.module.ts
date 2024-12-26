@@ -6,6 +6,7 @@ import { WebSocketModule } from './websocket/websocket.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { HealthModule } from './health/health.module';
     PrismaModule,
     RedisModule,
     HealthModule,
+    MonitoringModule,
   ],
 })
 export class AppModule {}

@@ -1,0 +1,42 @@
+name: Verify Deploy Setup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Render API Key
+        run: |
+          if [ -n "${{ secrets.RENDER_API_KEY }}" ]; then
+            echo "✅ RENDER_API_KEY is set"
+          else
+            echo "❌ RENDER_API_KEY is missing"
+            exit 1
+          fi
+      
+      - name: Check Service IDs
+        run: |
+          if [ -n "${{ secrets.RENDER_SERVICE_ID_STAGING }}" ]; then
+            echo "✅ RENDER_SERVICE_ID_STAGING is set"
+          else
+            echo "❌ RENDER_SERVICE_ID_STAGING is missing"
+            exit 1
+          fi
+          
+          if [ -n "${{ secrets.RENDER_SERVICE_ID_PROD }}" ]; then
+            echo "✅ RENDER_SERVICE_ID_PROD is set"
+          else
+            echo "❌ RENDER_SERVICE_ID_PROD is missing"
+            exit 1
+          fi
+      
+      - name: Check Snyk Token
+        run: |
+          if [ -n "${{ secrets.SNYK_TOKEN }}" ]; then
+            echo "✅ SNYK_TOKEN is set"
+          else
+            echo "❌ SNYK_TOKEN is missing"
+            exit 1
+          fi

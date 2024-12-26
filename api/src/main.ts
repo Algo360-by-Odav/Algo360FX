@@ -1,23 +1,40 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import * as compression from 'compression';
-import * as helmet from 'helmet';
+import compression from 'compression';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
+import { setupSentry } from './config/sentry.config';
+import { setupLogger } from './config/logger.config';
+import { LoggingMiddleware } from './middleware/logging.middleware';
+import { MetricsMiddleware } from './middleware/metrics.middleware';
+import { PrometheusService } from './monitoring/prometheus.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Create app with Winston logger
+  const app = await NestFactory.create(AppModule, {
+    logger: setupLogger(),
+  });
+
   const configService = app.get(ConfigService);
+  const prometheusService = app.get(PrometheusService);
+
+  // Setup Sentry
+  setupSentry(app);
 
   // Security
-  app.use(helmet());
+  app.use(helmet.default());
   app.use(compression());
   app.enableCors({
-    origin: configService.get('CORS_ORIGIN').split(','),
+    origin: configService.get('CORS_ORIGIN', '*').split(','),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
+
+  // Middleware
+  app.use(new LoggingMiddleware().use);
+  app.use(new MetricsMiddleware(prometheusService).use);
 
   // Validation
   app.useGlobalPipes(new ValidationPipe({

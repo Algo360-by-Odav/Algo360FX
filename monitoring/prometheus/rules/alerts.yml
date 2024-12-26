@@ -1,0 +1,65 @@
+groups:
+  - name: algo360fx
+    rules:
+      - alert: HighRequestLatency
+        expr: rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High request latency
+          description: Average request latency is above 1 second for the last 5 minutes
+
+      - alert: HighErrorRate
+        expr: rate(http_request_errors_total[5m]) / rate(http_requests_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High error rate
+          description: Error rate is above 10% for the last 5 minutes
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High CPU usage
+          description: CPU usage is above 80% for the last 5 minutes
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / process_heap_max_size_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High memory usage
+          description: Memory usage is above 80% of maximum heap size
+
+      - alert: WebSocketConnectionDrop
+        expr: delta(websocket_connections[5m]) < -10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: WebSocket connection drop
+          description: More than 10 WebSocket connections dropped in the last 5 minutes
+
+      - alert: RedisConnectionLost
+        expr: redis_connected == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Redis connection lost
+          description: Connection to Redis has been lost
+
+      - alert: APIEndpointDown
+        expr: up{job="algo360fx-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: API endpoint down
+          description: The API endpoint is not responding

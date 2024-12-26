@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   workflow_run:
     workflows: ["CI"]
     types:
@@ -12,62 +12,48 @@ jobs:
   deploy-staging:
     if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
-    environment: staging
+    environment:
+      name: staging
+      url: https://algo360fx-api-staging.onrender.com
     
     steps:
     - uses: actions/checkout@v3
-    
-    - name: Download server build
-      uses: actions/download-artifact@v3
-      with:
-        name: server-build
-        path: server/dist
-    
-    - name: Download client build
-      uses: actions/download-artifact@v3
-      with:
-        name: client-build
-        path: client/dist
     
     - name: Deploy to Render (Staging)
       env:
         RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_STAGING }}
       run: |
-        curl -X POST https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID_STAGING }}/deploys \
-          -H "Authorization: Bearer $RENDER_API_KEY"
+        curl -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+          -H "Authorization: Bearer $RENDER_API_KEY" \
+          -H "Content-Type: application/json"
   
   deploy-production:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: production
-    needs: [deploy-staging]
+    environment:
+      name: production
+      url: https://api.algo360fx.com
+    needs: []  # Remove dependency on staging for main branch deploys
     
     steps:
     - uses: actions/checkout@v3
     
-    - name: Download server build
-      uses: actions/download-artifact@v3
-      with:
-        name: server-build
-        path: server/dist
-    
-    - name: Download client build
-      uses: actions/download-artifact@v3
-      with:
-        name: client-build
-        path: client/dist
-    
     - name: Deploy to Render (Production)
       env:
         RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_PROD }}
       run: |
-        curl -X POST https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID_PROD }}/deploys \
-          -H "Authorization: Bearer $RENDER_API_KEY"
+        curl -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+          -H "Authorization: Bearer $RENDER_API_KEY" \
+          -H "Content-Type: application/json"
     
     - name: Create Release
+      if: success()
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         tag_name: v${{ github.run_number }}
         release_name: Release v${{ github.run_number }}
