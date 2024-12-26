@@ -3,5 +3,7 @@ export interface Config {
   port: number;
   env: 'development' | 'production' | 'test';
   logLevel: string;
-  // Add other configuration properties as needed
+  wsBaseUrl: string;
+  apiBaseUrl: string;
+  openaiApiKey?: string;
 }

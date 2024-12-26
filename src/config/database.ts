@@ -1,13 +1,16 @@
 import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import { Config } from '../types/config';
 
-export async function connectDB() {
+export async function connectDB(config: Config) {
   try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI is not defined in environment variables');
+    const mongoUri = config.mongoUri || process.env.MONGODB_URI;
+    
+    if (!mongoUri) {
+      throw new Error('MongoDB URI is not defined');
     }
 
-    await mongoose.connect(process.env.MONGODB_URI, {
-      // MongoDB Atlas recommended options
+    await mongoose.connect(mongoUri, {
       retryWrites: true,
       w: 'majority',
       maxPoolSize: 10,
@@ -16,17 +19,17 @@ export async function connectDB() {
     
     console.log('MongoDB connected successfully');
     
-    // Handle connection events
     mongoose.connection.on('error', (err) => {
       console.error('MongoDB connection error:', err);
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected');
+      console.log('MongoDB disconnected');
     });
 
+    return mongoose.connection;
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
+    console.error('Error connecting to MongoDB:', error);
+    throw error;
   }
-} 
+}
