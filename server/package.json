@@ -1,40 +1,30 @@
 {
   "name": "algo360fx-server",
   "version": "1.0.0",
-  "description": "Algo360FX Trading Server",
+  "description": "Trading server for Algo360FX",
   "main": "dist/index.js",
   "scripts": {
+    "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "set PORT=5000 && nodemon src/index.ts",
-    "build": "tsc -p tsconfig.json",
-    "postinstall": "npm run build",
-    "test": "jest"
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
   },
   "dependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/node": "^20.10.5",
-    "@types/uuid": "^9.0.7",
-    "@types/ws": "^8.5.13",
-    "bcryptjs": "^2.4.3",
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "express-validator": "^7.2.0",
-    "jsonwebtoken": "^9.0.2",
-    "metaapi.cloud-sdk": "^23.5.1",
+    "mongodb-memory-server": "^9.1.3",
     "mongoose": "^8.0.3",
-    "socket.io": "^4.8.1",
-    "typescript": "^5.3.3",
-    "uuid": "^9.0.1",
-    "ws": "^8.18.0"
+    "openai": "^4.0.0",
+    "zod": "^3.22.4",
+    "technicalindicators": "^3.1.0",
+    "dotenv": "^16.3.1",
+    "winston": "^3.11.0",
+    "cors": "^2.8.5",
+    "socket.io": "^4.7.2"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
-    "nodemon": "^3.0.2",
-    "ts-node": "^10.9.2"
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.5",
+    "@types/cors": "^2.8.17",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
   }
 }

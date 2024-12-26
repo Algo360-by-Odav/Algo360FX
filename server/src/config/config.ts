@@ -1,27 +1,26 @@
 import dotenv from 'dotenv';
+import { Config } from '../../types/config';
 
 dotenv.config();
 
 interface Config {
   port: number;
-  databaseUrl: string;
-  jwtSecret: string;
-  env: string;
-  metaApiToken: string;
-  mt5AccountId: string;
-  metaApiRetryAttempts: number;
-  metaApiRetryDelay: number;
-  redisUrl?: string;
+  mongoUri: string;
+  env: 'development' | 'production' | 'test';
+  logLevel: string;
+  wsBaseUrl: string;
+  apiBaseUrl: string;
+  openaiApiKey: string;
+  corsOrigin: string | string[];
 }
 
 export const config: Config = {
   port: parseInt(process.env.PORT || '5000'),
-  databaseUrl: process.env.DATABASE_URL || 'mongodb://localhost:27017/algo360fx',
-  jwtSecret: process.env.JWT_SECRET || 'development-secret-key',
-  env: process.env.NODE_ENV || 'development',
-  metaApiToken: process.env.META_API_TOKEN || '',
-  mt5AccountId: process.env.MT5_ACCOUNT_ID || '',
-  metaApiRetryAttempts: 3,
-  metaApiRetryDelay: 1000,
-  redisUrl: process.env.REDIS_URL
+  mongoUri: process.env.DATABASE_URL || 'mongodb://localhost:27017/algo360fx',
+  env: (process.env.NODE_ENV || 'development') as 'development' | 'production' | 'test',
+  logLevel: process.env.LOG_LEVEL || 'info',
+  wsBaseUrl: process.env.WS_BASE_URL || 'ws://localhost:5000',
+  apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:5000',
+  openaiApiKey: process.env.OPENAI_API_KEY,
+  corsOrigin: process.env.CORS_ORIGIN?.split(',') || '*'
 };
