@@ -49,11 +49,6 @@ services:
         value: "31536000"
       - key: CSP_ENABLED
         value: "true"
-    scaling:
-      minInstances: 1
-      maxInstances: 3
-      targetMemoryPercent: 80
-      targetCPUPercent: 80
 
   - type: web
     name: algo360fx-frontend
@@ -86,11 +81,6 @@ services:
         value: "31536000"
       - key: CSP_ENABLED
         value: "true"
-    scaling:
-      minInstances: 1
-      maxInstances: 2
-      targetMemoryPercent: 80
-      targetCPUPercent: 80
 
   - type: redis
     name: algo360fx-redis
