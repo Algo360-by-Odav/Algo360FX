@@ -51,7 +51,7 @@ export class RiskManagement {
     );
     
     // Estimate probability of success based on historical data
-    const successProbability = await this.estimateSuccessProbability(position);
+    const successProbability = await this.estimateSuccessProbability();
     
     // Calculate expected value
     const expectedValue = (successProbability * rewardAmount) - ((1 - successProbability) * riskAmount);
@@ -68,7 +68,7 @@ export class RiskManagement {
     };
   }
 
-  private async estimateSuccessProbability(position: Position): Promise<number> {
+  private async estimateSuccessProbability(): Promise<number> {
     // This would normally involve analyzing historical data
     // For now, return a placeholder value
     return 0.6;

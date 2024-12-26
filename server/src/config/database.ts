@@ -2,17 +2,17 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { config } from './config';
 
-let mongoServer: MongoMemoryServer;
+let mongoServer: MongoMemoryServer | null = null;
 
 export const connectDatabase = async () => {
   try {
-    if (config.env === 'development' && !config.mongoUri.includes('mongodb+srv')) {
+    if (config.env === 'development' && !config.DATABASE_URL?.includes('mongodb+srv')) {
       mongoServer = await MongoMemoryServer.create();
       const uri = mongoServer.getUri();
       await mongoose.connect(uri);
       console.log('Connected to MongoDB Memory Server');
     } else {
-      await mongoose.connect(config.mongoUri);
+      await mongoose.connect(config.DATABASE_URL || '');
       console.log('Connected to MongoDB Atlas');
     }
     
@@ -35,6 +35,7 @@ export const disconnectDatabase = async () => {
     await mongoose.disconnect();
     if (mongoServer) {
       await mongoServer.stop();
+      mongoServer = null;
     }
     console.log('Disconnected from MongoDB');
   } catch (error) {

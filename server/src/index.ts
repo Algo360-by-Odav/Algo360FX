@@ -19,30 +19,17 @@ const httpServer = createServer(app);
 console.log('HTTP server created');
 
 // CORS configuration
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'https://algo360fx-frontend.onrender.com'
-];
-
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log('Blocked by CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: config.CORS_ORIGIN,
   credentials: true
 }));
 
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
 const io = new Server(httpServer, {
-  path: '/ws',
+  path: config.WS_PATH,
   cors: {
-    origin: allowedOrigins,
+    origin: config.CORS_ORIGIN,
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -85,12 +72,12 @@ app.use((err: Error, _req: express.Request, res: express.Response, next: express
 
 // Connect to MongoDB
 console.log('Connecting to MongoDB...');
-mongoose.connect(config.mongoUri)
+mongoose.connect(config.MONGO_URI)
   .then(() => {
     console.log('Connected to MongoDB');
     
     // Start the server
-    const PORT = config.port;
+    const PORT = config.PORT;
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log('WebSocket server endpoints:');
