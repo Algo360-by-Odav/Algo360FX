@@ -33,7 +33,6 @@ services:
     env: node
     region: singapore
     plan: starter
-    rootDir: .
     buildCommand: npm install && npm run build
     startCommand: npm run preview -- --host 0.0.0.0 --port $PORT
     healthCheckPath: /
@@ -42,13 +41,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: "10000"
+        value: "3000"
       - key: VITE_API_URL
         value: https://algo360fx-api.onrender.com
       - key: VITE_WS_URL
         value: wss://algo360fx-api.onrender.com
-      - key: VITE_APP_ENV
-        value: production
       - key: HOST
         value: "0.0.0.0"
 
