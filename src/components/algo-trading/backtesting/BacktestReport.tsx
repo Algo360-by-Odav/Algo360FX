@@ -13,9 +13,7 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Button,
   IconButton,
-  Tooltip,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import ShareIcon from '@mui/icons-material/Share';
@@ -36,12 +34,11 @@ import {
   ScatterChart,
   Scatter,
 } from 'recharts';
-import { BacktestResult } from '../../../types/backtest';
-import { TradingStrategy } from '../../../types/algo-trading';
-import { formatCurrency, formatPercentage, formatDate } from '../../../utils/formatters';
+import { BacktestResult, Strategy, Trade, OrderSide } from '@/types/trading';
+import { formatCurrency, formatPercentage, formatDate } from '@/utils/formatters';
 
 interface BacktestReportProps {
-  strategy: TradingStrategy;
+  strategy: Strategy;
   result: BacktestResult;
   onShare?: () => void;
   onDownload?: () => void;
@@ -87,11 +84,11 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
                 <Typography variant="subtitle2" color="text.secondary">
                   Net Profit
                 </Typography>
-                <Typography variant="h4" color={result.metrics.netProfit >= 0 ? 'success.main' : 'error.main'}>
-                  {formatCurrency(result.metrics.netProfit)}
+                <Typography variant="h4" color={result.metrics.returns >= 0 ? 'success.main' : 'error.main'}>
+                  {formatCurrency(result.metrics.returns)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {formatPercentage(result.metrics.returnPercentage)}
+                  {formatPercentage(result.metrics.returns / result.metrics.totalTrades)}
                 </Typography>
               </Box>
             </Grid>
@@ -129,9 +126,6 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
                 <Typography variant="h4" color="error.main">
                   {formatPercentage(result.metrics.maxDrawdown)}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {formatDate(result.metrics.maxDrawdownDate)}
-                </Typography>
               </Box>
             </Grid>
           </Grid>
@@ -146,7 +140,7 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
           </Typography>
           <Box sx={{ height: 400 }}>
             <ResponsiveContainer>
-              <AreaChart data={result.equityCurve}>
+              <AreaChart data={result.equity.map((value, index) => ({ date: index, equity: value }))}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -178,7 +172,7 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
               </TableRow>
               <TableRow>
                 <TableCell>Sortino Ratio</TableCell>
-                <TableCell align="right">{result.metrics.sortinoRatio.toFixed(2)}</TableCell>
+                <TableCell align="right">{result.metrics.sortino.toFixed(2)}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell>Average Win</TableCell>
@@ -213,8 +207,8 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
                 <TableCell align="right">{result.metrics.losingTrades}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell>Average Trade Duration</TableCell>
-                <TableCell align="right">{result.metrics.averageTradeDuration}</TableCell>
+                <TableCell>Average Holding Time</TableCell>
+                <TableCell align="right">{result.metrics.averageHoldingTime}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
@@ -233,32 +227,32 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
             <TableCell>Entry Price</TableCell>
             <TableCell>Exit Price</TableCell>
             <TableCell>Size</TableCell>
-            <TableCell>Profit/Loss</TableCell>
+            <TableCell>P&L</TableCell>
             <TableCell>Duration</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {result.trades.map((trade, index) => (
+          {result.trades.map((trade: Trade, index) => (
             <TableRow key={index}>
               <TableCell>{formatDate(trade.entryTime)}</TableCell>
               <TableCell>
                 <Chip
-                  label={trade.type}
-                  color={trade.type === 'LONG' ? 'success' : 'error'}
+                  label={trade.side}
+                  color={trade.side === 'BUY' ? 'success' : 'error'}
                   size="small"
                 />
               </TableCell>
               <TableCell>{formatCurrency(trade.entryPrice)}</TableCell>
-              <TableCell>{formatCurrency(trade.exitPrice)}</TableCell>
+              <TableCell>{formatCurrency(trade.exitPrice || 0)}</TableCell>
               <TableCell>{trade.size}</TableCell>
               <TableCell
                 sx={{
-                  color: trade.profit >= 0 ? 'success.main' : 'error.main',
+                  color: (trade.pnl || 0) >= 0 ? 'success.main' : 'error.main',
                 }}
               >
-                {formatCurrency(trade.profit)}
+                {formatCurrency(trade.pnl || 0)}
               </TableCell>
-              <TableCell>{trade.duration}</TableCell>
+              <TableCell>{trade.duration || 0}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -268,51 +262,6 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
 
   const renderAnalysis = () => (
     <Grid container spacing={3}>
-      {/* Trade Distribution */}
-      <Grid item xs={12} md={6}>
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Trade Distribution
-          </Typography>
-          <Box sx={{ height: 300 }}>
-            <ResponsiveContainer>
-              <BarChart data={result.analysis.tradeDistribution}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="range" />
-                <YAxis />
-                <RechartsTooltip />
-                <Bar dataKey="count" fill="#2196f3" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Box>
-        </Paper>
-      </Grid>
-
-      {/* Monthly Returns */}
-      <Grid item xs={12} md={6}>
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Monthly Returns
-          </Typography>
-          <Box sx={{ height: 300 }}>
-            <ResponsiveContainer>
-              <BarChart data={result.analysis.monthlyReturns}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <RechartsTooltip />
-                <Bar
-                  dataKey="return"
-                  fill="#2196f3"
-                  stroke="#2196f3"
-                  fillOpacity={0.6}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </Box>
-        </Paper>
-      </Grid>
-
       {/* Drawdown Analysis */}
       <Grid item xs={12}>
         <Paper sx={{ p: 2 }}>
@@ -321,7 +270,7 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
           </Typography>
           <Box sx={{ height: 300 }}>
             <ResponsiveContainer>
-              <LineChart data={result.analysis.drawdownPeriods}>
+              <LineChart data={result.drawdown.map((value, index) => ({ date: index, drawdown: value * 100 }))}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -331,66 +280,8 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
                   dataKey="drawdown"
                   stroke="#f44336"
                   dot={false}
+                  name="Drawdown %"
                 />
-              </LineChart>
-            </ResponsiveContainer>
-          </Box>
-        </Paper>
-      </Grid>
-    </Grid>
-  );
-
-  const renderOptimization = () => (
-    <Grid container spacing={3}>
-      {/* Parameter Sensitivity */}
-      <Grid item xs={12}>
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Parameter Sensitivity Analysis
-          </Typography>
-          <Box sx={{ height: 400 }}>
-            <ResponsiveContainer>
-              <ScatterChart>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="parameter" name="Parameter Value" />
-                <YAxis dataKey="profit" name="Net Profit" />
-                <RechartsTooltip />
-                <Scatter
-                  data={result.optimization.parameterSensitivity}
-                  fill="#2196f3"
-                />
-              </ScatterChart>
-            </ResponsiveContainer>
-          </Box>
-        </Paper>
-      </Grid>
-
-      {/* Walk-Forward Analysis */}
-      <Grid item xs={12}>
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Walk-Forward Analysis
-          </Typography>
-          <Box sx={{ height: 300 }}>
-            <ResponsiveContainer>
-              <LineChart data={result.optimization.walkForwardResults}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="period" />
-                <YAxis />
-                <RechartsTooltip />
-                <Line
-                  type="monotone"
-                  dataKey="inSampleReturn"
-                  stroke="#2196f3"
-                  name="In-Sample"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="outOfSampleReturn"
-                  stroke="#4caf50"
-                  name="Out-of-Sample"
-                />
-                <Legend />
               </LineChart>
             </ResponsiveContainer>
           </Box>
@@ -430,7 +321,6 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
           <Tab label="Overview" />
           <Tab label="Trades" />
           <Tab label="Analysis" />
-          <Tab label="Optimization" />
         </Tabs>
       </Box>
 
@@ -443,9 +333,6 @@ const BacktestReport: React.FC<BacktestReportProps> = ({
       </TabPanel>
       <TabPanel value={activeTab} index={2}>
         {renderAnalysis()}
-      </TabPanel>
-      <TabPanel value={activeTab} index={3}>
-        {renderOptimization()}
       </TabPanel>
     </Box>
   );

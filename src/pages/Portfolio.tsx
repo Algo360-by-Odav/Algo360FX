@@ -1,13 +1,13 @@
 import React from 'react';
 import { Grid, Box } from '@mui/material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '@/stores/RootStoreContext';
+import { useRootStore } from '@/hooks/useRootStore';
 import AccountSummaryWidget from '@components/Account/AccountSummaryWidget';
 import PerformanceAnalyticsWidget from '@components/Analytics/PerformanceAnalyticsWidget';
 import PositionManagerWidget from '@components/Position/PositionManagerWidget';
 
 const Portfolio: React.FC = observer(() => {
-  const { tradingStore } = useRootStoreContext();
+  const { tradingStore } = useRootStore();
 
   return (
     <Box sx={{ p: 3 }}>
@@ -32,3 +32,4 @@ const Portfolio: React.FC = observer(() => {
 });
 
 export default Portfolio;
+

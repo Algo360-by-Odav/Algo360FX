@@ -26,7 +26,7 @@ import {
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 import DataTable, { Column } from '../tables/DataTable';
 import PerformanceChart from '../charts/PerformanceChart';
 import MarketNews from './MarketNews';
@@ -48,7 +48,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 );
 
 const StockMarket: React.FC = observer(() => {
-  const { stockMarketStore } = useRootStoreContext();
+  const { stockMarketStore } = useRootStore();
   const [tabValue, setTabValue] = useState(0);
   const [openBuyDialog, setOpenBuyDialog] = useState(false);
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
@@ -400,3 +400,4 @@ const StockMarket: React.FC = observer(() => {
 });
 
 export default StockMarket;
+

@@ -1,175 +1,129 @@
+import { io, Socket } from 'socket.io-client';
 import { OptimizationConfig, OptimizationResultNew } from '@/types/optimization';
 
 export class OptimizationWebSocket {
-  private ws: WebSocket | null = null;
+  private socket: Socket | null = null;
   private readonly url: string;
-  private reconnectAttempts = 0;
-  private readonly maxReconnectAttempts = 5;
-  private reconnectTimeout: NodeJS.Timeout | null = null;
   private messageHandlers: Map<string, (data: any) => void> = new Map();
-  private isConnecting = false;
 
-  constructor(url: string = import.meta.env.VITE_OPTIMIZATION_WS_URL || 'ws://localhost:3000/optimization') {
+  constructor(url: string = import.meta.env.VITE_OPTIMIZATION_WS_URL || 'http://localhost:5000') {
     this.url = url;
   }
 
   async connect(): Promise<void> {
-    if (this.isConnecting) {
+    if (this.socket?.connected) {
       return;
     }
 
-    this.isConnecting = true;
+    console.log('Connecting to optimization Socket.IO at', this.url);
 
     try {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        this.isConnecting = false;
-        return;
-      }
-
-      if (this.ws?.readyState === WebSocket.CONNECTING) {
-        this.isConnecting = false;
-        return;
-      }
-
-      console.log(`Connecting to optimization WebSocket at ${this.url}`);
-      this.ws = new WebSocket(this.url);
-
-      await new Promise<void>((resolve, reject) => {
-        if (!this.ws) {
-          reject(new Error('WebSocket instance is null'));
-          return;
-        }
-
-        const onOpen = () => {
-          console.log('Optimization WebSocket connected');
-          this.reconnectAttempts = 0;
-          this.isConnecting = false;
-          this.ws?.removeEventListener('open', onOpen);
-          this.ws?.removeEventListener('error', onError);
-          resolve();
-        };
-
-        const onError = (error: Event) => {
-          console.error('Optimization WebSocket connection error:', error);
-          this.ws?.removeEventListener('open', onOpen);
-          this.ws?.removeEventListener('error', onError);
-          reject(error);
-        };
-
-        this.ws.addEventListener('open', onOpen);
-        this.ws.addEventListener('error', onError);
-
-        this.ws.onclose = () => {
-          console.log('Optimization WebSocket closed');
-          this.isConnecting = false;
-          this.handleReconnect();
-        };
-
-        this.ws.onmessage = (event) => {
-          try {
-            const message = JSON.parse(event.data);
-            const handler = this.messageHandlers.get(message.type);
-            if (handler) {
-              handler(message.data);
-            }
-          } catch (error) {
-            console.error('Error handling optimization WebSocket message:', error);
-          }
-        };
+      this.socket = io(this.url, {
+        path: '/ws',
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+        transports: ['websocket'],
+        forceNew: true,
+        autoConnect: true
       });
+      
+      this.setupSocketHandlers();
     } catch (error) {
-      this.isConnecting = false;
-      console.error('Failed to connect to optimization WebSocket:', error);
-      this.handleReconnect();
+      console.error('Failed to connect to WebSocket:', error);
       throw error;
     }
   }
 
-  private handleReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached for optimization WebSocket');
-      return;
-    }
+  private setupSocketHandlers(): void {
+    if (!this.socket) return;
 
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-    }
+    this.socket.on('connect', () => {
+      console.log('Optimization Socket.IO connected');
+    });
 
-    this.reconnectAttempts++;
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
-    console.log(`Attempting to reconnect optimization WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms`);
+    this.socket.on('disconnect', () => {
+      console.log('Optimization Socket.IO disconnected');
+    });
 
-    this.reconnectTimeout = setTimeout(async () => {
-      try {
-        await this.connect();
-      } catch (error) {
-        console.error('Reconnection attempt failed:', error);
+    this.socket.on('connect_error', (error) => {
+      console.error('Optimization Socket.IO connection error:', error);
+    });
+
+    this.socket.on('optimization_progress', (data) => {
+      const handler = this.messageHandlers.get('optimization_progress');
+      if (handler) {
+        handler(data);
       }
-    }, delay);
-  }
+    });
 
-  disconnect() {
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
-    }
-
-    if (this.ws) {
-      this.ws.onclose = null; // Prevent reconnection attempt
-      this.ws.close();
-      this.ws = null;
-    }
-
-    this.messageHandlers.clear();
-    this.reconnectAttempts = 0;
-    this.isConnecting = false;
-  }
-
-  async startOptimization(strategyId: string, config: OptimizationConfig): Promise<string> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      try {
-        await this.connect();
-      } catch (error) {
-        throw new Error('Failed to connect to optimization WebSocket');
+    this.socket.on('optimization_completed', (data) => {
+      const handler = this.messageHandlers.get('optimization_complete');
+      if (handler) {
+        handler(data);
       }
+    });
+
+    this.socket.on('error', (data) => {
+      const handler = this.messageHandlers.get('optimization_error');
+      if (handler) {
+        handler(data);
+      }
+    });
+  }
+
+  disconnect(): void {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
     }
-
-    const optimizationId = `opt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    this.ws!.send(JSON.stringify({
-      type: 'start_optimization',
-      data: {
-        optimizationId,
-        strategyId,
-        config,
-      },
-    }));
-
-    return optimizationId;
   }
 
-  onProgress(optimizationId: string, callback: (progress: number) => void) {
-    this.messageHandlers.set(`progress_${optimizationId}`, (data) => {
-      callback(data.progress);
-    });
+  onMessage(type: string, handler: (data: any) => void): void {
+    this.messageHandlers.set(type, handler);
   }
 
-  onResult(optimizationId: string, callback: (result: OptimizationResultNew) => void) {
-    this.messageHandlers.set(`result_${optimizationId}`, (data) => {
-      callback(data);
-    });
+  removeMessageHandler(type: string): void {
+    this.messageHandlers.delete(type);
   }
 
-  onError(optimizationId: string, callback: (error: Error) => void) {
-    this.messageHandlers.set(`error_${optimizationId}`, (data) => {
-      callback(new Error(data.message));
-    });
+  startOptimization(config: OptimizationConfig): void {
+    if (!this.socket?.connected) {
+      throw new Error('WebSocket is not connected');
+    }
+    this.socket.emit('start_optimization', config);
   }
 
-  removeOptimizationHandlers(optimizationId: string) {
-    this.messageHandlers.delete(`progress_${optimizationId}`);
-    this.messageHandlers.delete(`result_${optimizationId}`);
-    this.messageHandlers.delete(`error_${optimizationId}`);
+  stopOptimization(optimizationId: string): void {
+    if (!this.socket?.connected) {
+      throw new Error('WebSocket is not connected');
+    }
+    this.socket.emit('stop_optimization', optimizationId);
+  }
+
+  isConnected(): boolean {
+    return this.socket?.connected || false;
+  }
+
+  public onOptimizationProgress(handler: (data: { optimizationId: string; progress: number }) => void): void {
+    this.messageHandlers.set('optimization_progress', handler);
+  }
+
+  public onOptimizationComplete(handler: (data: { optimizationId: string; result: OptimizationResultNew }) => void): void {
+    this.messageHandlers.set('optimization_complete', handler);
+  }
+
+  public onOptimizationError(handler: (data: { optimizationId: string; error: string }) => void): void {
+    this.messageHandlers.set('optimization_error', handler);
+  }
+
+  public close(): void {
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
   }
 }
 

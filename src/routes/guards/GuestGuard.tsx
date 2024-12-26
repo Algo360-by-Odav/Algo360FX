@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
-import { useRootStore } from '../../hooks/useRootStore';
+import { useAuth } from '@/stores/AuthStore';
 
 interface GuestGuardProps {
   children: React.ReactNode;
@@ -9,10 +9,10 @@ interface GuestGuardProps {
 
 const GuestGuard: React.FC<GuestGuardProps> = observer(({ children }) => {
   const location = useLocation();
-  const { authStore } = useRootStore();
+  const { isAuthenticated } = useAuth();
   const from = location.state?.from?.pathname || '/dashboard';
 
-  if (authStore.isAuthenticated) {
+  if (isAuthenticated) {
     return <Navigate to={from} replace />;
   }
 

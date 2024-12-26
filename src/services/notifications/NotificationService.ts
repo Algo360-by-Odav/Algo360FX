@@ -1,5 +1,5 @@
 import apiClient from '../../api/apiClient';
-import { WebSocketClient } from '../../websocket/WebSocketClient';
+import WebSocketService from '../websocketService';
 
 export interface Notification {
   id: string;
@@ -53,12 +53,12 @@ class NotificationService {
   }
 
   private setupWebSocket() {
-    WebSocketClient.on('notification', (notification: Notification) => {
+    WebSocketService.on('notification', (notification: Notification) => {
       this.handleNotification(notification);
     });
 
-    WebSocketClient.on('connected', () => {
-      WebSocketClient.subscribe('notifications');
+    WebSocketService.on('connected', () => {
+      WebSocketService.subscribe('notifications');
     });
   }
 

@@ -1,139 +1,105 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TradingWebSocketServer = void 0;
-const ws_1 = require("ws");
 const uuid_1 = require("uuid");
 class TradingWebSocketServer {
-    constructor(server) {
+    constructor(io) {
         this.clients = new Map();
         this.marketData = new Map();
-        this.wss = new ws_1.WebSocketServer({
-            server,
-            path: '/',
-            clientTracking: true
-        });
-        this.setupWebSocketServer();
+        this.io = io;
+        this.setupSocketServer();
         this.initializeMarketData();
         this.startHeartbeat();
     }
-    setupWebSocketServer() {
-        this.wss.on('connection', (ws) => {
+    setupSocketServer() {
+        this.io.on('connection', (socket) => {
             const clientId = (0, uuid_1.v4)();
             const client = {
                 id: clientId,
-                ws,
+                socket,
                 subscriptions: new Set()
             };
             this.clients.set(clientId, client);
             console.log(`Client connected: ${clientId}`);
-            this.sendMessage(ws, 'connect', { status: 'connected', clientId });
-            ws.on('message', (message) => {
-                try {
-                    const data = JSON.parse(message.toString());
-                    this.handleMessage(client, data);
-                }
-                catch (error) {
-                    console.error('Error parsing message:', error);
-                    this.sendError(ws, 'Invalid message format');
-                }
+            socket.emit('connect_ack', { status: 'connected', clientId });
+            socket.on('subscribe', (channel) => {
+                this.handleSubscribe(client, channel);
             });
-            ws.on('close', () => {
-                console.log(`Client disconnected: ${clientId}`);
-                this.clients.delete(clientId);
+            socket.on('unsubscribe', (channel) => {
+                this.handleUnsubscribe(client, channel);
             });
-            ws.on('error', (error) => {
-                console.error(`WebSocket error for client ${clientId}:`, error);
-                this.clients.delete(clientId);
+            socket.on('message', (data) => {
+                this.handleMessage(client, data);
+            });
+            socket.on('disconnect', () => {
+                this.handleDisconnect(client);
             });
         });
     }
+    handleSubscribe(client, channel) {
+        client.subscriptions.add(channel);
+        client.socket.join(channel);
+        console.log(`Client ${client.id} subscribed to ${channel}`);
+        const data = this.marketData.get(channel);
+        if (data) {
+            client.socket.emit('market_data', { channel, data });
+        }
+    }
+    handleUnsubscribe(client, channel) {
+        client.subscriptions.delete(channel);
+        client.socket.leave(channel);
+        console.log(`Client ${client.id} unsubscribed from ${channel}`);
+    }
+    handleMessage(client, message) {
+        try {
+            if (message.type === 'market_data_request') {
+                const data = this.marketData.get(message.symbol);
+                if (data) {
+                    client.socket.emit('market_data', { symbol: message.symbol, data });
+                }
+            }
+        }
+        catch (error) {
+            console.error('Error handling message:', error);
+            client.socket.emit('error', { message: 'Error processing message' });
+        }
+    }
+    handleDisconnect(client) {
+        this.clients.delete(client.id);
+        console.log(`Client disconnected: ${client.id}`);
+    }
     initializeMarketData() {
-        const symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD'];
-        symbols.forEach(symbol => {
-            this.marketData.set(symbol, {
-                symbol,
-                bid: this.randomPrice(1.0, 1.2),
-                ask: this.randomPrice(1.0, 1.2),
-                timestamp: new Date().toISOString()
-            });
+        this.marketData.set('EURUSD', {
+            bid: 1.0850,
+            ask: 1.0852,
+            timestamp: Date.now()
         });
         setInterval(() => {
             this.updateMarketData();
         }, 1000);
     }
     updateMarketData() {
-        this.marketData.forEach((data, symbol) => {
-            const change = (Math.random() - 0.5) * 0.0010;
-            const bid = Number((data.bid + change).toFixed(5));
-            const ask = Number((bid + 0.0002).toFixed(5));
+        for (const [symbol, data] of this.marketData) {
+            const variation = (Math.random() - 0.5) * 0.0010;
+            const newBid = parseFloat((data.bid + variation).toFixed(4));
+            const newAsk = parseFloat((newBid + 0.0002).toFixed(4));
             const updatedData = {
-                symbol,
-                bid,
-                ask,
-                timestamp: new Date().toISOString()
+                bid: newBid,
+                ask: newAsk,
+                timestamp: Date.now()
             };
             this.marketData.set(symbol, updatedData);
-            this.clients.forEach(client => {
-                if (client.subscriptions.has(symbol)) {
-                    this.sendMessage(client.ws, 'market_data', updatedData);
-                }
-            });
-        });
+            this.io.to(symbol).emit('market_data', { symbol, data: updatedData });
+        }
     }
     startHeartbeat() {
         this.heartbeatInterval = setInterval(() => {
-            this.clients.forEach((client, clientId) => {
-                if (client.ws.readyState === ws_1.WebSocket.OPEN) {
-                    this.sendMessage(client.ws, 'heartbeat', { timestamp: Date.now() });
-                }
-                else {
-                    console.log(`Removing inactive client: ${clientId}`);
-                    this.clients.delete(clientId);
-                }
-            });
+            this.io.emit('heartbeat', { timestamp: Date.now() });
         }, 30000);
-    }
-    handleMessage(client, message) {
-        const { type, data } = message;
-        switch (type) {
-            case 'subscribe':
-                if (data.symbol) {
-                    client.subscriptions.add(data.symbol);
-                    const marketData = this.marketData.get(data.symbol);
-                    if (marketData) {
-                        this.sendMessage(client.ws, 'market_data', marketData);
-                    }
-                }
-                break;
-            case 'unsubscribe':
-                if (data.symbol) {
-                    client.subscriptions.delete(data.symbol);
-                }
-                break;
-            case 'place_order':
-                this.sendMessage(client.ws, 'order_placed', {
-                    orderId: (0, uuid_1.v4)(),
-                    ...data
-                });
-                break;
-            default:
-                this.sendError(client.ws, `Unknown message type: ${type}`);
-        }
-    }
-    sendMessage(ws, type, data) {
-        if (ws.readyState === ws_1.WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type, data }));
-        }
-    }
-    sendError(ws, message) {
-        this.sendMessage(ws, 'error', { message });
-    }
-    randomPrice(min, max) {
-        return Number((Math.random() * (max - min) + min).toFixed(5));
     }
     close() {
         clearInterval(this.heartbeatInterval);
-        this.wss.close();
+        this.io.close();
     }
 }
 exports.TradingWebSocketServer = TradingWebSocketServer;

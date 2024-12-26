@@ -1,51 +1,36 @@
-import React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import React, { useEffect, useState, startTransition } from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
-import { useAuth } from '../../stores/AuthStore';
-import { config } from '../../config/config';
-import { CircularProgress, Box } from '@mui/material';
+import { useRootStore } from '@/hooks/useRootStore';
+import LoadingScreen from '@/components/loading/LoadingScreen';
 
-export interface ProtectedRouteProps {
-  children?: React.ReactNode;
-  requireAuth?: boolean;
-}
+const ProtectedRoute: React.FC = observer(() => {
+  const { authStore } = useRootStore();
+  const [isLoading, setIsLoading] = useState(true);
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = observer(({ 
-  children,
-  requireAuth = true 
-}) => {
-  const auth = useAuth();
-  const location = useLocation();
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        await authStore.checkAuth();
+      } finally {
+        startTransition(() => {
+          setIsLoading(false);
+        });
+      }
+    };
 
-  // Allow access in development mode
-  if (config.env === 'development' && !requireAuth) {
-    return children || <Outlet />;
+    checkAuth();
+  }, [authStore]);
+
+  if (isLoading) {
+    return <LoadingScreen />;
   }
 
-  // Show loading state while checking authentication
-  if (auth.loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          background: 'linear-gradient(135deg, #1a1f2c 0%, #2d3748 100%)',
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
+  if (!authStore.isAuthenticated) {
+    return <Navigate to="/auth/login" replace />;
   }
 
-  // Redirect to login if not authenticated
-  if (!auth.isAuthenticated && requireAuth) {
-    return <Navigate to="/auth/login" state={{ from: location }} replace />;
-  }
-
-  // Render children or outlet for nested routes
-  return children || <Outlet />;
+  return <Outlet />;
 });
 
 export default ProtectedRoute;

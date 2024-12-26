@@ -107,15 +107,14 @@ const menuItems = [
   { title: 'Trading', path: '/app/trading', icon: <TrendingUp /> },
   { title: 'Market Data', path: '/app/market-data', icon: <ShowChart /> },
   { title: 'Portfolio', path: '/app/portfolio', icon: <AccountBalance /> },
-  
+  { title: 'Money Manager', path: '/app/money-manager', icon: <AccountBalanceWallet /> },
+  { title: 'Strategy Builder', path: '/app/strategy-builder', icon: <Build /> },
   // Portals
   { type: 'divider' },
   { type: 'subheader', title: 'Portals' },
   { title: 'Broker Portal', path: '/app/broker', icon: <Business /> },
-  { title: 'Money Manager', path: '/app/money-manager', icon: <AccountBalanceWallet /> },
   { title: 'Signal Provider', path: '/app/signal-provider', icon: <SignalCellularAlt /> },
   { title: 'Investor Portal', path: '/app/investor', icon: <People /> },
-  
   // Professional Features
   { type: 'divider' },
   { type: 'subheader', title: 'Professional Tools' },
@@ -123,12 +122,10 @@ const menuItems = [
   { title: 'Advanced Trading', path: '/app/advanced-trading', icon: <PrecisionManufacturing /> },
   { title: 'HFT', path: '/app/hft', icon: <Speed /> },
   { title: 'Risk Management', path: '/app/risk', icon: <GppGood /> },
-  { title: 'Strategy Builder', path: '/app/strategy', icon: <Build /> },
   { title: 'Strategy Marketplace', path: '/app/marketplace', icon: <Store /> },
   { title: 'Analytics', path: '/app/analytics', icon: <Assessment /> },
   { title: 'Portfolio Optimizer', path: '/app/portfolio-optimizer', icon: <Tune /> },
   { title: 'Backtesting', path: '/app/backtesting', icon: <History /> },
-  
   // Education
   { type: 'divider' },
   { type: 'subheader', title: 'Education' },

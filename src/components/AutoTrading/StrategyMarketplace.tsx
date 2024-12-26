@@ -28,7 +28,7 @@ import {
   Verified as VerifiedIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 
 interface Strategy {
   id: string;
@@ -128,7 +128,7 @@ const sampleStrategies: Strategy[] = [
 ];
 
 const StrategyMarketplace: React.FC = observer(() => {
-  const { algoTradingStore } = useRootStoreContext();
+  const { algoTradingStore } = useRootStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -456,3 +456,4 @@ const StrategyMarketplace: React.FC = observer(() => {
 });
 
 export default StrategyMarketplace;
+

@@ -12,10 +12,10 @@ import {
   TextField,
   MenuItem,
 } from '@mui/material';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 
 const AlgoTradingWidget: React.FC = observer(() => {
-  const { algoTradingStore } = useRootStoreContext();
+  const { algoTradingStore } = useRootStore();
 
   return (
     <Card>
@@ -103,3 +103,4 @@ const AlgoTradingWidget: React.FC = observer(() => {
 });
 
 export default AlgoTradingWidget;
+

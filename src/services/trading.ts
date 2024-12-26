@@ -1,5 +1,5 @@
-import WebSocketService from './websocket';
-import { api } from './api';
+import WebSocketService from "./websocketService";
+import { api } from "./api";
 
 export enum OrderType {
   MARKET = 'MARKET',
@@ -50,6 +50,7 @@ export interface Position {
 class TradingService {
   private static instance: TradingService;
   private ws = WebSocketService;
+  private isConnected = false;
 
   private constructor() {
     this.setupWebSocketListeners();
@@ -64,32 +65,33 @@ class TradingService {
 
   private setupWebSocketListeners() {
     // Subscribe to order updates
-    this.ws.on('order_update', (order: Order) => {
+    this.ws.subscribe('order_update', (order: Order) => {
       document.dispatchEvent(new CustomEvent('orderUpdate', { detail: order }));
     });
 
     // Subscribe to position updates
-    this.ws.on('position_update', (position: Position) => {
+    this.ws.subscribe('position_update', (position: Position) => {
       document.dispatchEvent(new CustomEvent('positionUpdate', { detail: position }));
     });
 
     // Subscribe to trade executions
-    this.ws.on('trade_executed', (trade: any) => {
+    this.ws.subscribe('trade_executed', (trade: any) => {
       document.dispatchEvent(new CustomEvent('tradeExecuted', { detail: trade }));
     });
 
     // Subscribe to market data
-    this.ws.on('market_data', (data: any) => {
+    this.ws.subscribe('market_data', (data: any) => {
       document.dispatchEvent(new CustomEvent('marketDataUpdate', { detail: data }));
     });
 
     // Handle connection status
-    this.ws.on('connect', () => {
-      document.dispatchEvent(new CustomEvent('wsConnected'));
-    });
-
-    this.ws.on('disconnect', () => {
-      document.dispatchEvent(new CustomEvent('wsDisconnected'));
+    this.ws.subscribeToStatus((status) => {
+      this.isConnected = status === 'connected';
+      if (status === 'connected') {
+        document.dispatchEvent(new CustomEvent('wsConnected'));
+      } else if (status === 'disconnected') {
+        document.dispatchEvent(new CustomEvent('wsDisconnected'));
+      }
     });
   }
 
@@ -194,7 +196,7 @@ class TradingService {
 
   // Check if connected to WebSocket
   public isConnected(): boolean {
-    return this.ws.isConnected();
+    return this.isConnected;
   }
 
   // Force reconnect

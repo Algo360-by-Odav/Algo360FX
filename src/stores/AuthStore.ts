@@ -5,20 +5,14 @@ import { createContext, useContext } from 'react';
 import { User, UserRole, SignupData } from '@/types/user';
 import { RootStore } from './RootStore';
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-}
-
 export class AuthStore {
   user: User | null = null;
-  currentUser: User | null = null;
   loading: boolean = true;
   error: string | null = null;
   verificationSent: boolean = false;
   isAuthenticated: boolean = false;
   isLoading: boolean = false;
+  requireEmailVerification: boolean = true;
   rootStore: RootStore;
 
   constructor(rootStore: RootStore) {
@@ -41,252 +35,160 @@ export class AuthStore {
   }
 
   async checkAuth() {
+    this.setLoading(true);
     try {
-      // For development, always set a default user
-      // TODO: Remove this in production
       if (config.env === 'development') {
-        console.log('Setting development user');
         runInAction(() => {
-          this.currentUser = {
+          this.setUser({
             id: '1',
-            email: 'dev@example.com',
-            firstName: 'Dev',
+            email: 'demo@algo360fx.com',
+            name: 'Demo User',
+            firstName: 'Demo',
             lastName: 'User',
             role: UserRole.ADMIN,
+            isVerified: true,
+            status: 'active',
             preferences: {
-              theme: 'dark',
+              theme: 'light',
               notifications: {
                 email: true,
                 push: true,
-                sms: false
+                sms: false,
               },
               tradingPreferences: {
-                defaultLeverage: 1,
+                defaultLeverage: 100,
                 riskLevel: 'medium',
-                autoTrade: false
+                autoTrade: false,
               },
               displayPreferences: {
                 chartType: 'candlestick',
                 timeframe: '1h',
-                indicators: []
-              }
+                indicators: [],
+              },
             },
             permissions: ['read:all', 'write:all'],
-            isVerified: true,
-            status: 'active'
-          };
-          this.isAuthenticated = true;
-          this.loading = false;
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
         });
-        return;
+      } else {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const response = await api.get('/auth/me');
+          runInAction(() => {
+            this.setUser(response.data);
+          });
+        }
       }
-
-      const token = localStorage.getItem('token');
-      if (!token) {
-        runInAction(() => {
-          this.currentUser = null;
-          this.isAuthenticated = false;
-          this.loading = false;
-        });
-        return;
-      }
-
-      const response = await api.get('/auth/me');
-      runInAction(() => {
-        this.currentUser = response.data;
-        this.isAuthenticated = true;
-        this.loading = false;
-      });
     } catch (error) {
-      runInAction(() => {
-        this.currentUser = null;
-        this.isAuthenticated = false;
-        this.loading = false;
-        this.error = 'Failed to authenticate';
-      });
+      console.error('Auth check failed:', error);
+      this.setUser(null);
+    } finally {
+      this.setLoading(false);
     }
   }
 
   async login(email: string, password: string) {
     this.setLoading(true);
     this.setError(null);
-
     try {
-      // In development mode, allow any login
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: Auto-login');
-        const mockUser = {
-          id: '1',
-          email: email,
-          firstName: 'Dev',
-          lastName: 'User',
-          role: 'user',
-          isVerified: true,
-          status: 'active',
-          preferences: {
-            theme: 'dark',
-            notifications: {
-              email: true,
-              push: true,
-              sms: false
-            },
-            tradingPreferences: {
-              defaultLeverage: 10,
-              riskLevel: 'medium',
-              autoTrade: false
-            }
-          }
-        };
-        runInAction(() => {
-          this.currentUser = mockUser;
-          this.isAuthenticated = true;
-          this.error = null;
-        });
-        return true;
-      }
-
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       runInAction(() => {
-        this.currentUser = user;
-        this.isAuthenticated = true;
-        this.error = null;
+        this.setUser(user);
       });
-      return true;
     } catch (error) {
-      runInAction(() => {
-        this.error = 'Invalid credentials';
-        this.isAuthenticated = false;
-      });
-      return false;
+      this.setError('Invalid email or password');
+      throw error;
     } finally {
       this.setLoading(false);
     }
   }
 
-  async signup(data: SignupData) {
-    try {
-      const response = await api.post('/auth/signup', data);
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      runInAction(() => {
-        this.currentUser = user;
-        this.error = null;
-        this.isAuthenticated = true;
-      });
-      return true;
-    } catch (error) {
-      runInAction(() => {
-        this.error = 'Failed to create account';
-      });
-      return false;
-    }
-  }
-
   async register(data: SignupData) {
+    this.setLoading(true);
+    this.setError(null);
     try {
       const response = await api.post('/auth/register', data);
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       runInAction(() => {
-        this.currentUser = user;
-        this.error = null;
-        this.isAuthenticated = true;
-      });
-      return true;
-    } catch (error) {
-      runInAction(() => {
-        this.error = 'Failed to create account';
-      });
-      return false;
-    }
-  }
-
-  async sendVerificationCode(email: string) {
-    try {
-      await api.post('/auth/send-verification', { email });
-      runInAction(() => {
+        this.setUser(user);
         this.verificationSent = true;
-        this.error = null;
       });
-      return true;
     } catch (error) {
-      runInAction(() => {
-        this.error = 'Failed to send verification code';
-      });
-      return false;
-    }
-  }
-
-  async verifyCode(email: string, code: string) {
-    try {
-      await api.post('/auth/verify-code', { email, code });
-      runInAction(() => {
-        this.error = null;
-      });
-      return true;
-    } catch (error) {
-      runInAction(() => {
-        this.error = 'Invalid verification code';
-      });
-      return false;
-    }
-  }
-
-  async socialSignup(provider: 'google' | 'github') {
-    try {
-      const response = await api.post(`/auth/${provider}/signup`);
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      runInAction(() => {
-        this.currentUser = user;
-        this.error = null;
-        this.isAuthenticated = true;
-      });
-      return true;
-    } catch (error) {
-      runInAction(() => {
-        this.error = 'Social signup failed';
-      });
-      return false;
-    }
-  }
-
-  async verifyEmail(email: string) {
-    try {
-      await api.post('/auth/verify-email', { email });
-      runInAction(() => {
-        this.verificationSent = true;
-        this.error = null;
-      });
-      return true;
-    } catch (error) {
-      runInAction(() => {
-        this.error = 'Email verification failed';
-      });
-      return false;
+      this.setError('Registration failed');
+      throw error;
+    } finally {
+      this.setLoading(false);
     }
   }
 
   async logout() {
     localStorage.removeItem('token');
-    runInAction(() => {
-      this.currentUser = null;
-      this.isAuthenticated = false;
-    });
+    this.setUser(null);
+    this.rootStore.resetStores();
   }
 
-  clearError() {
-    this.error = null;
+  async verifyEmail(token: string) {
+    this.setLoading(true);
+    this.setError(null);
+    try {
+      const response = await api.post('/auth/verify-email', { token });
+      runInAction(() => {
+        if (this.user) {
+          this.user.isVerified = true;
+        }
+      });
+    } catch (error) {
+      this.setError('Email verification failed');
+      throw error;
+    } finally {
+      this.setLoading(false);
+    }
   }
 
-  hasPermission(permission: string): boolean {
-    return this.currentUser?.permissions?.includes(permission) || false;
+  async resendVerificationEmail() {
+    this.setLoading(true);
+    this.setError(null);
+    try {
+      await api.post('/auth/resend-verification');
+      runInAction(() => {
+        this.verificationSent = true;
+      });
+    } catch (error) {
+      this.setError('Failed to resend verification email');
+      throw error;
+    } finally {
+      this.setLoading(false);
+    }
   }
 
-  hasPermissions(permissions: string[]): boolean {
-    return permissions.every(permission => this.hasPermission(permission));
+  async requestPasswordReset(email: string) {
+    this.setLoading(true);
+    this.setError(null);
+    try {
+      await api.post('/auth/forgot-password', { email });
+    } catch (error) {
+      this.setError('Failed to send reset email');
+      throw error;
+    } finally {
+      this.setLoading(false);
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    this.setLoading(true);
+    this.setError(null);
+    try {
+      await api.post('/auth/reset-password', { token, newPassword });
+    } catch (error) {
+      this.setError('Failed to reset password');
+      throw error;
+    } finally {
+      this.setLoading(false);
+    }
   }
 }
 
@@ -294,7 +196,7 @@ const AuthContext = createContext<AuthStore | null>(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === null) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

@@ -49,6 +49,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import { styled } from '@mui/material/styles';
 
 interface RiskMetrics {
   accountBalance: number;
@@ -210,264 +211,165 @@ const RiskMonitoringDashboard: React.FC = observer(() => {
         </Box>
       </Box>
 
-      {loading && !metrics ? (
-        <Box display="flex" justifyContent="center" p={3}>
-          <CircularProgress />
-        </Box>
-      ) : metrics ? (
-        <Grid container spacing={3}>
-          {/* Account Overview */}
-          <Grid item xs={12} lg={8}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Account Overview
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Card>
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        Account Balance
-                      </Typography>
-                      <Typography variant="h6">
-                        {formatCurrency(metrics.accountBalance)}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Card>
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        Equity
-                      </Typography>
-                      <Typography variant="h6">
-                        {formatCurrency(metrics.equity)}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Card>
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        Margin Level
-                      </Typography>
-                      <Typography variant="h6">
-                        {metrics.marginLevel.toFixed(2)}%
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Card>
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        Daily P&L
-                      </Typography>
-                      <Typography
-                        variant="h6"
-                        color={metrics.dailyPnL >= 0 ? 'success.main' : 'error.main'}
-                      >
-                        {formatCurrency(metrics.dailyPnL)}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
+      {loading && <LinearProgress />}
 
-          {/* Risk Score */}
-          <Grid item xs={12} lg={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Risk Score
-              </Typography>
-              <Box display="flex" alignItems="center" gap={2}>
-                <Box position="relative" display="inline-flex">
-                  <CircularProgress
-                    variant="determinate"
-                    value={metrics.riskScore}
-                    size={100}
-                    thickness={8}
-                    sx={{ color: getRiskColor(metrics.riskScore) }}
-                  />
-                  <Box
-                    position="absolute"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    top={0}
-                    left={0}
-                    bottom={0}
-                    right={0}
-                  >
-                    <Typography
-                      variant="h4"
-                      component="div"
-                      color={getRiskColor(metrics.riskScore)}
-                    >
-                      {metrics.riskScore}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="textSecondary">
-                    Risk Level
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    color={getRiskColor(metrics.riskScore)}
-                  >
-                    {metrics.riskScore >= 80
-                      ? 'High Risk'
-                      : metrics.riskScore >= 50
-                      ? 'Medium Risk'
-                      : 'Low Risk'}
+      <Grid container spacing={3}>
+        {/* Account Overview */}
+        <Grid item xs={12} md={6}>
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Account Overview</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography color="textSecondary">Balance</Typography>
+                <Typography variant="h6">{metrics ? formatCurrency(metrics.accountBalance) : '-'}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography color="textSecondary">Equity</Typography>
+                <Typography variant="h6">{metrics ? formatCurrency(metrics.equity) : '-'}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography color="textSecondary">Margin</Typography>
+                <Typography variant="h6">{metrics ? formatCurrency(metrics.margin) : '-'}</Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography color="textSecondary">Free Margin</Typography>
+                <Typography variant="h6">{metrics ? formatCurrency(metrics.freeMargin) : '-'}</Typography>
+              </Grid>
+            </Grid>
+          </Paper>
+        </Grid>
+
+        {/* Risk Score */}
+        <Grid item xs={12} md={6}>
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Risk Score</Typography>
+            <Box display="flex" alignItems="center" justifyContent="center" p={2}>
+              <Box position="relative" display="inline-flex">
+                <CircularProgress
+                  variant="determinate"
+                  value={metrics?.riskScore || 0}
+                  size={120}
+                  thickness={8}
+                  sx={{ color: metrics ? getRiskColor(metrics.riskScore) : 'grey.300' }}
+                />
+                <Box
+                  position="absolute"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  top={0}
+                  left={0}
+                  bottom={0}
+                  right={0}
+                >
+                  <Typography variant="h4" component="div">
+                    {metrics?.riskScore || 0}%
                   </Typography>
                 </Box>
               </Box>
-            </Paper>
-          </Grid>
+            </Box>
+          </Paper>
+        </Grid>
 
-          {/* Open Positions */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Open Positions
-              </Typography>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Symbol</TableCell>
-                      <TableCell>Type</TableCell>
-                      <TableCell>Size</TableCell>
-                      <TableCell>Entry Price</TableCell>
-                      <TableCell>Current Price</TableCell>
-                      <TableCell>P&L</TableCell>
-                      <TableCell>Risk Level</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {metrics.openPositions.map((position) => (
-                      <TableRow key={position.symbol}>
-                        <TableCell>{position.symbol}</TableCell>
-                        <TableCell>
-                          {position.type === 'LONG' ? (
-                            <TrendingUp color="success" />
-                          ) : (
-                            <TrendingDown color="error" />
-                          )}
-                          {position.type}
-                        </TableCell>
-                        <TableCell>{position.size}</TableCell>
-                        <TableCell>{position.entryPrice}</TableCell>
-                        <TableCell>{position.currentPrice}</TableCell>
-                        <TableCell
-                          sx={{
-                            color:
-                              position.pnl >= 0 ? 'success.main' : 'error.main',
-                          }}
-                        >
-                          {formatCurrency(position.pnl)}
-                        </TableCell>
-                        <TableCell>
+        {/* Open Positions */}
+        <Grid item xs={12}>
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Open Positions</Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Symbol</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Size</TableCell>
+                    <TableCell>Entry Price</TableCell>
+                    <TableCell>Current Price</TableCell>
+                    <TableCell>P/L</TableCell>
+                    <TableCell>Risk Level</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {metrics?.openPositions.map((position, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{position.symbol}</TableCell>
+                      <TableCell>{position.type}</TableCell>
+                      <TableCell>{position.size}</TableCell>
+                      <TableCell>{position.entryPrice}</TableCell>
+                      <TableCell>{position.currentPrice}</TableCell>
+                      <TableCell sx={{ color: position.pnl >= 0 ? 'success.main' : 'error.main' }}>
+                        {formatCurrency(position.pnl)}
+                      </TableCell>
+                      <TableCell>
+                        <Box display="flex" alignItems="center">
                           <LinearProgress
                             variant="determinate"
                             value={position.risk * 100}
                             sx={{
-                              height: 8,
-                              borderRadius: 4,
-                              bgcolor: 'background.paper',
+                              width: 100,
+                              mr: 1,
+                              backgroundColor: 'grey.200',
                               '& .MuiLinearProgress-bar': {
-                                bgcolor: getRiskColor(position.risk * 100),
+                                backgroundColor: getRiskColor(position.risk * 100),
                               },
                             }}
                           />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          </Grid>
-
-          {/* Value at Risk Chart */}
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Historical Value at Risk (VaR)
-              </Typography>
-              <Box height={300}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={metrics.historicalVaR}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <RechartsTooltip />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke="#1976d2"
-                      fill="#1976d2"
-                      fillOpacity={0.2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Risk Alerts */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Risk Alerts
-              </Typography>
-              <Box display="flex" flexDirection="column" gap={2}>
-                {metrics.alerts.map((alert) => (
-                  <Alert
-                    key={alert.id}
-                    severity={alert.type}
-                    icon={
-                      alert.type === 'error' ? (
-                        <Error />
-                      ) : alert.type === 'warning' ? (
-                        <Warning />
-                      ) : (
-                        <CheckCircle />
-                      )
-                    }
-                  >
-                    <AlertTitle>
-                      {alert.type.charAt(0).toUpperCase() + alert.type.slice(1)}
-                    </AlertTitle>
-                    {alert.message}
-                    <Typography variant="caption" display="block">
-                      {alert.timestamp.toLocaleTimeString()}
-                    </Typography>
-                  </Alert>
-                ))}
-              </Box>
-            </Paper>
-          </Grid>
+                          <Typography variant="body2">
+                            {(position.risk * 100).toFixed(1)}%
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
         </Grid>
-      ) : (
-        <Typography color="textSecondary" align="center">
-          No risk metrics available
-        </Typography>
-      )}
 
-      {lastUpdate && (
-        <Box mt={2} display="flex" justifyContent="flex-end">
-          <Typography variant="caption" color="textSecondary">
-            Last updated: {lastUpdate.toLocaleTimeString()}
-          </Typography>
-        </Box>
-      )}
+        {/* Alerts */}
+        <Grid item xs={12}>
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Risk Alerts</Typography>
+            {metrics?.alerts.map((alert) => (
+              <Alert
+                key={alert.id}
+                severity={alert.type}
+                sx={{ mb: 1 }}
+              >
+                <AlertTitle>{alert.type.charAt(0).toUpperCase() + alert.type.slice(1)}</AlertTitle>
+                {alert.message}
+                <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                  {alert.timestamp.toLocaleString()}
+                </Typography>
+              </Alert>
+            ))}
+          </Paper>
+        </Grid>
+
+        {/* Historical VaR Chart */}
+        <Grid item xs={12}>
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Historical Value at Risk (VaR)</Typography>
+            <Box height={300}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={metrics?.historicalVaR || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <RechartsTooltip />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#8884d8"
+                    fill="#8884d8"
+                    fillOpacity={0.3}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
     </Box>
   );
 });

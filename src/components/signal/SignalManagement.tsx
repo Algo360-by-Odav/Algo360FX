@@ -12,12 +12,12 @@ import {
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 import DataTable, { Column } from '../tables/DataTable';
 import { Signal } from '../../stores/SignalProviderStore';
 
 const SignalManagement: React.FC = observer(() => {
-  const { signalStore } = useRootStoreContext();
+  const { signalStore } = useRootStore();
   const [openDialog, setOpenDialog] = useState(false);
   const [newSignal, setNewSignal] = useState({
     pair: '',
@@ -239,3 +239,4 @@ const SignalManagement: React.FC = observer(() => {
 });
 
 export default SignalManagement;
+

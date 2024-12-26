@@ -26,7 +26,7 @@ import {
   Add as AddIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '@/stores/RootStoreContext';
+import { useRootStore } from '@/hooks/useRootStore';
 
 interface Signal {
   id: string;
@@ -41,7 +41,7 @@ interface Signal {
 }
 
 const SignalManagement: React.FC = observer(() => {
-  const { signalStore } = useRootStoreContext();
+  const { signalStore } = useRootStore();
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null);
 
@@ -249,3 +249,5 @@ const SignalManagement: React.FC = observer(() => {
 });
 
 export default SignalManagement;
+
+

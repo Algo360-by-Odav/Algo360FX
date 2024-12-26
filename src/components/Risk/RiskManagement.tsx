@@ -19,7 +19,7 @@ import {
   Security as SecurityIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 
 interface RiskParameters {
   maxDrawdown: number;
@@ -32,7 +32,7 @@ interface RiskParameters {
 }
 
 const RiskManagement: React.FC = observer(() => {
-  const { tradingStore } = useRootStoreContext();
+  const { tradingStore } = useRootStore();
   const [riskParams, setRiskParams] = useState<RiskParameters>({
     maxDrawdown: 10,
     stopLossPercent: 2,
@@ -250,3 +250,4 @@ const RiskManagement: React.FC = observer(() => {
 });
 
 export default RiskManagement;
+

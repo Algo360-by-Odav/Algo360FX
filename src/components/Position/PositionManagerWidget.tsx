@@ -15,12 +15,12 @@ import {
 } from '@mui/material';
 import { Close, TrendingUp, TrendingDown } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '@/stores/RootStoreContext';
+import { useRootStore } from '@/hooks/useRootStore';
 import NumberTicker from '@components/Common/NumberTicker';
 
 const PositionManagerWidget: React.FC = observer(() => {
   const theme = useTheme();
-  const { tradingStore } = useRootStoreContext();
+  const { tradingStore } = useRootStore();
 
   const handleClosePosition = (symbol: string) => {
     tradingStore.closePosition(symbol);
@@ -159,3 +159,5 @@ const PositionManagerWidget: React.FC = observer(() => {
 });
 
 export default PositionManagerWidget;
+
+

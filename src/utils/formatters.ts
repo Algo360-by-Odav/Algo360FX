@@ -2,16 +2,13 @@
  * Format a number as currency with specified currency symbol and decimal places
  */
 export const formatCurrency = (
-  value: number,
-  currency: string = 'USD',
-  decimals: number = 2
+  amount: number,
+  currency: string = 'USD'
 ): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(value);
+  }).format(amount);
 };
 
 /**
@@ -19,33 +16,33 @@ export const formatCurrency = (
  */
 export const formatPercentage = (
   value: number,
-  decimals: number = 2,
-  includeSign: boolean = false
+  decimals: number = 2
 ): string => {
-  const formatted = (value * 100).toFixed(decimals) + '%';
-  return includeSign && value > 0 ? `+${formatted}` : formatted;
+  return `${(value * 100).toFixed(decimals)}%`;
 };
 
 /**
  * Format a number with commas as thousands separators
  */
 export const formatNumber = (
-  value: number,
-  decimals: number = 0
+  num: number,
+  decimals: number = 2
 ): string => {
-  return new Intl.NumberFormat('en-US', {
+  return num.toLocaleString('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  }).format(value);
+  });
 };
 
 /**
  * Format a date to a string with specified format
  */
 export const formatDate = (
-  date: Date,
+  date: Date | string,
   format: 'short' | 'medium' | 'long' = 'medium'
 ): string => {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  
   const options: Intl.DateTimeFormatOptions = {
     short: {
       year: 'numeric',
@@ -69,7 +66,7 @@ export const formatDate = (
     },
   }[format];
 
-  return new Intl.DateTimeFormat('en-US', options).format(date);
+  return new Intl.DateTimeFormat('en-US', options).format(d);
 };
 
 /**
@@ -106,13 +103,14 @@ export const formatDuration = (milliseconds: number): string => {
 
   if (days > 0) {
     return `${days}d ${hours % 24}h`;
-  } else if (hours > 0) {
-    return `${hours}h ${minutes % 60}m`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds % 60}s`;
-  } else {
-    return `${seconds}s`;
   }
+  if (hours > 0) {
+    return `${hours}h ${minutes % 60}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds % 60}s`;
+  }
+  return `${seconds}s`;
 };
 
 /**

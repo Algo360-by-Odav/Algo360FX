@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
 import ErrorBoundary from '@components/error/ErrorBoundary';
-import { useRootStoreContext } from '@/stores/RootStoreContext';
+import { useRootStore } from '@/hooks/useRootStore';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -50,7 +50,7 @@ const TabPanel = (props: TabPanelProps) => {
 };
 
 const MoneyManagerPortal: React.FC = observer(() => {
-  const { portfolioStore } = useRootStoreContext();
+  const { portfolioStore } = useRootStore();
   const [tabValue, setTabValue] = useState(0);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -300,3 +300,5 @@ const MoneyManagerPortal: React.FC = observer(() => {
 });
 
 export default MoneyManagerPortal;
+
+

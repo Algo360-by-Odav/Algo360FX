@@ -20,7 +20,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 
 interface MT5Config {
   server: string;
@@ -29,7 +29,7 @@ interface MT5Config {
 }
 
 const MT5ConnectionWidget: React.FC = observer(() => {
-  const { algoTradingStore } = useRootStoreContext();
+  const { algoTradingStore } = useRootStore();
   const [isConnected, setIsConnected] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [config, setConfig] = useState<MT5Config>({
@@ -169,3 +169,4 @@ const MT5ConnectionWidget: React.FC = observer(() => {
 });
 
 export default MT5ConnectionWidget;
+

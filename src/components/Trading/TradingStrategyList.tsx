@@ -14,10 +14,10 @@ import {
   Paper,
   Chip,
 } from '@mui/material';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 
 const TradingStrategyList: React.FC = observer(() => {
-  const { algoTradingStore } = useRootStoreContext();
+  const { algoTradingStore } = useRootStore();
 
   // Sample strategies data
   const strategies = [
@@ -95,3 +95,4 @@ const TradingStrategyList: React.FC = observer(() => {
 });
 
 export default TradingStrategyList;
+

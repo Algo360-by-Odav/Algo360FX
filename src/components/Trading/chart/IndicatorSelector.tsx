@@ -22,16 +22,15 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  ShowChart as ShowChartIcon,
+  ShowChart as ChartIcon,
   Timeline as TimelineIcon,
-  Functions as FunctionsIcon,
+  Functions as IndicatorIcon,
   TrendingUp as TrendingUpIcon,
-  Timeline as TimelineIcon,
-  ShowChart as TrendIcon,
-  Functions as MathIcon,
+  Analytics as AnalyticsIcon,
+  Calculate as CalculateIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useStore } from '../../../hooks/useStore';
+import { useRootStore } from '@/stores/RootStoreContext';
 
 interface IndicatorParams {
   type: string;
@@ -57,13 +56,13 @@ const indicators = [
     type: 'rsi',
     name: 'RSI',
     description: 'Relative Strength Index',
-    icon: <TrendIcon />,
+    icon: <IndicatorIcon />,
   },
   {
     type: 'macd',
     name: 'MACD',
     description: 'Moving Average Convergence Divergence',
-    icon: <MathIcon />,
+    icon: <CalculateIcon />,
   },
 ];
 
@@ -109,7 +108,7 @@ const IndicatorSelectorDialog: React.FC<IndicatorSelectorProps> = ({
 };
 
 const IndicatorSelector: React.FC = observer(() => {
-  const { marketStore } = useStore();
+  const { marketStore } = useRootStore();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [selectedIndicator, setSelectedIndicator] = React.useState<string>('');
@@ -173,13 +172,13 @@ const IndicatorSelector: React.FC = observer(() => {
         </MenuItem>
         <MenuItem onClick={() => handleIndicatorSelect('ema')}>
           <ListItemIcon>
-            <ShowChartIcon fontSize="small" />
+            <ChartIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Exponential Moving Average</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => handleIndicatorSelect('rsi')}>
           <ListItemIcon>
-            <FunctionsIcon fontSize="small" />
+            <IndicatorIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Relative Strength Index</ListItemText>
         </MenuItem>
@@ -191,7 +190,7 @@ const IndicatorSelector: React.FC = observer(() => {
         </MenuItem>
         <MenuItem onClick={() => handleIndicatorSelect('bollinger')}>
           <ListItemIcon>
-            <ShowChartIcon fontSize="small" />
+            <ChartIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Bollinger Bands</ListItemText>
         </MenuItem>

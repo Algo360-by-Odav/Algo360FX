@@ -16,6 +16,7 @@ import { OptimizationStore } from './OptimizationStore';
 import { SignalProviderStore } from './SignalProviderStore';
 import { InvestmentStore } from './InvestmentStore';
 import { StockMarketStore } from './StockMarketStore';
+import { MoneyManagerStore } from './MoneyManagerStore';
 
 // Configure MobX
 configure({
@@ -47,6 +48,7 @@ export class RootStore {
   public signalProviderStore: SignalProviderStore;
   public investmentStore: InvestmentStore;
   public stockMarketStore: StockMarketStore;
+  public moneyManagerStore: MoneyManagerStore;
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -79,6 +81,9 @@ export class RootStore {
     // Initialize signal and investment stores
     this.signalProviderStore = new SignalProviderStore(this);
     this.investmentStore = new InvestmentStore(this);
+
+    // Initialize money manager store
+    this.moneyManagerStore = new MoneyManagerStore(this);
 
     // Initialize default data for development
     if (process.env.NODE_ENV === 'development') {

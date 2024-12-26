@@ -23,7 +23,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
 import { PerformanceMetrics, TimeFrame } from '../../types/trading';
 
@@ -64,7 +64,7 @@ const MetricCard: React.FC<{
 
 const PerformanceAnalyticsWidget: React.FC = observer(() => {
   const theme = useTheme();
-  const { analyticsStore } = useRootStoreContext();
+  const { analyticsStore } = useRootStore();
   const [timeframe, setTimeframe] = useState<TimeFrame>('MONTH');
   const [isLoading, setIsLoading] = useState(false);
   const [performanceData, setPerformanceData] = useState<PerformanceMetrics>({
@@ -204,3 +204,4 @@ const PerformanceAnalyticsWidget: React.FC = observer(() => {
 });
 
 export default PerformanceAnalyticsWidget;
+

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Box, useTheme } from '@mui/material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 
 declare global {
   interface Window {
@@ -12,7 +12,7 @@ declare global {
 const TradingViewChart: React.FC = observer(() => {
   const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { tradingStore } = useRootStoreContext();
+  const { tradingStore } = useRootStore();
 
   useEffect(() => {
     console.log('TradingView chart mounting...'); 
@@ -109,3 +109,4 @@ const TradingViewChart: React.FC = observer(() => {
 });
 
 export default TradingViewChart;
+

@@ -25,7 +25,7 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 
 interface AutomationSettings {
   enabled: boolean;
@@ -49,7 +49,7 @@ interface TradingStrategy {
 }
 
 const AutomatedTrading: React.FC = observer(() => {
-  const { tradingStore } = useRootStoreContext();
+  const { tradingStore } = useRootStore();
   const [settings, setSettings] = useState<AutomationSettings>({
     enabled: false,
     maxDailyTrades: 10,
@@ -341,3 +341,4 @@ const AutomatedTrading: React.FC = observer(() => {
 });
 
 export default AutomatedTrading;
+

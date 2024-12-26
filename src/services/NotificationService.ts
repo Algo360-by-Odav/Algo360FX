@@ -30,11 +30,31 @@ class NotificationService {
     return NotificationService.instance;
   }
 
-  async getNotifications(page: number = 1, limit: number = 20): Promise<{ notifications: Notification[], total: number }> {
+  public async getNotifications(): Promise<Notification[]> {
+    if (import.meta.env.DEV) {
+      // Return mock notifications in development
+      return [
+        {
+          id: '1',
+          type: 'info',
+          title: 'Market Update',
+          message: 'EURUSD has reached your target price.',
+          timestamp: new Date(),
+          read: false
+        },
+        {
+          id: '2',
+          type: 'success',
+          title: 'Trade Executed',
+          message: 'Buy order for GBPUSD executed successfully.',
+          timestamp: new Date(),
+          read: true
+        }
+      ];
+    }
+
     try {
-      const response = await axios.get(`/notifications`, {
-        params: { page, limit }
-      });
+      const response = await axios.get('/notifications');
       return response.data;
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -42,9 +62,20 @@ class NotificationService {
     }
   }
 
-  async getPreferences(): Promise<NotificationPreferences> {
+  public async getPreferences(): Promise<NotificationPreferences> {
+    if (import.meta.env.DEV) {
+      // Return mock preferences in development
+      return {
+        emailNotifications: true,
+        pushNotifications: true,
+        tradeAlerts: true,
+        marketAlerts: true,
+        systemAlerts: true
+      };
+    }
+
     try {
-      const response = await axios.get(`/notifications/preferences`);
+      const response = await axios.get('/notifications/preferences');
       return response.data;
     } catch (error) {
       console.error('Error fetching notification preferences:', error);
@@ -52,17 +83,28 @@ class NotificationService {
     }
   }
 
-  async updatePreferences(preferences: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+  public async updatePreferences(preferences: NotificationPreferences): Promise<void> {
+    if (import.meta.env.DEV) {
+      // Mock successful update in development
+      console.log('Updated notification preferences:', preferences);
+      return;
+    }
+
     try {
-      const response = await axios.put(`/notifications/preferences`, preferences);
-      return response.data;
+      await axios.put('/notifications/preferences', preferences);
     } catch (error) {
       console.error('Error updating notification preferences:', error);
       throw error;
     }
   }
 
-  async markAsRead(notificationId: string): Promise<void> {
+  public async markAsRead(notificationId: string): Promise<void> {
+    if (import.meta.env.DEV) {
+      // Mock successful update in development
+      console.log('Marked notification as read:', notificationId);
+      return;
+    }
+
     try {
       await axios.put(`/notifications/${notificationId}/read`);
     } catch (error) {

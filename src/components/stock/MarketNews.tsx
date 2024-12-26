@@ -24,7 +24,7 @@ import {
   BookmarkBorder as BookmarkBorderIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 
 interface NewsItem {
   id: string;
@@ -40,7 +40,7 @@ interface NewsItem {
 }
 
 const MarketNews: React.FC = observer(() => {
-  const { stockMarketStore } = useRootStoreContext();
+  const { stockMarketStore } = useRootStore();
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
 
@@ -269,3 +269,4 @@ const MarketNews: React.FC = observer(() => {
 });
 
 export default MarketNews;
+

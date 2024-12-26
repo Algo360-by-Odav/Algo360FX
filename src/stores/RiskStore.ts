@@ -1,254 +1,132 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { RootStore } from './RootStore';
-import {
-  PortfolioRiskMetrics,
-  RiskAlert,
-  CurrencyRisk,
-  RiskLimits,
-  RiskMonitorConfig,
-} from '../risk/types';
-import {
-  calculateVolatility,
-  calculateHistoricalVaR,
-  calculateExpectedShortfall,
-  calculateBeta,
-  calculateDrawdownMetrics,
-  calculateCorrelationMatrix,
-  calculateEWMA,
-} from '@/utils/statistics';
-import { Matrix, createMatrix } from '@/utils/matrix';
+
+interface RiskMetrics {
+  totalExposure: number;
+  marginUsage: number;
+  exposureBySymbol: Record<string, number>;
+  exposureByBase: Record<string, number>;
+  riskScore: number;
+}
 
 export class RiskStore {
-  private monitoringInterval: NodeJS.Timer | null = null;
-  metrics: PortfolioRiskMetrics = {
-    volatility: 0,
-    valueAtRisk: 0,
-    expectedShortfall: 0,
-    beta: 0,
-    correlations: [],
-    drawdown: {
-      current: 0,
-      maximum: 0,
-      duration: 0,
-    },
-  };
-
-  currencyRisk: CurrencyRisk = {
+  private rootStore: RootStore;
+  private updateInterval: NodeJS.Timeout | null = null;
+  public metrics: RiskMetrics = {
+    totalExposure: 0,
+    marginUsage: 0,
+    exposureBySymbol: {},
     exposureByBase: {},
-    hedgeRatios: {},
-    correlationMatrix: [],
-    volatilityImpact: 0,
+    riskScore: 0,
   };
 
-  private returns: number[] = [];
-  private alerts: RiskAlert[] = [];
-  private historicalMetrics: PortfolioRiskMetrics[] = [];
-
-  constructor(private rootStore: RootStore) {
+  constructor(rootStore: RootStore) {
+    this.rootStore = rootStore;
     makeAutoObservable(this);
   }
 
-  startMonitoring = () => {
-    if (!this.monitoringInterval) {
-      this.refreshMetrics();
-      this.monitoringInterval = setInterval(this.refreshMetrics, 5000); // Update every 5 seconds
+  startMonitoring() {
+    if (!this.updateInterval) {
+      this.updateInterval = setInterval(() => this.updateRiskMetrics(), 60000);
+      this.updateRiskMetrics();
     }
-  };
+  }
 
-  stopMonitoring = () => {
-    if (this.monitoringInterval) {
-      clearInterval(this.monitoringInterval);
-      this.monitoringInterval = null;
+  stopMonitoring() {
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
     }
-  };
+  }
 
-  refreshMetrics = async () => {
+  private async updateRiskMetrics() {
     try {
-      // Get latest portfolio data
-      const positions = this.rootStore.tradeStore.positions;
-      const balance = this.rootStore.tradeStore.balance;
-      const equity = this.rootStore.tradeStore.equity;
+      const { tradeStore } = this.rootStore;
+      const positions = tradeStore.positions || [];
+      const balance = tradeStore.balance || 0;
+      const equity = tradeStore.equity || 0;
 
-      // Calculate returns
-      const newReturn = (equity - balance) / balance;
-      this.returns.push(newReturn);
-      if (this.returns.length > 252) { // Keep 1 year of daily returns
-        this.returns.shift();
-      }
+      const exposureBySymbol: Record<string, number> = {};
+      const exposureByBase: Record<string, number> = {};
 
-      // Calculate portfolio metrics
-      const portfolioMetrics = await this.calculatePortfolioMetrics();
-      const currencyRiskData = await this.calculateCurrencyRisk();
+      // Calculate exposures
+      positions.forEach(position => {
+        const exposure = position.size * position.price;
+        exposureBySymbol[position.symbol] = (exposureBySymbol[position.symbol] || 0) + exposure;
+        
+        const baseSymbol = position.symbol.substring(0, 3);
+        exposureByBase[baseSymbol] = (exposureByBase[baseSymbol] || 0) + exposure;
+      });
+
+      const totalExposure = Object.values(exposureBySymbol).reduce((sum, val) => sum + val, 0);
+      const marginUsage = balance > 0 ? (totalExposure / balance) * 100 : 0;
+
+      // Calculate risk score (0-100)
+      const riskScore = this.calculateRiskScore({
+        positions,
+        totalExposure,
+        marginUsage,
+        balance,
+        equity,
+      });
 
       runInAction(() => {
-        this.metrics = portfolioMetrics;
-        this.currencyRisk = currencyRiskData;
-        this.historicalMetrics.push(portfolioMetrics);
-        
-        // Keep last 24 hours of data (assuming 5-second updates)
-        if (this.historicalMetrics.length > 17280) {
-          this.historicalMetrics.shift();
-        }
-
-        this.checkAlerts();
+        this.metrics = {
+          totalExposure,
+          marginUsage,
+          exposureBySymbol,
+          exposureByBase,
+          riskScore,
+        };
       });
     } catch (error) {
-      console.error('Error refreshing risk metrics:', error);
+      console.error('Error updating risk metrics:', error);
     }
-  };
+  }
 
-  private calculatePortfolioMetrics = async (): Promise<PortfolioRiskMetrics> => {
-    const positions = this.rootStore.tradeStore.positions;
-    const balance = this.rootStore.tradeStore.balance;
-    const marketReturns = this.rootStore.marketStore.getMarketReturns();
-
-    // Calculate volatility using EWMA for more responsive estimates
-    const volatility = calculateVolatility(calculateEWMA(this.returns, 0.94));
+  private calculateRiskScore(params: {
+    positions: any[];
+    totalExposure: number;
+    marginUsage: number;
+    balance: number;
+    equity: number;
+  }): number {
+    const { positions, totalExposure, marginUsage, balance, equity } = params;
     
-    // Calculate Value at Risk and Expected Shortfall
-    const valueAtRisk = calculateHistoricalVaR(this.returns, 0.95, balance);
-    const expectedShortfall = calculateExpectedShortfall(this.returns, 0.95, balance);
-    
-    // Calculate beta against market returns
-    const beta = calculateBeta(this.returns, marketReturns);
-    
-    // Calculate drawdown metrics
-    const drawdownMetrics = calculateDrawdownMetrics(this.returns);
-    
-    // Calculate position correlations
-    const positionReturns = positions.map(p => p.returns);
-    const correlations = calculateCorrelationMatrix(positionReturns);
-
-    return {
-      volatility,
-      valueAtRisk,
-      expectedShortfall,
-      beta,
-      correlations,
-      drawdown: {
-        current: drawdownMetrics.currentDrawdown,
-        maximum: drawdownMetrics.maxDrawdown,
-        duration: drawdownMetrics.duration,
-      },
+    // Weight factors for different risk components
+    const weights = {
+      positionCount: 0.2,
+      exposure: 0.3,
+      marginUsage: 0.3,
+      equityRatio: 0.2,
     };
-  };
 
-  private calculateCurrencyRisk = async (): Promise<CurrencyRisk> => {
-    const positions = this.rootStore.tradeStore.positions;
-    const currencies = [...new Set(positions.map(p => p.symbol.split('/')[0]))];
-    
-    // Calculate exposure by base currency
-    const exposureByBase = currencies.reduce((acc, curr) => {
-      const exposure = positions
-        .filter(p => p.symbol.startsWith(curr + '/'))
-        .reduce((sum, p) => sum + Math.abs(p.notionalValue), 0);
-      return { ...acc, [curr]: exposure };
-    }, {});
+    // Position count risk (more positions = higher risk)
+    const maxPositions = 10;
+    const positionRisk = Math.min((positions.length / maxPositions) * 100, 100);
 
-    // Calculate currency correlations
-    const currencyReturns = currencies.map(curr =>
-      positions
-        .filter(p => p.symbol.startsWith(curr + '/'))
-        .map(p => p.returns)
-        .flat()
-    );
-    const correlationMatrix = calculateCorrelationMatrix(currencyReturns);
+    // Exposure risk (higher exposure relative to balance = higher risk)
+    const maxExposureRatio = 5; // 500% of balance
+    const exposureRisk = Math.min((totalExposure / (balance * maxExposureRatio)) * 100, 100);
 
-    // Calculate hedge ratios based on exposures and correlations
-    const hedgeRatios = currencies.reduce((acc, curr) => {
-      const exposure = exposureByBase[curr] || 0;
-      const totalExposure = Object.values(exposureByBase).reduce((sum: number, val: number) => sum + val, 0);
-      const hedgeRatio = totalExposure > 0 ? exposure / totalExposure : 0;
-      return { ...acc, [curr]: hedgeRatio };
-    }, {});
+    // Margin usage risk
+    const marginRisk = Math.min(marginUsage, 100);
 
-    // Calculate volatility impact
-    const volatilityImpact = calculateVolatility(
-      Object.values(exposureByBase).map(exp => exp / this.rootStore.tradeStore.balance)
-    );
+    // Equity ratio risk (lower equity ratio = higher risk)
+    const equityRatio = (equity / balance) * 100;
+    const equityRisk = Math.max(0, Math.min(100 - equityRatio, 100));
 
-    return {
-      exposureByBase,
-      hedgeRatios,
-      correlationMatrix: correlationMatrix,
-      volatilityImpact,
-    };
-  };
+    // Calculate weighted average risk score
+    const riskScore = 
+      (positionRisk * weights.positionCount) +
+      (exposureRisk * weights.exposure) +
+      (marginRisk * weights.marginUsage) +
+      (equityRisk * weights.equityRatio);
 
-  private checkAlerts = () => {
-    const newAlerts: RiskAlert[] = [];
+    return Math.round(riskScore);
+  }
 
-    // Check drawdown
-    if (this.metrics.drawdown.current > 0.05) {
-      newAlerts.push({
-        severity: this.metrics.drawdown.current > 0.1 ? 'critical' : 'high',
-        type: 'drawdown',
-        threshold: 0.05,
-        currentValue: this.metrics.drawdown.current,
-        timestamp: Date.now(),
-      });
-    }
-
-    // Check volatility
-    if (this.metrics.volatility > 0.02) {
-      newAlerts.push({
-        severity: this.metrics.volatility > 0.03 ? 'critical' : 'high',
-        type: 'volatility',
-        threshold: 0.02,
-        currentValue: this.metrics.volatility,
-        timestamp: Date.now(),
-      });
-    }
-
-    // Check correlation risk
-    const highCorrelationPairs = this.findHighCorrelationPairs();
-    if (highCorrelationPairs.length > 0) {
-      newAlerts.push({
-        severity: 'medium',
-        type: 'correlation',
-        threshold: 0.7,
-        currentValue: Math.max(...highCorrelationPairs.map(p => p.correlation)),
-        timestamp: Date.now(),
-      });
-    }
-
-    // Update alerts
-    runInAction(() => {
-      this.alerts = [...newAlerts];
-    });
-  };
-
-  private findHighCorrelationPairs = () => {
-    const positions = this.rootStore.tradeStore.positions;
-    const pairs: Array<{ pair1: string; pair2: string; correlation: number }> = [];
-    
-    for (let i = 0; i < positions.length; i++) {
-      for (let j = i + 1; j < positions.length; j++) {
-        const correlation = this.metrics.correlations[i][j];
-        if (Math.abs(correlation) > 0.7) {
-          pairs.push({
-            pair1: positions[i].symbol,
-            pair2: positions[j].symbol,
-            correlation,
-          });
-        }
-      }
-    }
-    
-    return pairs;
-  };
-
-  getRiskMetricsHistory = () => {
-    return this.historicalMetrics;
-  };
-
-  getAlerts = () => {
-    return this.alerts;
-  };
-
-  dismissAlert = (index: number) => {
-    runInAction(() => {
-      this.alerts = this.alerts.filter((_, i) => i !== index);
-    });
-  };
+  dispose() {
+    this.stopMonitoring();
+  }
 }

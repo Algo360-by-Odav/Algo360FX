@@ -14,12 +14,12 @@ import {
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 import DataTable, { Column } from '../tables/DataTable';
 import { Portfolio } from '../../stores/InvestmentStore';
 
 const PortfolioManagement: React.FC = observer(() => {
-  const { investmentStore } = useRootStoreContext();
+  const { investmentStore } = useRootStore();
   const [openDialog, setOpenDialog] = useState(false);
   const [newPortfolio, setNewPortfolio] = useState({
     name: '',
@@ -261,3 +261,4 @@ const PortfolioManagement: React.FC = observer(() => {
 });
 
 export default PortfolioManagement;
+

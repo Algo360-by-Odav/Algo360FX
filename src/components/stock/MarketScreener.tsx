@@ -36,7 +36,7 @@ import {
   Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 import { Stock } from '../../stores/StockMarketStore';
 
 interface ScreeningCriteria {
@@ -54,7 +54,7 @@ interface SavedScreen {
 }
 
 const MarketScreener: React.FC = observer(() => {
-  const { stockMarketStore } = useRootStoreContext();
+  const { stockMarketStore } = useRootStore();
   const [criteria, setCriteria] = useState<ScreeningCriteria[]>([
     {
       id: '1',
@@ -386,3 +386,4 @@ const MarketScreener: React.FC = observer(() => {
 });
 
 export default MarketScreener;
+

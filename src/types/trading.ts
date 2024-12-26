@@ -99,14 +99,30 @@ export interface Position {
 export interface Portfolio {
   userId: string;
   balance: number;
-  equity: number;
   margin: number;
+  equity: number;
   freeMargin: number;
   marginLevel: number;
   positions: Position[];
+  openOrders: Trade[];
+  closedTrades: Trade[];
+  unrealizedPnL: number;
+  realizedPnL: number;
+  totalPnL: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export type TimeFrame = '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1d' | '1w' | '1M';
+export type TimeFrame = 
+  | '1m'  // 1 minute
+  | '5m'  // 5 minutes
+  | '15m' // 15 minutes
+  | '30m' // 30 minutes
+  | '1h'  // 1 hour
+  | '4h'  // 4 hours
+  | '1d'  // 1 day
+  | '1w'  // 1 week
+  | '1M';  // 1 month
 
 export interface Candle {
   timestamp: number;
@@ -361,7 +377,8 @@ export type ChartType =
   | 'radar'
   | 'heikinAshi'
   | 'renko'
-  | 'kagi';
+  | 'kagi'
+  | 'pointfigure';
 
 export interface AreaChartOptions {
   fillColor?: string;
@@ -458,9 +475,16 @@ export interface RebalanceConstraints {
 
 export interface MarketEnvironment {
   trend: 'uptrend' | 'downtrend' | 'sideways';
-  volatility: number;
-  volume: 'high' | 'normal' | 'low';
+  volatility: 'low' | 'medium' | 'high';
+  volume: 'low' | 'normal' | 'high';
   regime: 'trending' | 'ranging' | 'breakout' | 'reversal';
+  momentum: 'strong' | 'weak' | 'neutral';
+  correlation: Record<string, number>;
+  volatilityIndex: number;
+  marketStrength: number;
+  riskLevel: 'low' | 'medium' | 'high';
+  liquidityScore: number;
+  sentiment: 'bullish' | 'bearish' | 'neutral';
 }
 
 export interface OptimizationResult {
@@ -482,4 +506,22 @@ export interface StrategyPerformance {
   parameters: Record<string, number>;
   performance: BacktestResult;
   robustness?: number;
+  metrics: {
+    profitFactor: number;
+    sharpeRatio: number;
+    maxDrawdown: number;
+    winRate: number;
+    expectancy: number;
+    recoveryFactor: number;
+    calmarRatio: number;
+    sortinoRatio: number;
+    trades: number;
+    profitableMonths: number;
+    maxConsecutiveLosses: number;
+    averageWin: number;
+    averageLoss: number;
+    averageHoldingPeriod: number;
+    profitabilityByTimeframe: Record<TimeFrame, number>;
+    profitabilityByMarketCondition: Record<string, number>;
+  };
 }

@@ -7,7 +7,7 @@ exports.config = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 exports.config = {
-    port: process.env.PORT || 3004,
+    port: process.env.PORT || 5000,
     mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/algo360fx',
     jwtSecret: process.env.JWT_SECRET || 'your-default-secret-key',
     env: process.env.NODE_ENV || 'development',

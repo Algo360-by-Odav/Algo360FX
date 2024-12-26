@@ -8,6 +8,7 @@ const http_1 = require("http");
 const cors_1 = __importDefault(require("cors"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const body_parser_1 = require("body-parser");
+const socket_io_1 = require("socket.io");
 const trading_1 = __importDefault(require("./websocket/trading"));
 const optimization_1 = __importDefault(require("./websocket/optimization"));
 const search_1 = __importDefault(require("./routes/search"));
@@ -19,8 +20,17 @@ const config_1 = require("./config/config");
 const metaapi_cloud_sdk_1 = __importDefault(require("metaapi.cloud-sdk"));
 const app = (0, express_1.default)();
 const httpServer = (0, http_1.createServer)(app);
-const wsServer = new trading_1.default(httpServer);
-const optimizationWsServer = new optimization_1.default(httpServer, '/optimization');
+const io = new socket_io_1.Server(httpServer, {
+    path: '/ws',
+    cors: {
+        origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173'],
+        methods: ['GET', 'POST'],
+        credentials: true
+    },
+    transports: ['websocket']
+});
+const tradingServer = new trading_1.default(io);
+const optimizationServer = new optimization_1.default(io);
 mongoose_1.default.connect(config_1.config.mongoUri, {
     retryWrites: true,
     w: 'majority',
@@ -29,7 +39,7 @@ mongoose_1.default.connect(config_1.config.mongoUri, {
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('MongoDB connection error:', err));
 app.use((0, cors_1.default)({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173'],
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173', 'http://localhost:5000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -103,8 +113,7 @@ app.get('/', (_req, res) => {
         process.on('SIGTERM', () => {
             console.log('SIGTERM received. Closing server...');
             mt5Bridge.stop();
-            wsServer.close();
-            optimizationWsServer.close();
+            io.close();
             httpServer.close(() => {
                 console.log('Server closed');
                 process.exit(0);
@@ -119,7 +128,6 @@ const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log('WebSocket server endpoints:');
-    console.log('- Trading: ws://localhost:5000/');
-    console.log('- Optimization: ws://localhost:5000/optimization');
+    console.log('- Trading: ws://localhost:5000/ws');
 });
 //# sourceMappingURL=index.js.map

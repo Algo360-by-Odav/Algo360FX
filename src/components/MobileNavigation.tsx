@@ -27,6 +27,11 @@ import {
   Settings as SettingsIcon,
   Code as StrategyIcon,
   Timeline as MarketDataIcon,
+  Security as SecurityIcon,
+  BusinessCenter,
+  SignalCellular4Bar,
+  Groups,
+  Speed as SpeedIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
@@ -45,26 +50,43 @@ export const MobileNavigation = observer(() => {
 
   // Main routes for bottom navigation
   const mainRoutes = [
-    { path: '/', label: 'Dashboard', icon: <DashboardIcon /> },
-    { path: '/trading', label: 'Trading', icon: <TradingIcon /> },
-    { path: '/portfolio', label: 'Portfolio', icon: <PortfolioIcon /> },
-    { path: '/analytics', label: 'Analytics', icon: <AnalyticsIcon /> },
+    { path: '/app/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
+    { path: '/app/trading', label: 'Trading', icon: <TradingIcon /> },
+    { path: '/app/portfolio', label: 'Portfolio', icon: <PortfolioIcon /> },
+    { path: '/app/analytics', label: 'Analytics', icon: <AnalyticsIcon /> },
   ];
 
-  // Additional routes for drawer
-  const drawerRoutes = [
-    { path: '/market-data', label: 'Market Data', icon: <MarketDataIcon /> },
-    { path: '/strategy', label: 'Strategy', icon: <StrategyIcon /> },
-    { path: '/auto-trading', label: 'Auto Trading', icon: <AutoTradingIcon /> },
-    { path: '/news', label: 'News', icon: <NewsIcon /> },
-    { path: '/calendar', label: 'Calendar', icon: <CalendarIcon /> },
-    { path: '/academy', label: 'Academy', icon: <AcademyIcon /> },
+  // Basic features for drawer
+  const basicRoutes = [
+    { path: '/app/market-data', label: 'Market Data', icon: <MarketDataIcon /> },
+    { path: '/app/strategy', label: 'Strategy', icon: <StrategyIcon /> },
+    { path: '/app/auto-trading', label: 'Auto Trading', icon: <AutoTradingIcon /> },
+    { path: '/app/news', label: 'News', icon: <NewsIcon /> },
+    { path: '/app/calendar', label: 'Calendar', icon: <CalendarIcon /> },
+    { path: '/app/hft', label: 'HFT', icon: <SpeedIcon /> },
+    { path: '/app/academy', label: 'Academy', icon: <AcademyIcon /> },
+  ];
+
+  // Advanced features for drawer
+  const advancedRoutes = [
+    { path: '/app/advanced-trading', label: 'Advanced Trading', icon: <TradingIcon /> },
+    { path: '/app/portfolio-optimizer', label: 'Portfolio Optimizer', icon: <AnalyticsIcon /> },
+    { path: '/app/backtesting', label: 'Backtesting', icon: <MarketDataIcon /> },
+    { path: '/app/risk-management', label: 'Risk Management', icon: <SecurityIcon /> },
+  ];
+
+  // Professional features for drawer
+  const professionalRoutes = [
+    { path: '/app/broker', label: 'Broker Portal', icon: <BusinessCenter /> },
+    { path: '/app/money-manager', label: 'Money Manager', icon: <PortfolioIcon /> },
+    { path: '/app/signal-provider', label: 'Signal Provider', icon: <SignalCellular4Bar /> },
+    { path: '/app/investor', label: 'Investor Portal', icon: <Groups /> },
   ];
 
   // User-related routes
   const userRoutes = [
-    { path: '/profile', label: 'Profile', icon: <ProfileIcon /> },
-    { path: '/settings', label: 'Settings', icon: <SettingsIcon /> },
+    { path: '/app/profile', label: 'Profile', icon: <ProfileIcon /> },
+    { path: '/app/settings', label: 'Settings', icon: <SettingsIcon /> },
   ];
 
   const handleNavigation = (path: string) => {
@@ -103,14 +125,15 @@ export const MobileNavigation = observer(() => {
           }}
         >
           <Box sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Algo360FX
+            <Typography variant="h6" component="div">
+              Menu
             </Typography>
           </Box>
           <Divider />
-          
+
+          {/* Basic Features */}
           <List>
-            {mainRoutes.map((route) => (
+            {basicRoutes.map((route) => (
               <ListItem
                 button
                 key={route.path}
@@ -122,11 +145,14 @@ export const MobileNavigation = observer(() => {
               </ListItem>
             ))}
           </List>
-          
+
+          {/* Advanced Features */}
           <Divider />
-          
+          <ListItem>
+            <ListItemText primary="Advanced Features" sx={{ opacity: 0.7 }} />
+          </ListItem>
           <List>
-            {drawerRoutes.map((route) => (
+            {advancedRoutes.map((route) => (
               <ListItem
                 button
                 key={route.path}
@@ -138,9 +164,28 @@ export const MobileNavigation = observer(() => {
               </ListItem>
             ))}
           </List>
-          
+
+          {/* Professional Features */}
           <Divider />
-          
+          <ListItem>
+            <ListItemText primary="Professional" sx={{ opacity: 0.7 }} />
+          </ListItem>
+          <List>
+            {professionalRoutes.map((route) => (
+              <ListItem
+                button
+                key={route.path}
+                onClick={() => handleNavigation(route.path)}
+                selected={location.pathname === route.path}
+              >
+                <ListItemIcon>{route.icon}</ListItemIcon>
+                <ListItemText primary={route.label} />
+              </ListItem>
+            ))}
+          </List>
+
+          {/* User Routes */}
+          <Divider />
           <List>
             {userRoutes.map((route) => (
               <ListItem
@@ -164,41 +209,47 @@ export const MobileNavigation = observer(() => {
           left: 0,
           right: 0,
           zIndex: 1000,
-          borderTop: 1,
-          borderColor: 'divider',
-          transform: 'translateZ(0)',
+          background: (theme) => theme.palette.background.paper,
           transition: (theme) =>
-            theme.transitions.create(['transform'], {
-              easing: theme.transitions.easing.easeInOut,
-              duration: theme.transitions.duration.short,
+            theme.transitions.create('transform', {
+              duration: theme.transitions.duration.standard,
+              easing: theme.transitions.easing.easeOut,
             }),
         }}
         elevation={3}
       >
         <BottomNavigation
           value={location.pathname}
-          onChange={(_, newValue) => {
-            navigate(newValue);
-          }}
+          onChange={(_, newValue) => handleNavigation(newValue)}
           showLabels
+          sx={{
+            height: 56,
+            '& .MuiBottomNavigationAction-root': {
+              minWidth: 'auto',
+              padding: '6px 0',
+              '&.Mui-selected': {
+                paddingTop: '6px',
+              },
+            },
+          }}
         >
           {mainRoutes.map((route) => (
             <BottomNavigationAction
               key={route.path}
-              label={route.label}
               value={route.path}
               icon={route.icon}
+              label={route.label}
             />
           ))}
           <BottomNavigationAction
             icon={<MenuIcon />}
-            onClick={(e) => {
-              e.preventDefault();
-              setDrawerOpen(true);
-            }}
+            onClick={() => setDrawerOpen(true)}
+            label="Menu"
           />
         </BottomNavigation>
       </Paper>
     </>
   );
 });
+
+export default MobileNavigation;

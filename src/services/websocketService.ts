@@ -115,6 +115,14 @@ class WebSocketService {
     }
   }
 
+  emit(event: string, data?: any) {
+    if (!this.socket?.connected) {
+      console.warn(`Cannot emit ${event}: socket not connected`);
+      return;
+    }
+    this.socket.emit(event, data);
+  }
+
   subscribeToStatus(callback: ConnectionStatusCallback) {
     this.statusSubscribers.add(callback);
     // Immediately notify the subscriber of the current status

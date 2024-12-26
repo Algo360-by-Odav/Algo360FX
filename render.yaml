@@ -3,20 +3,36 @@ services:
     name: algo360fx-api
     env: node
     region: singapore
+    plan: starter
     buildCommand: cd server && npm install && npm run build
     startCommand: cd server && npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 8080
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REDIS_URL
+        sync: false
 
   - type: web
     name: algo360fx-frontend
     env: node
     region: singapore
+    plan: starter
     buildCommand: npm install && CI=false npm run build
     startCommand: npm run preview
+    healthCheckPath: /
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
@@ -24,3 +40,16 @@ services:
         value: false
       - key: TSC_COMPILE_ON_ERROR
         value: true
+      - key: VITE_API_URL
+        value: https://algo360fx-api.onrender.com
+      - key: VITE_WS_URL
+        value: wss://algo360fx-api.onrender.com
+
+  - type: redis
+    name: algo360fx-redis
+    region: singapore
+    plan: starter
+    maxmemoryPolicy: noeviction
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere

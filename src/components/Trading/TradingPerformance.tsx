@@ -8,10 +8,10 @@ import {
   Grid,
   LinearProgress,
 } from '@mui/material';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 
 const TradingPerformance: React.FC = observer(() => {
-  const { algoTradingStore } = useRootStoreContext();
+  const { algoTradingStore } = useRootStore();
 
   // Sample performance metrics
   const metrics = {
@@ -139,3 +139,4 @@ const TradingPerformance: React.FC = observer(() => {
 });
 
 export default TradingPerformance;
+

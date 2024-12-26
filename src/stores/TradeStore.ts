@@ -1,13 +1,13 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { RootStore } from './RootStore';
-import { Trade, Portfolio } from '@/types/trading';
-import { api } from '@/services/api';
+import { Trade, Position, Portfolio } from '../types/trading';
 
 export class TradeStore {
+  private rootStore: RootStore;
   trades: Trade[] = [];
-  activeTrades: Trade[] = [];
-  historicalTrades: Trade[] = [];
+  positions: Position[] = [];
   portfolio: Portfolio = {
+    userId: '',
     balance: 0,
     equity: 0,
     margin: 0,
@@ -15,131 +15,138 @@ export class TradeStore {
     marginLevel: 0,
     positions: [],
   };
-  loading: boolean = false;
-  error: string | null = null;
 
-  constructor(private rootStore: RootStore) {
-    makeAutoObservable(this, {}, { autoBind: true });
+  constructor(rootStore: RootStore) {
+    this.rootStore = rootStore;
+    makeAutoObservable(this);
   }
 
-  async loadTrades() {
+  async fetchTrades() {
     try {
-      this.loading = true;
-      this.error = null;
-      const response = await api.get('/trades');
+      // TODO: Implement API call to fetch trades
+      const response = await fetch('/api/trades');
+      const trades = await response.json();
+      
       runInAction(() => {
-        this.trades = response.data.trades;
-        this.activeTrades = this.trades.filter(trade => !trade.closeTime);
-        this.historicalTrades = this.trades.filter(trade => trade.closeTime);
+        this.trades = trades;
       });
     } catch (error) {
-      runInAction(() => {
-        this.error = error instanceof Error ? error.message : 'Failed to load trades';
-      });
-    } finally {
-      runInAction(() => {
-        this.loading = false;
-      });
+      console.error('Error fetching trades:', error);
     }
   }
 
-  async placeTrade(trade: Partial<Trade>) {
+  async fetchPositions() {
     try {
-      this.loading = true;
-      this.error = null;
-      const response = await api.post('/trades', trade);
+      // TODO: Implement API call to fetch positions
+      const response = await fetch('/api/positions');
+      const positions = await response.json();
+      
       runInAction(() => {
-        this.trades.push(response.data.trade);
-        this.activeTrades.push(response.data.trade);
-        this.updatePortfolio(response.data.portfolio);
-      });
-      this.rootStore.notificationStore.addNotification({
-        type: 'success',
-        title: 'Trade Placed',
-        message: `Successfully placed ${trade.side} trade for ${trade.symbol}`,
+        this.positions = positions;
       });
     } catch (error) {
+      console.error('Error fetching positions:', error);
+    }
+  }
+
+  async fetchPortfolio() {
+    try {
+      // TODO: Implement API call to fetch portfolio
+      const response = await fetch('/api/portfolio');
+      const portfolio = await response.json();
+      
       runInAction(() => {
-        this.error = error instanceof Error ? error.message : 'Failed to place trade';
+        this.portfolio = portfolio;
       });
-      this.rootStore.notificationStore.addNotification({
-        type: 'error',
-        title: 'Trade Failed',
-        message: this.error,
+    } catch (error) {
+      console.error('Error fetching portfolio:', error);
+    }
+  }
+
+  async placeTrade(trade: Omit<Trade, 'id' | 'status'>) {
+    try {
+      // TODO: Implement API call to place trade
+      const response = await fetch('/api/trades', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(trade),
       });
-    } finally {
+      
+      const newTrade = await response.json();
+      
       runInAction(() => {
-        this.loading = false;
+        this.trades.push(newTrade);
       });
+
+      return newTrade;
+    } catch (error) {
+      console.error('Error placing trade:', error);
+      throw error;
     }
   }
 
   async closeTrade(tradeId: string) {
     try {
-      this.loading = true;
-      this.error = null;
-      const response = await api.put(`/trades/${tradeId}/close`);
+      // TODO: Implement API call to close trade
+      await fetch(`/api/trades/${tradeId}/close`, {
+        method: 'POST',
+      });
+      
       runInAction(() => {
-        const index = this.trades.findIndex(t => t.id === tradeId);
-        if (index !== -1) {
-          this.trades[index] = response.data.trade;
-          this.activeTrades = this.activeTrades.filter(t => t.id !== tradeId);
-          this.historicalTrades.push(response.data.trade);
-          this.updatePortfolio(response.data.portfolio);
+        const trade = this.trades.find(t => t.id === tradeId);
+        if (trade) {
+          trade.status = 'closed';
         }
       });
-      this.rootStore.notificationStore.addNotification({
-        type: 'success',
-        title: 'Trade Closed',
-        message: `Successfully closed trade ${tradeId}`,
-      });
     } catch (error) {
-      runInAction(() => {
-        this.error = error instanceof Error ? error.message : 'Failed to close trade';
-      });
-      this.rootStore.notificationStore.addNotification({
-        type: 'error',
-        title: 'Close Trade Failed',
-        message: this.error,
-      });
-    } finally {
-      runInAction(() => {
-        this.loading = false;
-      });
+      console.error('Error closing trade:', error);
+      throw error;
     }
   }
 
-  async updatePortfolio(portfolio: Portfolio) {
+  async closePosition(symbol: string) {
     try {
-      this.loading = true;
-      this.error = null;
+      // TODO: Implement API call to close position
+      await fetch(`/api/positions/${symbol}/close`, {
+        method: 'POST',
+      });
+      
       runInAction(() => {
-        this.portfolio = portfolio;
+        this.positions = this.positions.filter(p => p.symbol !== symbol);
       });
     } catch (error) {
-      runInAction(() => {
-        this.error = error instanceof Error ? error.message : 'Failed to update portfolio';
-      });
-    } finally {
-      runInAction(() => {
-        this.loading = false;
-      });
+      console.error('Error closing position:', error);
+      throw error;
     }
   }
 
-  get totalPnL(): number {
-    return this.trades.reduce((total, trade) => {
-      if (trade.pnl) {
-        return total + trade.pnl;
-      }
-      return total;
-    }, 0);
+  get openTrades() {
+    return this.trades.filter(trade => trade.status === 'open');
   }
 
-  get winRate(): number {
-    const closedTrades = this.historicalTrades;
-    if (closedTrades.length === 0) return 0;
-    const winningTrades = closedTrades.filter(trade => (trade.pnl || 0) > 0);
-    return (winningTrades.length / closedTrades.length) * 100;
+  get closedTrades() {
+    return this.trades.filter(trade => trade.status === 'closed');
+  }
+
+  get totalPnL() {
+    return this.trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+  }
+
+  get openPositionsCount() {
+    return this.positions.length;
+  }
+
+  get totalEquity() {
+    return this.portfolio.equity;
+  }
+
+  get marginLevel() {
+    return this.portfolio.marginLevel;
+  }
+
+  dispose() {
+    // Clean up any subscriptions or intervals if needed
   }
 }

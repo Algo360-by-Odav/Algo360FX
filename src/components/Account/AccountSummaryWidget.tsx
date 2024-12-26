@@ -20,12 +20,12 @@ import {
   Refresh,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '@/stores/RootStoreContext';
 import { formatCurrency, formatNumber, formatPercentage } from '../../utils/formatters';
 
 const AccountSummaryWidget: React.FC = observer(() => {
   const theme = useTheme();
-  const { tradingStore } = useRootStoreContext();
+  const { tradingStore } = useRootStore();
 
   const handleRefresh = () => {
     tradingStore.refreshAccountData();

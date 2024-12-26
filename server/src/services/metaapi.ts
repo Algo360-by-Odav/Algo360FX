@@ -1,44 +1,44 @@
 import MetaApi from 'metaapi.cloud-sdk';
-import { config } from '../config';
+import { config } from '../config/config';
 
 // Initialize MetaAPI with retry mechanism
 const api = new MetaApi(config.metaApiToken);
 
 // Cache for MetaAPI connections
 let cachedConnection: any = null;
-let lastConnectionTime: number = 0;
-const CONNECTION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 export async function getMetaApiConnection() {
-  const now = Date.now();
-  
-  // Check if we have a valid cached connection
-  if (cachedConnection && (now - lastConnectionTime) < CONNECTION_TIMEOUT) {
-    return cachedConnection;
-  }
-
-  // Get a new connection
-  for (let attempt = 1; attempt <= config.metaApiRetryAttempts; attempt++) {
-    try {
-      const accounts = await api.metatraderAccountApi.getAccounts();
-      console.log('Available accounts:', accounts.map(acc => ({ 
-        id: acc.id, 
-        login: acc.login,
-        name: acc.name,
-        type: acc.type,
-        state: acc.state 
-      })));
+  try {
+    if (!cachedConnection) {
+      console.log('Initializing MetaAPI connection...');
       
-      cachedConnection = api;
-      lastConnectionTime = now;
-      return cachedConnection;
-    } catch (error) {
-      console.error(`Connection attempt ${attempt} failed:`, error);
-      if (attempt === config.metaApiRetryAttempts) {
-        throw error;
+      // Create MT5 account instance
+      const account = await api.metatraderAccountApi.getAccount(config.mt5AccountId);
+      if (!account) {
+        throw new Error('MT5 account not found');
       }
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, config.metaApiRetryDelay));
+
+      console.log('MT5 account found, deploying...');
+      
+      // Deploy account
+      const deployedAccount = await account.deploy();
+      console.log('Account deployed, waiting for connection...');
+      
+      // Wait until account is deployed and connected to broker
+      await deployedAccount.waitConnected();
+      console.log('Account connected to broker');
+
+      // Get connection instance
+      cachedConnection = await deployedAccount.getStreamingConnection();
+      await cachedConnection.connect();
+      await cachedConnection.waitSynchronized();
+      
+      console.log('MetaAPI connection established and synchronized');
     }
+
+    return cachedConnection;
+  } catch (error) {
+    console.error('MetaAPI connection error:', error);
+    throw error;
   }
 }

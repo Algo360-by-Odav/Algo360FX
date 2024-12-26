@@ -1,10 +1,7 @@
 export enum UserRole {
+  USER = 'user',
   ADMIN = 'admin',
-  BROKER = 'broker',
-  MONEY_MANAGER = 'money_manager',
-  SIGNAL_PROVIDER = 'signal_provider',
-  INVESTOR = 'investor',
-  USER = 'user'
+  MANAGER = 'manager',
 }
 
 export interface UserPreferences {
@@ -21,7 +18,7 @@ export interface UserPreferences {
   };
   displayPreferences: {
     chartType: 'candlestick' | 'line' | 'bar';
-    timeframe: '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
+    timeframe: '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1d' | '1w';
     indicators: string[];
   };
 }
@@ -29,16 +26,16 @@ export interface UserPreferences {
 export interface User {
   id: string;
   email: string;
+  name: string;
   firstName: string;
   lastName: string;
   role: UserRole;
+  isVerified: boolean;
+  status: 'active' | 'inactive' | 'suspended';
   preferences: UserPreferences;
   permissions: string[];
-  createdAt?: Date;
-  updatedAt?: Date;
-  lastLogin?: Date;
-  isVerified: boolean;
-  status: 'active' | 'suspended' | 'inactive';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface SignupData {
@@ -47,5 +44,9 @@ export interface SignupData {
   firstName: string;
   lastName: string;
   role?: UserRole;
-  verificationCode?: string;
+}
+
+export interface LoginData {
+  email: string;
+  password: string;
 }

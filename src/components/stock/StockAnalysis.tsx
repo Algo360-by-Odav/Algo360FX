@@ -26,7 +26,7 @@ import {
   Analytics as AnalyticsIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 import { StockAnalysis as StockAnalysisType } from '../../stores/StockMarketStore';
 import PerformanceChart from '../charts/PerformanceChart';
 
@@ -43,7 +43,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 );
 
 const StockAnalysisComponent: React.FC<{ symbol: string }> = observer(({ symbol }) => {
-  const { stockMarketStore } = useRootStoreContext();
+  const { stockMarketStore } = useRootStore();
   const [tabValue, setTabValue] = useState(0);
 
   const analysis = stockMarketStore.getAnalysis(symbol);

@@ -24,10 +24,13 @@ export class OptimizationStore {
   private async initializeWebSocket() {
     try {
       await this.webSocket.connect();
+      runInAction(() => {
+        this.error = null;
+      });
     } catch (error) {
       console.error('Failed to connect to optimization WebSocket:', error);
       runInAction(() => {
-        this.error = 'Failed to connect to optimization service';
+        this.error = 'Failed to connect to optimization service. Please check your connection and try again.';
       });
     }
   }

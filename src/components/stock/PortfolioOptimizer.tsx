@@ -29,7 +29,7 @@ import {
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 import PerformanceChart from '../charts/PerformanceChart';
 
 interface OptimizationParams {
@@ -60,7 +60,7 @@ interface OptimizedPortfolio {
 }
 
 const PortfolioOptimizer: React.FC = observer(() => {
-  const { stockMarketStore } = useRootStoreContext();
+  const { stockMarketStore } = useRootStore();
   const [optimizationParams, setOptimizationParams] = useState<OptimizationParams>({
     riskTolerance: 50,
     targetReturn: 12,
@@ -346,3 +346,4 @@ const PortfolioOptimizer: React.FC = observer(() => {
 });
 
 export default PortfolioOptimizer;
+

@@ -1,20 +1,40 @@
-import React from 'react';
-import { AuthContext } from '@/stores/AuthStore';
-import { useRootStore } from '@/hooks/useRootStore';
+import React, { createContext, useContext, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
+import { useRootStore } from '@/hooks/useRootStore';
 
-interface AuthProviderProps {
-  children: React.ReactNode;
+interface AuthContextType {
+  isAuthenticated: boolean;
+  user: any;
+  loading: boolean;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = observer(({ children }) => {
-  const rootStore = useRootStore();
-  
+export const AuthContext = createContext<AuthContextType | null>(null);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = observer(({ children }) => {
+  const { authStore } = useRootStore();
+
+  useEffect(() => {
+    // Initialize auth state
+    authStore.checkAuth();
+  }, [authStore]);
+
+  const value = {
+    isAuthenticated: authStore.isAuthenticated,
+    user: authStore.user,
+    loading: authStore.isLoading
+  };
+
   return (
-    <AuthContext.Provider value={rootStore.authStore}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 });
 
-export default AuthProvider;
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === null) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

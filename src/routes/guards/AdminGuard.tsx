@@ -1,7 +1,8 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
-import { useRootStore } from '../../hooks/useRootStore';
+import { useAuth } from '@/stores/AuthStore';
+import { UserRole } from '@/types/user';
 
 interface AdminGuardProps {
   children: React.ReactNode;
@@ -9,13 +10,13 @@ interface AdminGuardProps {
 
 const AdminGuard: React.FC<AdminGuardProps> = observer(({ children }) => {
   const location = useLocation();
-  const { authStore } = useRootStore();
+  const { user } = useAuth();
 
-  if (!authStore.isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!user) {
+    return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 
-  if (authStore.user?.role !== 'admin') {
+  if (user.role !== UserRole.ADMIN) {
     return <Navigate to="/dashboard" replace />;
   }
 

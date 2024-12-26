@@ -1,14 +1,11 @@
-import React, { createContext, useContext } from 'react';
+import React, { useContext } from 'react';
 import { RootStore } from './RootStore';
 
-export const RootStoreContext = createContext<RootStore | null>(null);
+const RootStoreContext = React.createContext<RootStore | null>(null);
 
-interface RootStoreProviderProps {
-  children: React.ReactNode;
-  store: RootStore;
-}
+export const RootStoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const store = React.useMemo(() => new RootStore(), []);
 
-export const RootStoreProvider: React.FC<RootStoreProviderProps> = ({ children, store }) => {
   return (
     <RootStoreContext.Provider value={store}>
       {children}
@@ -16,11 +13,12 @@ export const RootStoreProvider: React.FC<RootStoreProviderProps> = ({ children, 
   );
 };
 
-// Export a hook that throws an error if used outside of context
-export const useRootStoreContext = () => {
+export const useRootStore = () => {
   const context = useContext(RootStoreContext);
-  if (!context) {
+  if (context === null) {
     throw new Error('useRootStore must be used within RootStoreProvider');
   }
   return context;
 };
+
+export { RootStoreContext };

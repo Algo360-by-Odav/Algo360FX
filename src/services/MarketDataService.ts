@@ -1,4 +1,5 @@
 import { Subject, Observable } from 'rxjs';
+import WebSocketService from './websocketService';
 
 export interface MarketTick {
   symbol: string;
@@ -17,26 +18,18 @@ export interface OrderBook {
   timestamp: number;
 }
 
-interface WebSocketMessage {
-  type: 'tick' | 'orderbook' | 'error';
-  data: any;
-}
-
 export class MarketDataService {
   private static instance: MarketDataService;
-  private ws: WebSocket | null = null;
   private tickSubject = new Subject<MarketTick>();
   private orderBookSubject = new Subject<OrderBook>();
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000;
   private mockDataInterval: number | null = null;
+  private subscribedSymbols: Set<string> = new Set();
 
   private constructor() {
     if (process.env.NODE_ENV === 'development') {
       this.startMockDataStream();
     } else {
-      this.connect();
+      this.setupMarketDataHandlers();
     }
   }
 
@@ -45,6 +38,27 @@ export class MarketDataService {
       MarketDataService.instance = new MarketDataService();
     }
     return MarketDataService.instance;
+  }
+
+  private setupMarketDataHandlers() {
+    // Subscribe to market data events
+    WebSocketService.subscribe('marketData', (data) => {
+      if (data.type === 'tick') {
+        this.tickSubject.next(data.data as MarketTick);
+      } else if (data.type === 'orderbook') {
+        this.orderBookSubject.next(data.data as OrderBook);
+      }
+    });
+
+    // Handle connection status changes
+    WebSocketService.subscribeToStatus((status) => {
+      if (status === 'connected') {
+        // Resubscribe to all symbols when reconnected
+        this.subscribedSymbols.forEach(symbol => {
+          this.subscribeToSymbol(symbol);
+        });
+      }
+    });
   }
 
   private startMockDataStream() {
@@ -84,86 +98,36 @@ export class MarketDataService {
     }, 1000);
   }
 
-  private connect() {
-    try {
-      this.ws = new WebSocket('wss://your-websocket-server/market-data');
-
-      this.ws.onopen = () => {
-        console.log('WebSocket connected');
-        this.reconnectAttempts = 0;
-      };
-
-      this.ws.onmessage = (event: MessageEvent) => {
-        try {
-          const message: WebSocketMessage = JSON.parse(event.data);
-          this.handleMessage(message);
-        } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
-        }
-      };
-
-      this.ws.onerror = (error: Event) => {
-        console.error('WebSocket error:', error);
-      };
-
-      this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        this.handleDisconnect();
-      };
-    } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
-      this.handleDisconnect();
-    }
-  }
-
-  private handleMessage(message: WebSocketMessage) {
-    switch (message.type) {
-      case 'tick':
-        this.tickSubject.next(message.data as MarketTick);
-        break;
-      case 'orderbook':
-        this.orderBookSubject.next(message.data as OrderBook);
-        break;
-      case 'error':
-        console.error('Market data error:', message.data);
-        break;
-      default:
-        console.warn('Unknown message type:', message);
-    }
-  }
-
-  private handleDisconnect() {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      this.reconnectAttempts++;
-      console.log(
-        `Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`
-      );
-      setTimeout(() => this.connect(), this.reconnectDelay * this.reconnectAttempts);
+  private subscribeToSymbol(symbol: string) {
+    if (WebSocketService.isConnected()) {
+      WebSocketService.emit('subscribe', symbol);
+      this.subscribedSymbols.add(symbol);
     } else {
-      console.error('Max reconnection attempts reached');
+      console.error(`Cannot subscribe to ${symbol}: WebSocket not connected`);
+    }
+  }
+
+  private unsubscribeFromSymbol(symbol: string) {
+    if (WebSocketService.isConnected()) {
+      WebSocketService.emit('unsubscribe', symbol);
+      this.subscribedSymbols.delete(symbol);
+    } else {
+      console.error(`Cannot unsubscribe from ${symbol}: WebSocket not connected`);
     }
   }
 
   subscribeToTicks(symbol: string): Observable<MarketTick> {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: 'subscribe', channel: 'ticks', symbol }));
-    }
+    this.subscribeToSymbol(symbol);
     return this.tickSubject.asObservable();
   }
 
   subscribeToOrderBook(symbol: string): Observable<OrderBook> {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(
-        JSON.stringify({ type: 'subscribe', channel: 'orderbook', symbol })
-      );
-    }
+    this.subscribeToSymbol(symbol);
     return this.orderBookSubject.asObservable();
   }
 
   unsubscribe(symbol: string) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: 'unsubscribe', symbol }));
-    }
+    this.unsubscribeFromSymbol(symbol);
   }
 
   disconnect() {
@@ -171,9 +135,8 @@ export class MarketDataService {
       window.clearInterval(this.mockDataInterval);
       this.mockDataInterval = null;
     }
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
+    this.subscribedSymbols.clear();
   }
 }
+
+export default MarketDataService.getInstance();

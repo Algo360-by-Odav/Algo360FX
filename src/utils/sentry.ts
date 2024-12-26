@@ -1,39 +1,45 @@
 import * as Sentry from '@sentry/react';
+import { Integrations } from '@sentry/tracing';
+
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 
 export const initSentry = () => {
-  if (process.env.NODE_ENV === 'production') {
+  if (SENTRY_DSN) {
     Sentry.init({
-      dsn: process.env.VITE_SENTRY_DSN,
-      integrations: [
-        new Sentry.BrowserTracing({
-          tracePropagationTargets: ['localhost', /^https:\/\/[^/]*algo360fx\.vercel\.app/],
-        }),
-        new Sentry.Replay(),
-      ],
-      tracesSampleRate: 1.0,
-      replaysSessionSampleRate: 0.1,
-      replaysOnErrorSampleRate: 1.0,
+      dsn: SENTRY_DSN,
+      integrations: [new Integrations.BrowserTracing()],
+      tracesSampleRate: import.meta.env.MODE === 'production' ? 0.1 : 1.0,
+      environment: import.meta.env.MODE,
     });
   }
 };
 
-export const captureException = (error: Error, context?: Record<string, any>) => {
-  if (process.env.NODE_ENV === 'production') {
+export const captureException = (error: Error, context?: Record<string, unknown>) => {
+  if (SENTRY_DSN) {
     Sentry.captureException(error, {
       extra: context,
     });
   } else {
-    console.error('Error:', error, '\nContext:', context);
+    console.error('Error:', error, context);
   }
 };
 
-export const setUserContext = (userId: string, email?: string) => {
-  Sentry.setUser({
-    id: userId,
-    email,
-  });
+export const captureMessage = (message: string, level: Sentry.SeverityLevel = 'info') => {
+  if (SENTRY_DSN) {
+    Sentry.captureMessage(message, level);
+  } else {
+    console.log(`${level.toUpperCase()}: ${message}`);
+  }
 };
 
-export const clearUserContext = () => {
-  Sentry.setUser(null);
+export const setUser = (user: { id: string; email?: string; username?: string }) => {
+  if (SENTRY_DSN) {
+    Sentry.setUser(user);
+  }
+};
+
+export const clearUser = () => {
+  if (SENTRY_DSN) {
+    Sentry.setUser(null);
+  }
 };

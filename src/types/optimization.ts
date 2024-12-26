@@ -1,4 +1,5 @@
 import { TradingStrategy } from './algo-trading';
+import { BacktestResult } from './trading';
 
 export enum OptimizationMetric {
   SHARPE_RATIO = 'SHARPE_RATIO',
@@ -10,11 +11,10 @@ export enum OptimizationMetric {
 }
 
 export enum OptimizationMethod {
-  GeneticAlgorithm = 'genetic',
-  GridSearch = 'grid',
-  ParticleSwarm = 'particle_swarm',
-  RandomSearch = 'random',
-  BayesianOptimization = 'bayesian'
+  GridSearch = 'GRID_SEARCH',
+  WalkForward = 'WALK_FORWARD',
+  MonteCarlo = 'MONTE_CARLO',
+  Genetic = 'GENETIC'
 }
 
 export enum OptimizationObjective {
@@ -27,40 +27,70 @@ export enum OptimizationObjective {
 
 export interface OptimizationParameter {
   name: string;
-  min: number;
-  max: number;
-  step: number;
-  current: number;
+  type: 'number' | 'boolean' | 'string';
+  min?: number;
+  max?: number;
+  step?: number;
+  values?: any[];
+  value: any;
 }
 
-export type OptimizationMethodType = 'genetic' | 'grid' | 'random' | 'bayesian';
-export type OptimizationObjectiveType = 'sharpe' | 'returns' | 'drawdown' | 'sortino';
-
 export interface OptimizationConfig {
-  // Time range for optimization
-  startDate: Date;
-  endDate: Date;
-
-  // Parameters to optimize with their possible values
-  parameters: Record<string, number[]>;
-
-  // Optimization settings
-  optimizationMetric: OptimizationMetric;
+  strategyId: string;
   method: OptimizationMethod;
-
-  // Method-specific settings
+  parameters: OptimizationParameter[];
+  metric: 'sharpeRatio' | 'sortino' | 'maxDrawdown' | 'returns' | 'winRate' | 'profitFactor';
+  constraints?: {
+    maxDrawdown?: number;
+    minProfitFactor?: number;
+    minWinRate?: number;
+    maxExecutionTime?: number;
+  };
   walkForwardPeriods?: number;
-  monteCarloIterations?: number;
-  generations?: number;
   populationSize?: number;
+  generations?: number;
+  crossoverRate?: number;
   mutationRate?: number;
+}
 
-  // Constraints
-  maxDrawdown?: number;
-  minTradeCount?: number;
-  minWinRate?: number;
-  minProfitFactor?: number;
-  maxPositionSize?: number;
+export interface OptimizationProgress {
+  status: 'running' | 'completed' | 'failed';
+  progress: number;
+  currentGeneration?: number;
+  bestFitness?: number;
+  message?: string;
+  error?: string;
+}
+
+export interface OptimizationResult {
+  id: string;
+  strategyId: string;
+  status: 'running' | 'completed' | 'failed';
+  progress: number;
+  config: OptimizationConfig;
+  generations: {
+    generation: number;
+    bestFitness: number;
+    averageFitness: number;
+    parameters: Record<string, any>;
+  }[];
+  parameterDistribution: {
+    parameter: string;
+    values: any[];
+    frequencies: number[];
+  }[];
+  bestParameters: Record<string, any>;
+  finalPerformance: {
+    sharpeRatio: number;
+    sortino: number;
+    maxDrawdown: number;
+    returns: number;
+    winRate: number;
+    profitFactor: number;
+  };
+  startTime: Date;
+  endTime?: Date;
+  error?: string;
 }
 
 export interface OptimizationPerformance {
@@ -74,21 +104,6 @@ export interface OptimizationPerformance {
 export interface OptimizationResultItem {
   parameters: Record<string, number>;
   performance: OptimizationPerformance;
-}
-
-export interface OptimizationResult {
-  parameters: Record<string, number>;
-  performance: OptimizationPerformance;
-  allResults: OptimizationResultItem[];
-}
-
-export interface OptimizationProgress {
-  status: 'running' | 'completed' | 'failed';
-  progress: number;
-  currentIteration: number;
-  totalIterations: number;
-  bestResult?: OptimizationResult;
-  error?: string;
 }
 
 export interface OptimizationJob {
@@ -110,25 +125,6 @@ export interface PerformanceMetrics {
   profitFactor: number;
 }
 
-export interface ParameterDistribution {
-  parameter: string;
-  values: number[];
-  frequencies: number[];
-}
-
-export interface OptimizationResultNew {
-  generations: {
-    number: number;
-    bestFitness: number;
-    averageFitness: number;
-    parameters: Record<string, number>;
-  }[];
-  performance: PerformanceMetrics[];
-  parameterDistribution: ParameterDistribution[];
-  bestParameters: Record<string, number>;
-  finalPerformance: PerformanceMetrics;
-}
-
 export interface TradingStrategyNew {
   id: string;
   name: string;
@@ -136,8 +132,8 @@ export interface TradingStrategyNew {
   parameters: OptimizationParameter[];
   metrics: PerformanceMetrics;
   config: {
-    method: OptimizationMethodType;
-    objective: OptimizationObjectiveType;
+    method: OptimizationMethod;
+    objective: 'sharpe_ratio' | 'sortino_ratio' | 'returns' | 'max_drawdown' | 'profit_factor';
     parameters: OptimizationParameter[];
     populationSize?: number;
     generations?: number;
@@ -148,5 +144,5 @@ export interface TradingStrategyNew {
     startDate?: string;
     endDate?: string;
   };
-  results?: OptimizationResultNew;
+  results?: OptimizationResult;
 }

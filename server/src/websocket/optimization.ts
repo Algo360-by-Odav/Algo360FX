@@ -1,219 +1,158 @@
-import { WebSocket, WebSocketServer } from 'ws';
-import { Server } from 'http';
+import { Server as SocketIOServer, Socket } from 'socket.io';
 import { OptimizationConfig, OptimizationResultNew } from '../types/optimization';
 
 export class OptimizationWebSocketServer {
-  private wss: WebSocketServer;
+  private io: SocketIOServer;
   private optimizations: Map<string, {
     config: OptimizationConfig;
     progress: number;
     status: 'running' | 'completed' | 'error';
   }> = new Map();
 
-  constructor(server: Server, path: string = '/optimization') {
-    this.wss = new WebSocketServer({ 
-      server,
-      path,
-      clientTracking: true
-    });
-
-    this.setupWebSocketServer();
+  constructor(io: SocketIOServer) {
+    this.io = io;
   }
 
-  private setupWebSocketServer() {
-    this.wss.on('connection', (ws: WebSocket) => {
+  public initialize() {
+    this.setupSocketServer();
+    console.log('Optimization WebSocket Server initialized');
+  }
+
+  private setupSocketServer() {
+    this.io.on('connection', (socket: Socket) => {
       console.log('New optimization client connected');
 
-      ws.on('message', async (message: string) => {
+      socket.on('message', async (data: any) => {
         try {
-          const data = JSON.parse(message.toString());
-          await this.handleMessage(ws, data);
+          await this.handleMessage(socket, data);
         } catch (error) {
           console.error('Error handling optimization message:', error);
-          this.sendError(ws, 'Failed to process message');
+          this.sendError(socket, 'Failed to process message');
         }
       });
 
-      ws.on('close', () => {
+      socket.on('disconnect', () => {
         console.log('Optimization client disconnected');
       });
+    });
+  }
 
-      ws.on('error', (error) => {
-        console.error('Optimization WebSocket error:', error);
-        this.sendError(ws, 'WebSocket error occurred');
+  private async handleMessage(socket: Socket, data: any) {
+    switch (data.type) {
+      case 'start_optimization':
+        await this.handleStartOptimization(socket, data.config);
+        break;
+      case 'stop_optimization':
+        await this.handleStopOptimization(socket, data.optimizationId);
+        break;
+      case 'get_status':
+        this.handleGetStatus(socket, data.optimizationId);
+        break;
+      default:
+        this.sendError(socket, 'Unknown message type');
+    }
+  }
+
+  private async handleStartOptimization(socket: Socket, config: OptimizationConfig) {
+    try {
+      const optimizationId = Math.random().toString(36).substring(7);
+      
+      this.optimizations.set(optimizationId, {
+        config,
+        progress: 0,
+        status: 'running'
       });
 
-      // Send initial connection success message
-      this.send(ws, 'connect', { status: 'connected' });
-    });
-  }
+      // Start the optimization process
+      this.runOptimization(optimizationId, socket);
 
-  private async handleMessage(ws: WebSocket, message: any) {
-    const { type, data } = message;
-
-    switch (type) {
-      case 'start_optimization':
-        await this.handleStartOptimization(ws, data);
-        break;
-
-      case 'stop_optimization':
-        await this.handleStopOptimization(ws, data);
-        break;
-
-      case 'get_status':
-        await this.handleGetStatus(ws, data);
-        break;
-
-      default:
-        this.sendError(ws, `Unknown message type: ${type}`);
+      socket.emit('optimization_started', { optimizationId });
+    } catch (error) {
+      console.error('Error starting optimization:', error);
+      this.sendError(socket, 'Failed to start optimization');
     }
   }
 
-  private async handleStartOptimization(ws: WebSocket, data: {
-    optimizationId: string;
-    strategyId: string;
-    config: OptimizationConfig;
-  }) {
-    const { optimizationId, strategyId, config } = data;
-
-    // Store optimization details
-    this.optimizations.set(optimizationId, {
-      config,
-      progress: 0,
-      status: 'running'
-    });
-
-    // Start the optimization process
-    await this.runOptimization(ws, optimizationId, strategyId, config);
-  }
-
-  private async handleStopOptimization(ws: WebSocket, data: {
-    optimizationId: string;
-  }) {
-    const { optimizationId } = data;
+  private async handleStopOptimization(socket: Socket, optimizationId: string) {
     const optimization = this.optimizations.get(optimizationId);
-
     if (!optimization) {
-      this.sendError(ws, `Optimization not found: ${optimizationId}`);
+      this.sendError(socket, 'Optimization not found');
       return;
     }
 
-    // Stop the optimization
     optimization.status = 'completed';
-    this.optimizations.set(optimizationId, optimization);
-    
-    this.send(ws, 'optimization_stopped', { optimizationId });
+    socket.emit('optimization_stopped', { optimizationId });
   }
 
-  private async handleGetStatus(ws: WebSocket, data: {
-    optimizationId: string;
-  }) {
-    const { optimizationId } = data;
+  private handleGetStatus(socket: Socket, optimizationId: string) {
     const optimization = this.optimizations.get(optimizationId);
-
     if (!optimization) {
-      this.sendError(ws, `Optimization not found: ${optimizationId}`);
+      this.sendError(socket, 'Optimization not found');
       return;
     }
 
-    this.send(ws, 'optimization_status', {
+    socket.emit('optimization_status', {
       optimizationId,
-      ...optimization
+      progress: optimization.progress,
+      status: optimization.status
     });
   }
 
-  private async runOptimization(
-    ws: WebSocket,
-    optimizationId: string,
-    strategyId: string,
-    config: OptimizationConfig
-  ) {
+  private async runOptimization(optimizationId: string, socket: Socket) {
+    const optimization = this.optimizations.get(optimizationId);
+    if (!optimization) return;
+
     try {
-      // Use config parameters for optimization
-      const { parameters, timeframe, startDate, endDate, symbol, optimizationMetric } = config;
-      console.log(`Starting optimization for ${symbol} on ${timeframe} from ${startDate} to ${endDate}`);
-      console.log(`Optimization metric: ${optimizationMetric}`);
-      console.log('Parameters:', parameters);
+      // Simulate optimization process
+      for (let i = 0; i <= 100; i += 10) {
+        if (optimization.status !== 'running') break;
 
-      // Simulate optimization progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        if (progress <= 100) {
-          this.send(ws, 'optimization_progress', {
-            optimizationId,
-            progress
-          });
-        }
-      }, 1000);
+        optimization.progress = i;
+        socket.emit('optimization_progress', {
+          optimizationId,
+          progress: i,
+          status: 'running'
+        });
 
-      // Simulate optimization results after 10 seconds
-      setTimeout(() => {
-        clearInterval(interval);
-        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      if (optimization.status === 'running') {
+        optimization.status = 'completed';
+        optimization.progress = 100;
+
         const result: OptimizationResultNew = {
           optimizationId,
-          strategyId,
+          strategyId: optimization.config.strategyId,
           parameters: {
-            stopLoss: parameters.stopLoss?.min || 50,
-            takeProfit: parameters.takeProfit?.min || 100,
-            entryThreshold: parameters.entryThreshold?.min || 0.5
+            stopLoss: 50,
+            takeProfit: 100,
+            riskPerTrade: 0.02
           },
-          performance: this.generateRandomResults(),
+          performance: {
+            profit: 5000,
+            sharpeRatio: 1.5,
+            maxDrawdown: -15,
+            winRate: 0.65,
+            tradeCount: 100
+          },
           timestamp: new Date().toISOString()
         };
 
-        this.send(ws, 'optimization_complete', result);
-        
-        // Update optimization status
-        const optimization = this.optimizations.get(optimizationId);
-        if (optimization) {
-          optimization.status = 'completed';
-          optimization.progress = 100;
-        }
-      }, 10000);
-
-    } catch (error: any) {
-      console.error('Optimization error:', error);
-      this.send(ws, 'optimization_error', {
-        optimizationId,
-        error: error.message
-      });
-      
-      // Update optimization status
-      const optimization = this.optimizations.get(optimizationId);
-      if (optimization) {
-        optimization.status = 'error';
+        socket.emit('optimization_completed', {
+          optimizationId,
+          result
+        });
       }
+    } catch (error) {
+      console.error('Error running optimization:', error);
+      optimization.status = 'error';
+      this.sendError(socket, 'Optimization process failed');
     }
   }
 
-  private generateRandomResults(): OptimizationResultNew['performance'] {
-    return {
-      profit: Math.random() * 10000 - 5000,
-      sharpeRatio: Math.random() * 3,
-      maxDrawdown: Math.random() * 30,
-      winRate: Math.random() * 100,
-      tradeCount: Math.floor(Math.random() * 1000)
-    };
-  }
-
-  private send(ws: WebSocket, type: string, data: any) {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type, data }));
-    }
-  }
-
-  private sendError(ws: WebSocket, message: string) {
-    this.send(ws, 'error', { message });
-  }
-
-  public getConnectedClients(): number {
-    return this.wss.clients.size;
-  }
-
-  public close() {
-    this.wss.close();
+  private sendError(socket: Socket, message: string) {
+    socket.emit('error', { message });
   }
 }
 

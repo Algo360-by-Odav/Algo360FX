@@ -3,37 +3,29 @@ import { observer } from 'mobx-react-lite';
 import { useAuth } from '../../stores/AuthStore';
 import { Navigate } from 'react-router-dom';
 import AccessDenied from '../AccessDenied';
-
-interface User {
-  id: string;
-  email: string;
-  role: string;
-  permissions: string[];
-}
+import { User, UserRole } from '@/types/user';
 
 interface PermissionGuardProps {
-  requiredPermissions: string[];
+  requiredRoles: UserRole[];
   children: React.ReactNode;
 }
 
-const PermissionGuard: React.FC<PermissionGuardProps> = ({
-  requiredPermissions,
+const PermissionGuard: React.FC<PermissionGuardProps> = observer(({
+  requiredRoles,
   children,
 }) => {
   const { user } = useAuth();
 
-  const hasRequiredPermissions = (user: User) => {
-    if (!user || !user.permissions) return false;
-    return requiredPermissions.every((permission) =>
-      user.permissions.includes(permission)
-    );
+  const hasRequiredRole = (user: User) => {
+    if (!user || !user.role) return false;
+    return requiredRoles.includes(user.role as UserRole);
   };
 
-  if (!user || !hasRequiredPermissions(user)) {
+  if (!user || !hasRequiredRole(user)) {
     return <AccessDenied />;
   }
 
   return <>{children}</>;
-};
+});
 
 export default PermissionGuard;

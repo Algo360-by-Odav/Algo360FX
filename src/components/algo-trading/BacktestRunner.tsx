@@ -1,129 +1,118 @@
-import React, { useState } from 'react';
-import { observer } from 'mobx-react-lite';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Paper,
-  Typography,
-  TextField,
   Button,
-  Grid,
+  Card,
+  CardContent,
   FormControl,
+  Grid,
   InputLabel,
-  Select,
   MenuItem,
-  Chip,
-  Alert,
-  CircularProgress,
-  Slider,
-  Dialog,
-  DialogContent,
+  Select,
+  SelectChangeEvent,
+  TextField,
+  Typography,
 } from '@mui/material';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { TradingStrategy, BacktestParams } from '../../types/algo-trading';
-import { useAlgoTradingStore } from '../../stores/AlgoTradingStore';
-import { formatCurrency, formatPercentage } from '../../utils/formatters';
-import BacktestResults from './BacktestResults';
-import BacktestReport from './backtesting/BacktestReport';
+import { DatePicker } from '@mui/x-date-pickers';
+import { observer } from 'mobx-react-lite';
+import { useRootStore } from '@/stores/RootStore';
+import { Strategy, TimeFrame } from '@/types/trading';
+import { formatDate } from '@/utils/formatters';
 
-const BacktestRunner: React.FC = observer(() => {
-  const algoTradingStore = useAlgoTradingStore();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface BacktestRunnerProps {
+  onBacktestComplete?: () => void;
+}
+
+const BacktestRunner: React.FC<BacktestRunnerProps> = observer(({ onBacktestComplete }) => {
+  const { algoTradingStore, marketStore } = useRootStore();
   const [selectedStrategy, setSelectedStrategy] = useState<string>('');
-  const [params, setParams] = useState<BacktestParams>({
-    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-    endDate: new Date(),
-    initialCapital: 100000,
-    symbols: [],
-    timeframe: '1h',
-    commission: 0.1,
-    slippage: 0.05,
-  });
-  const [showReport, setShowReport] = useState(false);
+  const [selectedTimeframe, setSelectedTimeframe] = useState<TimeFrame>(TimeFrame.H1);
+  const [startDate, setStartDate] = useState<Date | null>(new Date());
+  const [endDate, setEndDate] = useState<Date | null>(new Date());
+  const [initialBalance, setInitialBalance] = useState<number>(10000);
+  const [commission, setCommission] = useState<number>(0.1);
+  const [slippage, setSlippage] = useState<number>(0.05);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
 
-  const handleStrategyChange = (event: React.ChangeEvent<{ value: unknown }>) => {
-    setSelectedStrategy(event.target.value as string);
-    const strategy = algoTradingStore.getStrategy(event.target.value as string);
-    if (strategy) {
-      setParams({
-        ...params,
-        symbols: strategy.symbols,
-        timeframe: strategy.timeframe,
-      });
-    }
+  useEffect(() => {
+    algoTradingStore.loadStrategies();
+  }, [algoTradingStore]);
+
+  const handleStrategyChange = (event: SelectChangeEvent<string>) => {
+    setSelectedStrategy(event.target.value);
   };
 
-  const handleSymbolAdd = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      const symbol = (event.target as HTMLInputElement).value.toUpperCase();
-      if (symbol && !params.symbols.includes(symbol)) {
-        setParams({
-          ...params,
-          symbols: [...params.symbols, symbol],
-        });
-        (event.target as HTMLInputElement).value = '';
-      }
-    }
+  const handleTimeframeChange = (event: SelectChangeEvent<TimeFrame>) => {
+    setSelectedTimeframe(event.target.value as TimeFrame);
   };
 
-  const handleSymbolRemove = (symbolToRemove: string) => {
-    setParams({
-      ...params,
-      symbols: params.symbols.filter((symbol) => symbol !== symbolToRemove),
-    });
+  const handleStartDateChange = (date: Date | null) => {
+    setStartDate(date);
+  };
+
+  const handleEndDateChange = (date: Date | null) => {
+    setEndDate(date);
+  };
+
+  const handleInitialBalanceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInitialBalance(Number(event.target.value));
+  };
+
+  const handleCommissionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setCommission(Number(event.target.value));
+  };
+
+  const handleSlippageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSlippage(Number(event.target.value));
   };
 
   const handleRunBacktest = async () => {
-    if (!selectedStrategy) {
-      setError('Please select a strategy');
-      return;
-    }
+    if (!selectedStrategy || !startDate || !endDate) return;
 
-    setLoading(true);
-    setError(null);
-
+    setIsRunning(true);
     try {
-      await algoTradingStore.runBacktest(selectedStrategy, params);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const strategy = algoTradingStore.strategies.find(s => s.id === selectedStrategy);
+      if (!strategy) return;
 
-  const handleViewReport = () => {
-    setShowReport(true);
+      await algoTradingStore.runBacktest({
+        strategy,
+        parameters: strategy.parameters,
+        symbol: strategy.symbol,
+        timeframe: selectedTimeframe,
+        startDate,
+        endDate,
+        initialBalance,
+        commission,
+        slippage,
+        useSpread: true,
+      });
+
+      if (onBacktestComplete) {
+        onBacktestComplete();
+      }
+    } catch (error) {
+      console.error('Backtest error:', error);
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3, backgroundColor: '#1F2937' }}>
-        <Typography variant="h6" sx={{ mb: 3, color: 'white' }}>
-          Backtest Runner
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          Backtest Configuration
         </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
         <Grid container spacing={3}>
-          {/* Strategy Selection */}
-          <Grid item xs={12}>
+          <Grid item xs={12} md={6}>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                Strategy
-              </InputLabel>
+              <InputLabel>Strategy</InputLabel>
               <Select
                 value={selectedStrategy}
                 onChange={handleStrategyChange}
                 label="Strategy"
-                sx={{ color: 'white' }}
               >
-                {algoTradingStore.strategies.map((strategy) => (
+                {algoTradingStore.strategies.map((strategy: Strategy) => (
                   <MenuItem key={strategy.id} value={strategy.id}>
                     {strategy.name}
                   </MenuItem>
@@ -132,190 +121,95 @@ const BacktestRunner: React.FC = observer(() => {
             </FormControl>
           </Grid>
 
-          {/* Date Range */}
           <Grid item xs={12} md={6}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DateTimePicker
-                label="Start Date"
-                value={params.startDate}
-                onChange={(date) =>
-                  setParams({ ...params, startDate: date || new Date() })
-                }
-                sx={{
-                  width: '100%',
-                  '& .MuiInputLabel-root': {
-                    color: 'rgba(255, 255, 255, 0.7)',
-                  },
-                  '& .MuiOutlinedInput-input': {
-                    color: 'white',
-                  },
-                }}
-              />
-            </LocalizationProvider>
+            <FormControl fullWidth>
+              <InputLabel>Timeframe</InputLabel>
+              <Select
+                value={selectedTimeframe}
+                onChange={handleTimeframeChange}
+                label="Timeframe"
+              >
+                {Object.values(TimeFrame).map((timeframe) => (
+                  <MenuItem key={timeframe} value={timeframe}>
+                    {timeframe}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DateTimePicker
-                label="End Date"
-                value={params.endDate}
-                onChange={(date) =>
-                  setParams({ ...params, endDate: date || new Date() })
-                }
-                sx={{
-                  width: '100%',
-                  '& .MuiInputLabel-root': {
-                    color: 'rgba(255, 255, 255, 0.7)',
-                  },
-                  '& .MuiOutlinedInput-input': {
-                    color: 'white',
-                  },
-                }}
-              />
-            </LocalizationProvider>
+            <DatePicker
+              label="Start Date"
+              value={startDate}
+              onChange={handleStartDateChange}
+              format="yyyy-MM-dd"
+              sx={{ width: '100%' }}
+            />
           </Grid>
 
-          {/* Initial Capital */}
+          <Grid item xs={12} md={6}>
+            <DatePicker
+              label="End Date"
+              value={endDate}
+              onChange={handleEndDateChange}
+              format="yyyy-MM-dd"
+              sx={{ width: '100%' }}
+            />
+          </Grid>
+
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              label="Initial Capital"
+              label="Initial Balance"
               type="number"
-              value={params.initialCapital}
-              onChange={(e) =>
-                setParams({
-                  ...params,
-                  initialCapital: parseFloat(e.target.value),
-                })
-              }
-              InputLabelProps={{ sx: { color: 'rgba(255, 255, 255, 0.7)' } }}
-              InputProps={{ sx: { color: 'white' } }}
+              value={initialBalance}
+              onChange={handleInitialBalanceChange}
+              InputProps={{
+                inputProps: { min: 0 },
+              }}
             />
           </Grid>
 
-          {/* Commission */}
           <Grid item xs={12} md={4}>
-            <Box sx={{ width: '100%' }}>
-              <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1 }}>
-                Commission (%)
-              </Typography>
-              <Slider
-                value={params.commission}
-                onChange={(_, value) =>
-                  setParams({ ...params, commission: value as number })
-                }
-                min={0}
-                max={1}
-                step={0.01}
-                valueLabelDisplay="auto"
-                valueLabelFormat={(value) => `${value}%`}
-                sx={{
-                  color: '#2196f3',
-                  '& .MuiSlider-valueLabel': {
-                    backgroundColor: '#2196f3',
-                  },
-                }}
-              />
-            </Box>
-          </Grid>
-
-          {/* Slippage */}
-          <Grid item xs={12} md={4}>
-            <Box sx={{ width: '100%' }}>
-              <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1 }}>
-                Slippage (%)
-              </Typography>
-              <Slider
-                value={params.slippage}
-                onChange={(_, value) =>
-                  setParams({ ...params, slippage: value as number })
-                }
-                min={0}
-                max={0.5}
-                step={0.01}
-                valueLabelDisplay="auto"
-                valueLabelFormat={(value) => `${value}%`}
-                sx={{
-                  color: '#2196f3',
-                  '& .MuiSlider-valueLabel': {
-                    backgroundColor: '#2196f3',
-                  },
-                }}
-              />
-            </Box>
-          </Grid>
-
-          {/* Symbols */}
-          <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Add Symbol"
-              placeholder="Press Enter to add"
-              onKeyPress={handleSymbolAdd}
-              sx={{ mb: 2 }}
-              InputLabelProps={{ sx: { color: 'rgba(255, 255, 255, 0.7)' } }}
-              InputProps={{ sx: { color: 'white' } }}
+              label="Commission (%)"
+              type="number"
+              value={commission}
+              onChange={handleCommissionChange}
+              InputProps={{
+                inputProps: { min: 0, step: 0.01 },
+              }}
             />
-
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {params.symbols.map((symbol) => (
-                <Chip
-                  key={symbol}
-                  label={symbol}
-                  onDelete={() => handleSymbolRemove(symbol)}
-                  sx={{
-                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                    color: 'white',
-                  }}
-                />
-              ))}
-            </Box>
           </Grid>
 
-          {/* Run Button */}
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Slippage (%)"
+              type="number"
+              value={slippage}
+              onChange={handleSlippageChange}
+              InputProps={{
+                inputProps: { min: 0, step: 0.01 },
+              }}
+            />
+          </Grid>
+
           <Grid item xs={12}>
             <Button
-              variant="contained"
               fullWidth
+              variant="contained"
               onClick={handleRunBacktest}
-              disabled={loading}
-              sx={{
-                mt: 2,
-                backgroundColor: '#2196f3',
-                '&:hover': {
-                  backgroundColor: '#1976d2',
-                },
-              }}
+              disabled={isRunning || !selectedStrategy || !startDate || !endDate}
             >
-              {loading ? <CircularProgress size={24} /> : 'Run Backtest'}
+              {isRunning ? 'Running Backtest...' : 'Run Backtest'}
             </Button>
           </Grid>
         </Grid>
-
-        {/* Results */}
-        {algoTradingStore.backtestResults && (
-          <BacktestResults results={algoTradingStore.backtestResults} />
-        )}
-      </Paper>
-      {showReport && algoTradingStore.backtestResults && (
-        <Dialog
-          open={showReport}
-          onClose={() => setShowReport(false)}
-          maxWidth="xl"
-          fullWidth
-        >
-          <DialogContent>
-            <BacktestReport
-              strategy={selectedStrategy!}
-              result={algoTradingStore.backtestResults}
-              onShare={() => {}}
-              onDownload={() => {}}
-              onPrint={() => {}}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
-    </Box>
+      </CardContent>
+    </Card>
   );
 });
 

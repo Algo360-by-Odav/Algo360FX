@@ -16,7 +16,7 @@ import {
 import { observer } from 'mobx-react-lite';
 import PerformanceAnalyticsWidget from '@components/Analytics/PerformanceAnalyticsWidget';
 import RiskCalculatorWidget from '@components/Risk/RiskCalculatorWidget';
-import AnalyticsDashboard from '@components/dashboard/AnalyticsDashboard';
+import AdvancedAnalyticsDashboard from '@components/Analytics/AdvancedAnalytics/AdvancedAnalyticsDashboard';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -188,7 +188,7 @@ const Analytics: React.FC = observer(() => {
 
         {/* Advanced Analytics Tab */}
         <TabPanel value={tabValue} index={1}>
-          <AnalyticsDashboard />
+          <AdvancedAnalyticsDashboard />
         </TabPanel>
       </Grid>
     </Box>

@@ -19,7 +19,7 @@ import {
   Add as AddIcon,
   Edit as DrawIcon,
   Clear as ClearIcon,
-  Crosshairs as CrosshairIcon,
+  CropFree as CrosshairIcon,
   Info as LegendIcon,
 } from '@mui/icons-material';
 import { ChartSettings } from '../../../types/trading';

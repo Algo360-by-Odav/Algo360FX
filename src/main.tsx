@@ -6,7 +6,7 @@ import App from './App';
 import { RootStore } from './stores/RootStore';
 import { RootStoreProvider } from './stores/RootStoreContext';
 import { SearchProvider } from './context/SearchContext';
-import AuthProvider from './providers/AuthProvider';
+import { AuthProvider } from './providers/AuthProvider';
 import ErrorBoundary from './components/error/ErrorBoundary';
 import { initSentry } from './utils/sentry';
 import './styles/global.css';

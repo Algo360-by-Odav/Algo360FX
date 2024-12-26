@@ -12,7 +12,23 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   
   return {
-    base: './',
+    base: '/',
+    server: {
+      port: 5173,
+      strictPort: true,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+          secure: false
+        },
+        '/ws': {
+          target: 'ws://localhost:5000',
+          ws: true,
+          secure: false
+        }
+      }
+    },
     plugins: [
       react({
         babel: {
@@ -30,58 +46,55 @@ export default defineConfig(({ command, mode }) => {
         '@pages': resolve(__dirname, './src/pages'),
         '@stores': resolve(__dirname, './src/stores'),
         '@theme': resolve(__dirname, './src/theme'),
-        '@utils': resolve(__dirname, './src/utils')
+        '@utils': resolve(__dirname, './src/utils'),
+        '@config': resolve(__dirname, './src/config'),
+        '@websocket': resolve(__dirname, './src/websocket'),
+        '@sentry/tracing': resolve(__dirname, 'node_modules/@sentry/tracing'),
+        '@sentry/react': resolve(__dirname, 'node_modules/@sentry/react')
       }
     },
     build: {
       outDir: 'dist',
-      emptyOutDir: true,
-      manifest: true,
+      assetsDir: 'assets',
+      sourcemap: true,
       rollupOptions: {
-        input: {
-          main: resolve(__dirname, 'index.html')
-        },
         output: {
           manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom'],
-            mui: ['@mui/material', '@mui/icons-material'],
-            charts: ['lightweight-charts', 'recharts']
-          }
+            vendor: [
+              'react',
+              'react-dom',
+              'react-router-dom',
+              '@mui/material',
+              '@mui/icons-material',
+              'mobx',
+              'mobx-react-lite'
+            ]
+          },
+          assetFileNames: (assetInfo) => {
+            let extType = assetInfo.name.split('.').at(1);
+            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
+              extType = 'img';
+            } else if (/woff|woff2/.test(extType)) {
+              extType = 'fonts';
+            }
+            return `assets/${extType}/[name]-[hash][extname]`;
+          },
+          chunkFileNames: 'assets/js/[name]-[hash].js',
+          entryFileNames: 'assets/js/[name]-[hash].js',
         }
-      }
+      },
+      chunkSizeWarningLimit: 1600,
     },
-    server: {
-      port: 5173,
-      host: true,
-      proxy: {
-        '/api': {
-          target: 'http://localhost:5000',
-          changeOrigin: true,
-          secure: false
-        },
-        '/ws': {
-          target: 'ws://localhost:5000',
-          ws: true
-        }
-      }
-    },
-    preview: {
-      port: 5173,
-      proxy: {
-        '/api': {
-          target: 'http://localhost:5000',
-          changeOrigin: true,
-          secure: false
-        },
-        '/ws': {
-          target: 'ws://localhost:5000',
-          ws: true
-        }
-      }
-    },
-    define: {
-      __API_URL__: JSON.stringify(env.VITE_API_URL || 'http://localhost:5000/api'),
-      __WS_URL__: JSON.stringify(env.VITE_WS_URL || 'ws://localhost:5000/ws')
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        '@mui/material',
+        '@mui/icons-material',
+        'mobx',
+        'mobx-react-lite'
+      ]
     }
   };
 });

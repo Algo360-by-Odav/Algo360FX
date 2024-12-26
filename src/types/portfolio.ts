@@ -1,157 +1,148 @@
-import { TradingStrategy } from './algo-trading';
-
-export interface PortfolioStrategy extends TradingStrategy {
-  allocation: number;
-  riskContribution?: number;
-  correlations?: Record<string, number>;
-}
-
-export interface PortfolioMetrics {
-  expectedReturn: number;
-  volatility: number;
-  sharpeRatio: number;
-  maxDrawdown: number;
-  correlationMatrix: number[][];
-  valueAtRisk: number;
-  conditionalVaR: number;
-  diversificationRatio: number;
-  trackingError: number;
-  informationRatio: number;
-  calmarRatio: number;
-  betaToMarket: number;
-  treynorRatio: number;
-}
+import { Trade, Position } from './trading';
 
 export interface Portfolio {
   id: string;
+  userId: string;
   name: string;
   description: string;
-  strategies: PortfolioStrategy[];
-  metrics: PortfolioMetrics;
-  initialCapital: number;
+  type: 'LIVE' | 'DEMO' | 'BACKTEST';
+  currency: string;
+  initialBalance: number;
+  currentBalance: number;
+  unrealizedPnl: number;
+  realizedPnl: number;
+  equity: number;
+  margin: number;
+  freeMargin: number;
+  marginLevel: number;
+  leverage: number;
+  positions: Position[];
+  trades: Trade[];
   createdAt: Date;
   updatedAt: Date;
-  userId: string;
-  isActive: boolean;
-  tags: string[];
+  settings: PortfolioSettings;
+  performance: PortfolioPerformance;
+  risk: PortfolioRisk;
 }
 
-export enum OptimizationObjective {
-  MAX_SHARPE = 'MAX_SHARPE',
-  MIN_RISK = 'MIN_RISK',
-  MAX_RETURN = 'MAX_RETURN',
-  RISK_PARITY = 'RISK_PARITY',
+export interface PortfolioSettings {
+  autoRebalance: boolean;
+  rebalanceThreshold: number;
+  rebalanceInterval: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  maxDrawdown: number;
+  maxLeverage: number;
+  maxPositions: number;
+  defaultStopLoss: number;
+  defaultTakeProfit: number;
+  defaultPositionSize: number;
+  defaultLeverage: number;
 }
 
-export enum RiskMeasure {
-  VOLATILITY = 'VOLATILITY',
-  VAR = 'VAR',
-  CVAR = 'CVAR',
-  DOWNSIDE_RISK = 'DOWNSIDE_RISK',
-  TRACKING_ERROR = 'TRACKING_ERROR',
-}
-
-export interface PortfolioConstraints {
-  minWeight: number;
-  maxWeight: number;
-  targetReturn?: number;
-  maxVolatility?: number;
-  maxDrawdown?: number;
-  minDiversification?: number;
-  sectorConstraints?: Record<string, { min: number; max: number }>;
-  assetClassConstraints?: Record<string, { min: number; max: number }>;
-  turnoverConstraint?: number;
-  customConstraints?: {
-    type: string;
-    value: number;
-    operator: '>' | '<' | '>=' | '<=' | '=';
-  }[];
-}
-
-export interface OptimizationDetails {
-  objective: OptimizationObjective;
-  constraints: PortfolioConstraints;
-  riskMeasure: RiskMeasure;
-  convergence: boolean;
-  iterations: number;
-  optimizationTime: number;
-}
-
-export interface PortfolioOptimizationResult {
-  strategies: PortfolioStrategy[];
-  metrics: PortfolioMetrics;
-  efficientFrontier: { risk: number; return: number }[];
-  riskContribution: number[];
-  optimizationDetails: OptimizationDetails;
-}
-
-export interface PortfolioRebalanceConfig {
-  frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly';
-  threshold: number;
-  optimizationObjective: OptimizationObjective;
-  constraints: PortfolioConstraints;
-  riskMeasure: RiskMeasure;
-}
-
-export interface PortfolioAlert {
-  id: string;
-  portfolioId: string;
-  type: 'REBALANCE' | 'RISK' | 'PERFORMANCE' | 'CUSTOM';
-  message: string;
-  severity: 'low' | 'medium' | 'high';
-  createdAt: Date;
-  isRead: boolean;
-}
-
-export interface PortfolioReport {
-  id: string;
-  portfolioId: string;
-  startDate: Date;
-  endDate: Date;
-  metrics: PortfolioMetrics;
-  trades: {
-    strategyId: string;
-    count: number;
-    volume: number;
-    pnl: number;
-  }[];
-  rebalances: {
-    date: Date;
-    oldWeights: number[];
-    newWeights: number[];
-    reason: string;
-  }[];
-  riskAnalysis: {
-    var: number;
-    cvar: number;
-    stressTests: {
-      scenario: string;
-      impact: number;
-    }[];
+export interface PortfolioPerformance {
+  returns: {
+    daily: number;
+    weekly: number;
+    monthly: number;
+    yearly: number;
+    allTime: number;
   };
-  createdAt: Date;
+  metrics: {
+    sharpeRatio: number;
+    sortinoRatio: number;
+    maxDrawdown: number;
+    recoveryFactor: number;
+    profitFactor: number;
+    winRate: number;
+    averageWin: number;
+    averageLoss: number;
+    expectancy: number;
+  };
+  history: {
+    equity: EquityPoint[];
+    drawdown: DrawdownPoint[];
+    returns: ReturnPoint[];
+  };
 }
 
-export interface PortfolioAnalysis {
-  historicalPerformance: {
-    date: Date;
-    value: number;
-    drawdown: number;
-  }[];
-  riskDecomposition: {
-    strategyId: string;
-    contribution: number;
-  }[];
-  factorExposure: {
-    factor: string;
-    exposure: number;
-  }[];
-  scenarioAnalysis: {
-    scenario: string;
-    impact: number;
-  }[];
-  styleAnalysis: {
-    style: string;
-    exposure: number;
-  }[];
+export interface PortfolioRisk {
+  currentDrawdown: number;
+  maxDrawdown: number;
+  valueAtRisk: number;
+  expectedShortfall: number;
+  betaToMarket: number;
+  correlationToMarket: number;
+  volatility: number;
+  concentrationRisk: ConcentrationRisk[];
+  exposures: ExposureRisk[];
+}
+
+export interface ConcentrationRisk {
+  type: 'SYMBOL' | 'SECTOR' | 'STRATEGY';
+  name: string;
+  exposure: number;
+  limit: number;
+  risk: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
+export interface ExposureRisk {
+  symbol: string;
+  notional: number;
+  percentage: number;
+  direction: 'LONG' | 'SHORT';
+  leverage: number;
+  risk: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
+export interface EquityPoint {
+  timestamp: Date;
+  equity: number;
+  balance: number;
+  unrealizedPnl: number;
+}
+
+export interface DrawdownPoint {
+  timestamp: Date;
+  drawdown: number;
+  duration: number;
+  recovered: boolean;
+}
+
+export interface ReturnPoint {
+  timestamp: Date;
+  return: number;
+  cumulative: number;
+}
+
+export interface PortfolioAllocation {
+  symbol: string;
+  targetWeight: number;
+  currentWeight: number;
+  deviation: number;
+  action: 'BUY' | 'SELL' | 'HOLD';
+  amount: number;
+  notional: number;
+}
+
+export interface RebalanceConfig {
+  method: 'THRESHOLD' | 'PERIODIC' | 'CUSTOM';
+  threshold?: number;
+  interval?: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  customLogic?: string;
+  constraints: {
+    minTradeSize: number;
+    maxTradeSize: number;
+    maxSlippage: number;
+    minHoldingPeriod: number;
+  };
+}
+
+export interface RebalanceResult {
+  timestamp: Date;
+  trades: Trade[];
+  allocations: PortfolioAllocation[];
+  metrics: {
+    turnover: number;
+    cost: number;
+    tracking: number;
+  };
 }

@@ -120,23 +120,72 @@ export interface MLJob {
   completedAt?: Date;
 }
 
-export interface ModelEvaluation {
-  modelId: string;
+export interface ModelConfig {
+  architecture: string;
+  layers: number[];
+  activation: string;
+  optimizer: string;
+  learningRate: number;
+  batchSize: number;
+  epochs: number;
+  validationSplit: number;
+  features: string[];
+  target: string;
+  lookback: number;
+  horizon: number;
+}
+
+export interface ModelMetrics {
+  loss: number;
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1Score: number;
+  r2Score: number;
+  mse: number;
+  mae: number;
+  rmse: number;
+}
+
+export interface ModelPrediction {
   timestamp: Date;
-  metrics: {
-    accuracy: number;
-    precision: number;
-    recall: number;
-    f1Score: number;
-    profitFactor: number;
-    sharpeRatio: number;
-    maxDrawdown: number;
-  };
-  confusionMatrix: {
-    truePositives: number;
-    falsePositives: number;
-    trueNegatives: number;
-    falseNegatives: number;
-  };
-  predictions: PredictionResult[];
+  actual: number;
+  predicted: number;
+  confidence: number;
+  direction: 'UP' | 'DOWN' | 'NEUTRAL';
+}
+
+export interface ModelTrainingProgress {
+  epoch: number;
+  loss: number;
+  accuracy: number;
+  valLoss: number;
+  valAccuracy: number;
+  timestamp: Date;
+}
+
+export interface FeatureImportance {
+  feature: string;
+  importance: number;
+}
+
+export interface ModelEvaluation {
+  metrics: ModelMetrics;
+  predictions: ModelPrediction[];
+  featureImportance: FeatureImportance[];
+  confusionMatrix: number[][];
+  trainingHistory: ModelTrainingProgress[];
+}
+
+export interface MLStrategy {
+  id: string;
+  name: string;
+  description: string;
+  modelConfig: ModelConfig;
+  timeframe: Timeframe;
+  symbol: string;
+  enabled: boolean;
+  lastTrained: Date;
+  performance: ModelMetrics;
+  predictions: ModelPrediction[];
 }

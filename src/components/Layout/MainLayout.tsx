@@ -23,6 +23,7 @@ import {
 import { useStore } from '../../hooks/useStore';
 import Sidebar from './Sidebar';
 import NotificationCenter from '../notifications/NotificationCenter';
+import TradingAssistant from '../AI/TradingAssistant';
 
 const drawerWidth = 240;
 
@@ -138,6 +139,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = observer(({ children
         <Main open={open}>
           <DrawerHeader />
           {children}
+          <TradingAssistant />
         </Main>
         <NotificationCenter
           open={notificationsOpen}

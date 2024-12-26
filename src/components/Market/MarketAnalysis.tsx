@@ -22,7 +22,7 @@ import {
   Timeline as TimelineIcon,
 } from '@mui/icons-material';
 import { observer } from 'mobx-react-lite';
-import { useRootStoreContext } from '../../stores/RootStoreContext';
+import { useRootStore } from '../../stores/RootStoreContext';
 import PerformanceChart from '../charts/PerformanceChart';
 
 interface MarketIndicator {
@@ -39,7 +39,7 @@ interface TechnicalLevel {
 }
 
 const MarketAnalysis: React.FC = observer(() => {
-  const { marketStore } = useRootStoreContext();
+  const { marketStore } = useRootStore();
   const [selectedPair, setSelectedPair] = useState('EUR/USD');
   const [timeframe, setTimeframe] = useState('H1');
   const [activeTab, setActiveTab] = useState(0);
@@ -303,3 +303,4 @@ const MarketAnalysis: React.FC = observer(() => {
 });
 
 export default MarketAnalysis;
+

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -40,26 +40,8 @@ import {
 import { format } from 'date-fns';
 import { useTheme } from '@mui/material/styles';
 import * as tf from '@tensorflow/tfjs';
-
-interface MarketData {
-  timestamp: Date;
-  price: number;
-  volume: number;
-  bid: number;
-  ask: number;
-  depth: {
-    bids: [number, number][];
-    asks: [number, number][];
-  };
-}
-
-interface OrderFlowData {
-  price: number;
-  buyVolume: number;
-  sellVolume: number;
-  delta: number;
-  cumDelta: number;
-}
+import WebSocketService from '../../services/websocketService';
+import { MarketData } from '@/types/market';
 
 interface RealTimeAnalysisProps {
   data: MarketData[];
@@ -81,7 +63,6 @@ const RealTimeAnalysis: React.FC<RealTimeAnalysisProps> = ({
     timeframe: '1m',
   });
 
-  const [wsConnection, setWsConnection] = React.useState<WebSocket | null>(null);
   const [status, setStatus] = React.useState<'connected' | 'disconnected' | 'error'>('disconnected');
   const [orderFlow, setOrderFlow] = React.useState<OrderFlowData[]>([]);
   const [analysis, setAnalysis] = React.useState({
@@ -91,45 +72,30 @@ const RealTimeAnalysis: React.FC<RealTimeAnalysisProps> = ({
     sentiment: 'neutral',
   });
 
-  // WebSocket Connection
-  React.useEffect(() => {
-    const connectWebSocket = () => {
-      try {
-        const ws = new WebSocket(wsEndpoint);
-        
-        ws.onopen = () => {
-          setStatus('connected');
-          ws.send(JSON.stringify({
-            type: 'subscribe',
-            channels: ['trades', 'orderbook'],
-            symbols: ['EURUSD'],
-          }));
-        };
+  const wsRef = useRef<typeof WebSocketService | null>(null);
 
-        ws.onmessage = (event) => {
-          const message = JSON.parse(event.data);
-          handleMarketData(message);
-        };
+  useEffect(() => {
+    // Connect to WebSocket
+    if (!wsRef.current) {
+      WebSocketService.connect(wsEndpoint);
+      wsRef.current = WebSocketService;
 
-        ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
-          setStatus('error');
-        };
+      // Subscribe to market data updates
+      WebSocketService.subscribe('marketData');
 
-        ws.onclose = () => {
-          setStatus('disconnected');
-          setTimeout(connectWebSocket, 5000); // Reconnect after 5 seconds
-        };
+      // Handle market data updates
+      WebSocketService.on('marketData', (message: any) => {
+        handleMarketData(message);
+      });
+    }
 
-        setWsConnection(ws);
-      } catch (error) {
-        console.error('WebSocket connection error:', error);
-        setStatus('error');
+    return () => {
+      if (wsRef.current) {
+        WebSocketService.unsubscribe('marketData');
+        WebSocketService.disconnect();
+        wsRef.current = null;
       }
     };
-
-    connectWebSocket();
-    return () => wsConnection?.close();
   }, [wsEndpoint]);
 
   // Handle incoming market data

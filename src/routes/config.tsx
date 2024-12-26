@@ -1,35 +1,34 @@
-import React, { lazy } from 'react';
-import { Navigate } from 'react-router-dom';
-import AuthGuard from './guards/AuthGuard';
-import GuestGuard from './guards/GuestGuard';
-import AdminGuard from './guards/AdminGuard';
+import React from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
+import { UserRole } from '@/types/user';
 
 // Layouts
-const MainLayout = lazy(() => import('../layouts/MainLayout'));
-const AuthLayout = lazy(() => import('../layouts/AuthLayout'));
+import MainLayout from '@/layouts/MainLayout';
+import AuthLayout from '@/layouts/AuthLayout';
 
-// Auth pages
-const Login = lazy(() => import('../pages/auth/Login'));
-const Register = lazy(() => import('../pages/auth/Register'));
-const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'));
-const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'));
-const VerifyEmail = lazy(() => import('../pages/auth/VerifyEmail'));
+// Guards
+import AuthGuard from './guards/AuthGuard';
+import GuestGuard from './guards/GuestGuard';
+import PermissionGuard from './guards/PermissionGuard';
 
-// Main pages
-const Dashboard = lazy(() => import('../pages/Dashboard'));
-const Trading = lazy(() => import('../pages/Trading'));
-const MarketData = lazy(() => import('../pages/MarketData'));
-const Portfolio = lazy(() => import('../pages/Portfolio'));
-const StrategyBuilder = lazy(() => import('../pages/StrategyBuilder'));
-const Analytics = lazy(() => import('../pages/Analytics'));
-const News = lazy(() => import('../pages/News'));
-const Calendar = lazy(() => import('../pages/Calendar'));
-const Profile = lazy(() => import('../pages/Profile'));
-const Settings = lazy(() => import('../pages/Settings'));
-const Documentation = lazy(() => import('../pages/Documentation'));
-
-// Error pages
-const NotFound = lazy(() => import('../pages/NotFound'));
+// Pages
+import Login from '@/pages/auth/Login';
+import Register from '@/pages/auth/Register';
+import ForgotPassword from '@/pages/auth/ForgotPassword';
+import ResetPassword from '@/pages/auth/ResetPassword';
+import VerifyEmail from '@/pages/auth/VerifyEmail';
+import Dashboard from '@/pages/dashboard/Dashboard';
+import Trading from '@/pages/trading/Trading';
+import MarketData from '@/pages/market/MarketData';
+import Portfolio from '@/pages/portfolio/Portfolio';
+import StrategyBuilder from '@/pages/strategy/StrategyBuilder';
+import Analytics from '@/pages/analytics/Analytics';
+import News from '@/pages/news/News';
+import Calendar from '@/pages/calendar/Calendar';
+import Profile from '@/pages/profile/Profile';
+import Settings from '@/pages/settings/Settings';
+import Documentation from '@/pages/docs/Documentation';
+import MoneyManager from '@/pages/money-manager/MoneyManager';
 
 export interface RouteConfig {
   path: string;
@@ -40,110 +39,114 @@ export interface RouteConfig {
 const routes: RouteConfig[] = [
   {
     path: 'auth',
-    element: <AuthLayout />,
+    element: <GuestGuard><AuthLayout /></GuestGuard>,
     children: [
       {
         path: 'login',
-        element: (
-          <GuestGuard>
-            <Login />
-          </GuestGuard>
-        ),
+        element: <Login />,
       },
       {
         path: 'register',
-        element: (
-          <GuestGuard>
-            <Register />
-          </GuestGuard>
-        ),
+        element: <Register />,
       },
       {
         path: 'forgot-password',
-        element: (
-          <GuestGuard>
-            <ForgotPassword />
-          </GuestGuard>
-        ),
+        element: <ForgotPassword />,
       },
       {
         path: 'reset-password/:token',
-        element: (
-          <GuestGuard>
-            <ResetPassword />
-          </GuestGuard>
-        ),
+        element: <ResetPassword />,
       },
       {
-        path: 'verify-email',
+        path: 'verify-email/:token?',
         element: <VerifyEmail />,
+      },
+      {
+        path: '',
+        element: <Navigate to="/auth/login" replace />,
       },
     ],
   },
   {
-    path: '/',
+    path: '',
     element: (
       <AuthGuard>
-        <MainLayout />
+        <MainLayout>
+          <Outlet />
+        </MainLayout>
       </AuthGuard>
     ),
     children: [
       {
         path: '',
-        element: <Navigate to="/app/dashboard" replace />,
+        element: <Navigate to="/dashboard" replace />,
       },
       {
-        path: 'app',
-        children: [
-          {
-            path: '',
-            element: <Navigate to="/app/dashboard" replace />,
-          },
-          {
-            path: 'dashboard',
-            element: <Dashboard />,
-          },
-          {
-            path: 'trading',
-            element: <Trading />,
-          },
-          {
-            path: 'market-data',
-            element: <MarketData />,
-          },
-          {
-            path: 'portfolio',
-            element: <Portfolio />,
-          },
-          {
-            path: 'strategy-builder',
-            element: <StrategyBuilder />,
-          },
-          {
-            path: 'analytics',
-            element: <Analytics />,
-          },
-          {
-            path: 'news',
-            element: <News />,
-          },
-          {
-            path: 'calendar',
-            element: <Calendar />,
-          },
-          {
-            path: 'profile',
-            element: <Profile />,
-          },
-          {
-            path: 'settings',
-            element: <Settings />,
-          },
-          {
-            path: 'docs',
-            element: <Documentation />,
-          },
-        ],
+        path: 'dashboard',
+        element: <Dashboard />,
+      },
+      {
+        path: 'trading',
+        element: (
+          <PermissionGuard requiredPermissions={['trading:access']}>
+            <Trading />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'market-data',
+        element: <MarketData />,
+      },
+      {
+        path: 'portfolio',
+        element: <Portfolio />,
+      },
+      {
+        path: 'strategy-builder',
+        element: (
+          <PermissionGuard requiredPermissions={['strategy:create']}>
+            <StrategyBuilder />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'analytics',
+        element: (
+          <PermissionGuard requiredPermissions={['analytics:view']}>
+            <Analytics />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: 'news',
+        element: <News />,
+      },
+      {
+        path: 'calendar',
+        element: <Calendar />,
+      },
+      {
+        path: 'profile',
+        element: <Profile />,
+      },
+      {
+        path: 'settings',
+        element: <Settings />,
+      },
+      {
+        path: 'docs',
+        element: <Documentation />,
+      },
+      {
+        path: 'money-manager',
+        element: (
+          <PermissionGuard 
+            requiredRoles={[UserRole.ADMIN, UserRole.MANAGER]} 
+            requiredPermissions={['money-manager:access']}
+          >
+            <MoneyManager />
+          </PermissionGuard>
+        ),
       },
     ],
   },
