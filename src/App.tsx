@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
-import { theme } from '@theme/theme';
+import theme from './theme';
 import LoadingScreen from '@components/loading/LoadingScreen';
 import IntroAnimation from '@components/intro/IntroAnimation';
 import AuthLayout from '@components/auth/AuthLayout';
@@ -63,33 +63,35 @@ function App() {
 
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
-              <Route path="/app" element={<MainLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="trading" element={<TradingPage />} />
-                <Route path="market-data" element={<MarketData />} />
-                <Route path="portfolio" element={<Portfolio />} />
-                <Route path="money-manager" element={<MoneyManager />} />
-                <Route path="risk-management" element={<RiskManagement />} />
-                <Route path="strategy-builder" element={<StrategyBuilder />} />
-                <Route path="marketplace" element={<Marketplace />} />
-                <Route path="analytics" element={<Analytics />} />
-                <Route path="academy" element={<TradingAcademy />} />
-                <Route path="news" element={<News />} />
-                <Route path="calendar" element={<Calendar />} />
-                <Route path="hft" element={<HFT />} />
-                <Route path="profile" element={<Profile />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="notifications" element={<Notifications />} />
-                <Route path="auto-trading" element={<AutoTrading />} />
-                <Route path="advanced-trading" element={<AdvancedTrading />} />
-                <Route path="portfolio-optimizer" element={<PortfolioOptimizer />} />
-                <Route path="backtesting" element={<Backtesting />} />
-                <Route path="broker-portal" element={<BrokerPortal />} />
-                <Route path="money-manager-portal" element={<MoneyManagerPortal />} />
-                <Route path="signal-provider-portal" element={<SignalProviderPortal />} />
-                <Route path="investor-portal" element={<InvestorPortal />} />
-              </Route>
+              <Route path="/app" element={<MainLayout children={
+                <Routes>
+                  <Route index element={<Dashboard />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="trading" element={<TradingPage />} />
+                  <Route path="market-data" element={<MarketData />} />
+                  <Route path="portfolio" element={<Portfolio />} />
+                  <Route path="money-manager" element={<MoneyManager />} />
+                  <Route path="risk-management" element={<RiskManagement />} />
+                  <Route path="strategy-builder" element={<StrategyBuilder />} />
+                  <Route path="marketplace" element={<Marketplace />} />
+                  <Route path="analytics" element={<Analytics />} />
+                  <Route path="academy" element={<TradingAcademy />} />
+                  <Route path="news" element={<News />} />
+                  <Route path="calendar" element={<Calendar />} />
+                  <Route path="hft" element={<HFT />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="notifications" element={<Notifications />} />
+                  <Route path="auto-trading" element={<AutoTrading />} />
+                  <Route path="advanced-trading" element={<AdvancedTrading />} />
+                  <Route path="portfolio-optimizer" element={<PortfolioOptimizer />} />
+                  <Route path="backtesting" element={<Backtesting />} />
+                  <Route path="broker-portal" element={<BrokerPortal />} />
+                  <Route path="money-manager-portal" element={<MoneyManagerPortal />} />
+                  <Route path="signal-provider-portal" element={<SignalProviderPortal />} />
+                  <Route path="investor-portal" element={<InvestorPortal />} />
+                </Routes>
+              } />} />
             </Route>
 
             {/* Root redirect */}

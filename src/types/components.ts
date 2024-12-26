@@ -3,6 +3,8 @@ import { Theme } from '@mui/material/styles';
 import { Trade, Position, Strategy, BacktestResult } from './trading';
 import { RiskMetrics, RiskProfile } from './risk';
 import { ModelConfig, ModelMetrics } from './ml';
+import { Message } from './chat';
+import { RootStore } from '../stores/RootStore';
 
 export interface ChartProps {
   data: any[];
@@ -144,4 +146,44 @@ export interface FormFieldProps {
   required?: boolean;
   disabled?: boolean;
   options?: { label: string; value: any }[];
+}
+
+export interface MainLayoutProps {
+  children: ReactNode;
+}
+
+export interface StoreProviderProps {
+  children: ReactNode;
+  store?: RootStore;
+}
+
+export interface OptimizationParameter {
+  name: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+}
+
+export interface RebalanceTarget {
+  symbol: string;
+  targetAllocation: number;
+  currentAllocation?: number;
+}
+
+export interface StrategyMetrics {
+  [key: string]: number;
+}
+
+export interface BacktestConfig {
+  initialBalance: number;
+  startDate: string;
+  endDate: string;
+  symbol: string;
+  timeframe: string;
+  strategy: any;
+  parameters: Record<string, any>;
+  commission: number;
+  slippage: number;
+  useSpread: boolean;
 }
