@@ -40,8 +40,8 @@ class TradingWebSocketServer {
         try {
           const data = JSON.parse(message.toString());
           this.handleMessage(client, data);
-        } catch (error) {
-          this.handleError(error as Error);
+        } catch (error: unknown) {
+          this.handleError(error);
         }
       });
 
@@ -50,8 +50,8 @@ class TradingWebSocketServer {
         this.clients.delete(clientId);
       });
 
-      ws.on('error', (error) => {
-        this.handleError(error as Error);
+      ws.on('error', (error: unknown) => {
+        this.handleError(error);
         this.clients.delete(clientId);
       });
     });
@@ -194,13 +194,15 @@ class TradingWebSocketServer {
     }, 30000); // Send heartbeat every 30 seconds
   }
 
-  private handleError(error: Error) {
+  private handleError(error: unknown) {
     console.error('WebSocket error:', error);
-    this.clients.forEach((client) => {
-      if (client.ws.readyState === WebSocket.OPEN) {
-        this.sendMessage(client.ws, 'error', { message: error.message });
-      }
-    });
+    if (error instanceof Error) {
+      this.clients.forEach((client) => {
+        if (client.ws.readyState === WebSocket.OPEN) {
+          this.sendMessage(client.ws, 'error', { message: error.message });
+        }
+      });
+    }
   }
 
   public close() {
