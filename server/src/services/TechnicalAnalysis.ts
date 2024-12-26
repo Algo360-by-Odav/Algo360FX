@@ -1,9 +1,9 @@
 import { SMA, RSI, MACD, BollingerBands } from 'technicalindicators';
 import { MarketData, TechnicalIndicator } from '../types/services';
+import axios from 'axios';
 
 export class TechnicalAnalysis {
   private async getHistoricalData(symbol: string, timeframe: string): Promise<MarketData[]> {
-    // Replace with your actual market data provider
     const response = await axios.get(`${process.env.MARKET_DATA_API}/historical`, {
       params: { symbol, timeframe }
     });
@@ -13,11 +13,6 @@ export class TechnicalAnalysis {
   public async analyze(symbol: string, timeframe: string, indicators: string[] = []): Promise<Record<string, any>> {
     const historicalData = await this.getHistoricalData(symbol, timeframe);
     const analysis: Record<string, any> = {};
-
-    // Default indicators if none specified
-    if (indicators.length === 0) {
-      indicators = ['sma', 'ema', 'rsi', 'macd', 'bollinger'];
-    }
 
     // Calculate indicators
     const technicalIndicators = this.calculateIndicators(historicalData);
@@ -38,7 +33,7 @@ export class TechnicalAnalysis {
   private calculateIndicators(marketData: MarketData[]): TechnicalIndicator[] {
     const closePrices = marketData.map(d => d.close);
     
-    const indicators: TechnicalIndicator[] = [
+    return [
       {
         name: 'SMA',
         value: this.calculateSMA(closePrices, 20),
@@ -55,8 +50,6 @@ export class TechnicalAnalysis {
         period: 26
       }
     ];
-
-    return indicators;
   }
 
   private calculateSMA(data: number[], period: number): number {
@@ -116,21 +109,32 @@ export class TechnicalAnalysis {
   }
 
   private calculateTrendStrength(data: MarketData[]) {
-    // Implement trend strength calculation
-    // Could use ADX or other trend strength indicators
-    return 'moderate'; // placeholder
+    const closes = data.map(d => d.close);
+    const sma20 = this.calculateSMA(closes, 20);
+    return closes[closes.length - 1] > sma20 ? 'strong' : 'weak';
   }
 
   private findKeyLevels(data: MarketData[]) {
-    // Implement support/resistance level detection
+    const highs = data.map(d => d.high);
+    const lows = data.map(d => d.low);
     return {
-      support: [],
-      resistance: [],
+      support: Math.min(...lows),
+      resistance: Math.max(...highs),
     };
   }
 
   private detectPatterns(data: MarketData[]) {
-    // Implement chart pattern recognition
-    return [];
+    const closes = data.map(d => d.close);
+    const patterns = [];
+    
+    // Simple trend pattern detection
+    const sma20 = this.calculateSMA(closes, 20);
+    if (closes[closes.length - 1] > sma20) {
+      patterns.push('uptrend');
+    } else {
+      patterns.push('downtrend');
+    }
+    
+    return patterns;
   }
 }

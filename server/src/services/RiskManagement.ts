@@ -2,20 +2,31 @@ import { Position } from '../types/services';
 
 interface RiskMetrics {
   riskAmount: number;
-  potentialReward: number;
+  rewardAmount: number;
   riskRewardRatio: number;
-  stopLossDistance: number;
-  takeProfitDistance: number;
   positionRiskPercent: number;
   recommendedPositionSize: number;
-  maxDrawdown: number;
-  probabilityOfSuccess: number;
+  successProbability: number;
+  expectedValue: number;
+  warnings: string[];
 }
 
 export class RiskManagement {
   private accountBalance: number = 10000; // Default value, should be fetched from user's account
   private maxRiskPerTrade: number = 0.02; // 2% risk per trade
   private maxDrawdown: number = 0.06; // 6% maximum drawdown
+
+  public calculatePositionSize(accountBalance: number, riskPercentage: number): number {
+    return accountBalance * (riskPercentage / 100);
+  }
+
+  public calculateMaxLeverage(accountBalance: number): number {
+    return Math.min(100, accountBalance / 1000); // Simple leverage calculation
+  }
+
+  public calculatePortfolioRisk(): number {
+    return this.accountBalance * this.maxRiskPerTrade;
+  }
 
   public async analyzePosition(position: Position): Promise<RiskMetrics> {
     const stopLossDistance = Math.abs(position.entryPrice - position.stopLoss);
@@ -24,11 +35,11 @@ export class RiskManagement {
     // Calculate risk amount
     const riskAmount = position.size * stopLossDistance;
     
-    // Calculate potential reward
-    const potentialReward = position.size * takeProfitDistance;
+    // Calculate reward amount
+    const rewardAmount = position.size * takeProfitDistance;
     
     // Calculate risk-reward ratio
-    const riskRewardRatio = potentialReward / riskAmount;
+    const riskRewardRatio = rewardAmount / riskAmount;
     
     // Calculate position risk as percentage of account
     const positionRiskPercent = (riskAmount / this.accountBalance) * 100;
@@ -36,54 +47,34 @@ export class RiskManagement {
     // Calculate recommended position size based on risk parameters
     const recommendedPositionSize = this.calculatePositionSize(
       this.accountBalance,
-      this.maxRiskPerTrade * 100,
-      position
+      this.maxRiskPerTrade * 100
     );
     
     // Estimate probability of success based on historical data
-    const probabilityOfSuccess = await this.estimateSuccessProbability(position);
+    const successProbability = await this.estimateSuccessProbability(position);
     
-    // Calculate maximum drawdown
-    const maxDrawdown = await this.calculateMaxDrawdown(position);
-
+    // Calculate expected value
+    const expectedValue = (successProbability * rewardAmount) - ((1 - successProbability) * riskAmount);
+    
     return {
       riskAmount,
-      potentialReward,
+      rewardAmount,
       riskRewardRatio,
-      stopLossDistance,
-      takeProfitDistance,
       positionRiskPercent,
       recommendedPositionSize,
-      maxDrawdown,
-      probabilityOfSuccess,
+      successProbability,
+      expectedValue,
+      warnings: this.generateWarnings(position)
     };
   }
 
-  public calculatePositionSize(accountBalance: number, riskPercentage: number, position: Position): number {
-    return accountBalance * (riskPercentage / 100);
-  }
-
-  public calculateMaxLeverage(accountBalance: number, position: Position): number {
-    return Math.min(100, accountBalance / (position.size * position.entryPrice));
-  }
-
-  public calculatePortfolioRisk(positions: Position[]): number {
-    return positions.reduce((total, pos) => total + this.calculatePositionSize(1000, 1, pos), 0);
-  }
-
   private async estimateSuccessProbability(position: Position): Promise<number> {
-    // This should be implemented based on historical data analysis
-    // For now, returning a placeholder value
-    return 0.65;
+    // This would normally involve analyzing historical data
+    // For now, return a placeholder value
+    return 0.6;
   }
 
-  private async calculateMaxDrawdown(position: Position): Promise<number> {
-    // This should be implemented based on historical data and Monte Carlo simulation
-    // For now, returning a placeholder value
-    return this.maxDrawdown * this.accountBalance;
-  }
-
-  public validateRiskParameters(position: Position): string[] {
+  private generateWarnings(position: Position): string[] {
     const warnings: string[] = [];
     
     // Check risk-reward ratio
@@ -105,40 +96,9 @@ export class RiskManagement {
     if (stopLossPercent < 0.1) {
       warnings.push('Stop loss is too close to entry price');
     } else if (stopLossPercent > 2) {
-      warnings.push('Stop loss distance is unusually large');
+      warnings.push('Stop loss is too far from entry price');
     }
     
     return warnings;
-  }
-
-  public async calculatePositionCorrelations(positions: Position[]): Promise<number> {
-    // This should calculate the correlation between different open positions
-    // to avoid over-exposure to correlated pairs
-    // For now, returning a placeholder value
-    return 0.3;
-  }
-
-  public generateRiskReport(position: Position, metrics: RiskMetrics): string {
-    return `
-Risk Analysis Report for ${position.symbol}
-----------------------------------------
-Position Type: ${position.type}
-Entry Price: ${position.entryPrice}
-Stop Loss: ${position.stopLoss}
-Take Profit: ${position.takeProfit}
-Position Size: ${position.size}
-
-Risk Metrics:
-- Risk Amount: $${metrics.riskAmount.toFixed(2)}
-- Potential Reward: $${metrics.potentialReward.toFixed(2)}
-- Risk-Reward Ratio: ${metrics.riskRewardRatio.toFixed(2)}
-- Account Risk: ${metrics.positionRiskPercent.toFixed(2)}%
-- Probability of Success: ${(metrics.probabilityOfSuccess * 100).toFixed(1)}%
-- Maximum Drawdown: $${metrics.maxDrawdown.toFixed(2)}
-
-Recommendations:
-- Recommended Position Size: ${metrics.recommendedPositionSize.toFixed(2)}
-${this.validateRiskParameters(position).map(warning => `- Warning: ${warning}`).join('\n')}
-    `.trim();
   }
 }

@@ -6,14 +6,14 @@ let mongoServer: MongoMemoryServer;
 
 export const connectDatabase = async () => {
   try {
-    if (config.env === 'development') {
+    if (config.env === 'development' && !config.mongoUri.includes('mongodb+srv')) {
       mongoServer = await MongoMemoryServer.create();
-      const mongoUri = mongoServer.getUri();
-      await mongoose.connect(mongoUri);
+      const uri = mongoServer.getUri();
+      await mongoose.connect(uri);
       console.log('Connected to MongoDB Memory Server');
     } else {
       await mongoose.connect(config.mongoUri);
-      console.log('Connected to MongoDB');
+      console.log('Connected to MongoDB Atlas');
     }
     
     mongoose.connection.on('error', (err) => {
@@ -36,6 +36,7 @@ export const disconnectDatabase = async () => {
     if (mongoServer) {
       await mongoServer.stop();
     }
+    console.log('Disconnected from MongoDB');
   } catch (error) {
     console.error('Error disconnecting from database:', error);
     process.exit(1);
