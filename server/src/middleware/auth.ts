@@ -16,15 +16,6 @@ declare global {
 }
 
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
-  // Always skip authentication in development mode
-  if (config.env === 'development') {
-    req.user = {
-      userId: 'dev-user',
-      email: 'dev@example.com'
-    };
-    return next();
-  }
-
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
