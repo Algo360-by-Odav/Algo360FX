@@ -5,7 +5,7 @@ import {
   OptimizationResultNew,
   TradingStrategyNew,
 } from '@/types/optimization';
-import { OptimizationWebSocket, optimizationWebSocket } from '@/services/optimizationWebSocket';
+import { OptimizationWebSocketService } from '@/services/optimizationWebSocket';
 
 export class OptimizationStore {
   strategies: TradingStrategyNew[] = [];
@@ -13,11 +13,11 @@ export class OptimizationStore {
   currentOptimization: string | null = null;
   error: string | null = null;
   optimizationProgress: number = 0;
-  private webSocket: OptimizationWebSocket;
+  private webSocket: OptimizationWebSocketService;
 
   constructor(private rootStore: RootStore) {
     makeAutoObservable(this);
-    this.webSocket = new optimizationWebSocket();
+    this.webSocket = new OptimizationWebSocketService();
     this.initializeWebSocket();
   }
 

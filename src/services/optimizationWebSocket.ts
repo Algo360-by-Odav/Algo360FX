@@ -103,5 +103,3 @@ export class OptimizationWebSocketService {
     return this.socket?.connected || false;
   }
 }
-
-export const optimizationWebSocket = new OptimizationWebSocketService();
