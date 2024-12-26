@@ -1,11 +1,4 @@
-interface Position {
-  symbol: string;
-  type: 'long' | 'short';
-  entry: number;
-  stopLoss: number;
-  takeProfit: number;
-  size: number;
-}
+import { Position } from '../types/services';
 
 interface RiskMetrics {
   riskAmount: number;
@@ -25,8 +18,8 @@ export class RiskManagement {
   private maxDrawdown: number = 0.06; // 6% maximum drawdown
 
   public async analyzePosition(position: Position): Promise<RiskMetrics> {
-    const stopLossDistance = Math.abs(position.entry - position.stopLoss);
-    const takeProfitDistance = Math.abs(position.takeProfit - position.entry);
+    const stopLossDistance = Math.abs(position.entryPrice - position.stopLoss);
+    const takeProfitDistance = Math.abs(position.takeProfit - position.entryPrice);
     
     // Calculate risk amount
     const riskAmount = position.size * stopLossDistance;
@@ -41,11 +34,10 @@ export class RiskManagement {
     const positionRiskPercent = (riskAmount / this.accountBalance) * 100;
     
     // Calculate recommended position size based on risk parameters
-    const recommendedPositionSize = this.calculateRecommendedSize(
-      position.entry,
-      position.stopLoss,
+    const recommendedPositionSize = this.calculatePositionSize(
       this.accountBalance,
-      this.maxRiskPerTrade
+      this.maxRiskPerTrade * 100,
+      position
     );
     
     // Estimate probability of success based on historical data
@@ -67,15 +59,16 @@ export class RiskManagement {
     };
   }
 
-  private calculateRecommendedSize(
-    entry: number,
-    stopLoss: number,
-    balance: number,
-    riskPercent: number
-  ): number {
-    const riskAmount = balance * riskPercent;
-    const stopLossDistance = Math.abs(entry - stopLoss);
-    return riskAmount / stopLossDistance;
+  public calculatePositionSize(accountBalance: number, riskPercentage: number, position: Position): number {
+    return accountBalance * (riskPercentage / 100);
+  }
+
+  public calculateMaxLeverage(accountBalance: number, position: Position): number {
+    return Math.min(100, accountBalance / (position.size * position.entryPrice));
+  }
+
+  public calculatePortfolioRisk(positions: Position[]): number {
+    return positions.reduce((total, pos) => total + this.calculatePositionSize(1000, 1, pos), 0);
   }
 
   private async estimateSuccessProbability(position: Position): Promise<number> {
@@ -94,21 +87,21 @@ export class RiskManagement {
     const warnings: string[] = [];
     
     // Check risk-reward ratio
-    const rr = Math.abs(position.takeProfit - position.entry) / 
-               Math.abs(position.stopLoss - position.entry);
+    const rr = Math.abs(position.takeProfit - position.entryPrice) / 
+               Math.abs(position.stopLoss - position.entryPrice);
     if (rr < 1.5) {
       warnings.push('Risk-reward ratio is below recommended minimum of 1.5');
     }
     
     // Check position size
-    const riskAmount = position.size * Math.abs(position.entry - position.stopLoss);
+    const riskAmount = position.size * Math.abs(position.entryPrice - position.stopLoss);
     const riskPercent = (riskAmount / this.accountBalance) * 100;
     if (riskPercent > this.maxRiskPerTrade * 100) {
       warnings.push(`Position risk (${riskPercent.toFixed(2)}%) exceeds maximum allowed risk per trade (${this.maxRiskPerTrade * 100}%)`);
     }
     
     // Check stop loss distance
-    const stopLossPercent = (Math.abs(position.entry - position.stopLoss) / position.entry) * 100;
+    const stopLossPercent = (Math.abs(position.entryPrice - position.stopLoss) / position.entryPrice) * 100;
     if (stopLossPercent < 0.1) {
       warnings.push('Stop loss is too close to entry price');
     } else if (stopLossPercent > 2) {
@@ -130,7 +123,7 @@ export class RiskManagement {
 Risk Analysis Report for ${position.symbol}
 ----------------------------------------
 Position Type: ${position.type}
-Entry Price: ${position.entry}
+Entry Price: ${position.entryPrice}
 Stop Loss: ${position.stopLoss}
 Take Profit: ${position.takeProfit}
 Position Size: ${position.size}

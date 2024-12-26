@@ -1,8 +1,8 @@
-import { technicalIndicators } from 'technicalindicators';
-import axios from 'axios';
+import { SMA, RSI, MACD, BollingerBands } from 'technicalindicators';
+import { MarketData, TechnicalIndicator } from '../types/services';
 
 export class TechnicalAnalysis {
-  private async getHistoricalData(symbol: string, timeframe: string) {
+  private async getHistoricalData(symbol: string, timeframe: string): Promise<MarketData[]> {
     // Replace with your actual market data provider
     const response = await axios.get(`${process.env.MARKET_DATA_API}/historical`, {
       params: { symbol, timeframe }
@@ -10,7 +10,7 @@ export class TechnicalAnalysis {
     return response.data;
   }
 
-  public async analyze(symbol: string, timeframe: string, indicators: string[] = []) {
+  public async analyze(symbol: string, timeframe: string, indicators: string[] = []): Promise<Record<string, any>> {
     const historicalData = await this.getHistoricalData(symbol, timeframe);
     const analysis: Record<string, any> = {};
 
@@ -20,35 +20,11 @@ export class TechnicalAnalysis {
     }
 
     // Calculate indicators
-    for (const indicator of indicators) {
-      switch (indicator.toLowerCase()) {
-        case 'sma':
-          analysis.sma = this.calculateSMA(historicalData);
-          break;
-        case 'ema':
-          analysis.ema = this.calculateEMA(historicalData);
-          break;
-        case 'rsi':
-          analysis.rsi = this.calculateRSI(historicalData);
-          break;
-        case 'macd':
-          analysis.macd = this.calculateMACD(historicalData);
-          break;
-        case 'bollinger':
-          analysis.bollinger = this.calculateBollingerBands(historicalData);
-          break;
-        case 'atr':
-          analysis.atr = this.calculateATR(historicalData);
-          break;
-        case 'stochastic':
-          analysis.stochastic = this.calculateStochastic(historicalData);
-          break;
-        // Add more indicators as needed
-      }
-    }
+    const technicalIndicators = this.calculateIndicators(historicalData);
+    analysis.indicators = technicalIndicators;
 
     // Add trend analysis
-    analysis.trend = this.analyzeTrend(historicalData, analysis);
+    analysis.trend = this.analyzeTrend(historicalData, technicalIndicators);
     
     // Add support/resistance levels
     analysis.levels = this.findKeyLevels(historicalData);
@@ -59,84 +35,93 @@ export class TechnicalAnalysis {
     return analysis;
   }
 
-  private calculateSMA(data: any[], period: number = 20) {
-    return technicalIndicators.sma({
-      period,
-      values: data.map(d => d.close)
-    });
+  private calculateIndicators(marketData: MarketData[]): TechnicalIndicator[] {
+    const closePrices = marketData.map(d => d.close);
+    
+    const indicators: TechnicalIndicator[] = [
+      {
+        name: 'SMA',
+        value: this.calculateSMA(closePrices, 20),
+        period: 20
+      },
+      {
+        name: 'RSI',
+        value: this.calculateRSI(closePrices, 14),
+        period: 14
+      },
+      {
+        name: 'MACD',
+        value: this.calculateMACD(closePrices).histogram,
+        period: 26
+      }
+    ];
+
+    return indicators;
   }
 
-  private calculateEMA(data: any[], period: number = 20) {
-    return technicalIndicators.ema({
-      period,
-      values: data.map(d => d.close)
-    });
+  private calculateSMA(data: number[], period: number): number {
+    const input = {
+      values: data,
+      period
+    };
+    const results = SMA.calculate(input);
+    return results[results.length - 1] || 0;
   }
 
-  private calculateRSI(data: any[], period: number = 14) {
-    return technicalIndicators.rsi({
-      period,
-      values: data.map(d => d.close)
-    });
+  private calculateRSI(data: number[], period: number): number {
+    const input = {
+      values: data,
+      period
+    };
+    const results = RSI.calculate(input);
+    return results[results.length - 1] || 0;
   }
 
-  private calculateMACD(data: any[]) {
-    return technicalIndicators.macd({
-      values: data.map(d => d.close),
+  private calculateMACD(data: number[]): { histogram: number } {
+    const input = {
+      values: data,
       fastPeriod: 12,
       slowPeriod: 26,
       signalPeriod: 9,
-    });
+      SimpleMAOscillator: false,
+      SimpleMASignal: false
+    };
+    const results = MACD.calculate(input);
+    return {
+      histogram: results[results.length - 1]?.histogram || 0
+    };
   }
 
-  private calculateBollingerBands(data: any[], period: number = 20) {
-    return technicalIndicators.bollingerbands({
+  calculateBollingerBands(data: number[], period: number = 20, stdDev: number = 2) {
+    const input = {
       period,
-      values: data.map(d => d.close),
-      stdDev: 2
-    });
+      values: data,
+      stdDev
+    };
+    return BollingerBands.calculate(input);
   }
 
-  private calculateATR(data: any[], period: number = 14) {
-    return technicalIndicators.atr({
-      high: data.map(d => d.high),
-      low: data.map(d => d.low),
-      close: data.map(d => d.close),
-      period
-    });
-  }
-
-  private calculateStochastic(data: any[], period: number = 14) {
-    return technicalIndicators.stochastic({
-      high: data.map(d => d.high),
-      low: data.map(d => d.low),
-      close: data.map(d => d.close),
-      period,
-      signalPeriod: 3
-    });
-  }
-
-  private analyzeTrend(data: any[], indicators: any) {
+  private analyzeTrend(data: MarketData[], indicators: TechnicalIndicator[]) {
     const closes = data.map(d => d.close);
-    const sma20 = this.calculateSMA(data, 20);
-    const sma50 = this.calculateSMA(data, 50);
-    const sma200 = this.calculateSMA(data, 200);
+    const sma20 = this.calculateSMA(closes, 20);
+    const sma50 = this.calculateSMA(closes, 50);
+    const sma200 = this.calculateSMA(closes, 200);
     
     return {
-      shortTerm: closes[closes.length - 1] > sma20[sma20.length - 1] ? 'bullish' : 'bearish',
-      mediumTerm: closes[closes.length - 1] > sma50[sma50.length - 1] ? 'bullish' : 'bearish',
-      longTerm: closes[closes.length - 1] > sma200[sma200.length - 1] ? 'bullish' : 'bearish',
+      shortTerm: closes[closes.length - 1] > sma20 ? 'bullish' : 'bearish',
+      mediumTerm: closes[closes.length - 1] > sma50 ? 'bullish' : 'bearish',
+      longTerm: closes[closes.length - 1] > sma200 ? 'bullish' : 'bearish',
       strength: this.calculateTrendStrength(data),
     };
   }
 
-  private calculateTrendStrength(data: any[]) {
+  private calculateTrendStrength(data: MarketData[]) {
     // Implement trend strength calculation
     // Could use ADX or other trend strength indicators
     return 'moderate'; // placeholder
   }
 
-  private findKeyLevels(data: any[]) {
+  private findKeyLevels(data: MarketData[]) {
     // Implement support/resistance level detection
     return {
       support: [],
@@ -144,7 +129,7 @@ export class TechnicalAnalysis {
     };
   }
 
-  private detectPatterns(data: any[]) {
+  private detectPatterns(data: MarketData[]) {
     // Implement chart pattern recognition
     return [];
   }

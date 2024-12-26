@@ -1,17 +1,22 @@
-import { Router } from 'express';
-import { OpenAI } from 'openai';
+import express from 'express';
+import OpenAI from 'openai';
 import { z } from 'zod';
 import { validateRequest } from '../middleware/validateRequest';
-import { TechnicalAnalysis } from '../services/TechnicalAnalysis';
-import { MarketData } from '../services/MarketData';
-import { RiskManagement } from '../services/RiskManagement';
+import { config } from '../config/config';
 
-const router = Router();
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const router = express.Router();
+const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
 // Validation schemas
+const analyzeTradeSchema = z.object({
+  symbol: z.string(),
+  timeframe: z.string(),
+  entry: z.number(),
+  stopLoss: z.number(),
+  takeProfit: z.number(),
+  strategy: z.string().optional(),
+});
+
 const analyzeMarketSchema = z.object({
   symbol: z.string(),
   timeframe: z.string(),
@@ -192,6 +197,34 @@ router.post('/risk', validateRequest(riskAssessmentSchema), async (req, res) => 
   } catch (error) {
     console.error('Error in risk assessment:', error);
     res.status(500).json({ error: 'Failed to assess risk' });
+  }
+});
+
+// Trade Analysis Endpoint
+router.post('/analyze-trade', validateRequest(analyzeTradeSchema), async (req, res) => {
+  try {
+    const { symbol, timeframe, entry, stopLoss, takeProfit, strategy } = req.body;
+
+    const prompt = `Analyze this trade setup:
+      Symbol: ${symbol}
+      Timeframe: ${timeframe}
+      Entry: ${entry}
+      Stop Loss: ${stopLoss}
+      Take Profit: ${takeProfit}
+      ${strategy ? `Strategy: ${strategy}` : ''}
+    `;
+
+    const completion = await openai.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'gpt-4',
+    });
+
+    res.json({
+      analysis: completion.choices[0]?.message?.content || 'No analysis available',
+    });
+  } catch (error) {
+    console.error('Error analyzing trade:', error);
+    res.status(500).json({ error: 'Failed to analyze trade' });
   }
 });
 
