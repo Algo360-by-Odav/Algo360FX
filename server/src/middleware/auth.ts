@@ -2,18 +2,24 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
 
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-  };
+interface UserPayload {
+  userId: string;
+  email: string;
 }
 
-export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+declare global {
+  namespace Express {
+    interface Request {
+      user?: UserPayload;
+    }
+  }
+}
+
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   // Always skip authentication in development mode
   if (config.env === 'development') {
     req.user = {
-      id: 'dev-user',
+      userId: 'dev-user',
       email: 'dev@example.com'
     };
     return next();
@@ -26,10 +32,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       throw new Error();
     }
 
-    const decoded = jwt.verify(token, config.jwtSecret) as {
-      id: string;
-      email: string;
-    };
+    const decoded = jwt.verify(token, config.JWT_SECRET) as UserPayload;
 
     req.user = decoded;
     next();
