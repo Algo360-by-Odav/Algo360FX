@@ -55,7 +55,7 @@ services:
     env: static
     region: singapore
     plan: starter
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci --production=false && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: NODE_VERSION
