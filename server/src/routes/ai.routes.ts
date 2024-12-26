@@ -3,9 +3,12 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { validateRequest } from '../middleware/validateRequest';
 import { config } from '../config/config';
+import { TechnicalAnalysisService } from '../services/technicalAnalysis';
+import { MarketDataService } from '../services/marketData';
+import { RiskManagementService } from '../services/riskManagement';
 
 const router = express.Router();
-const openai = new OpenAI({ apiKey: config.openaiApiKey });
+const openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
 
 // Validation schemas
 const analyzeTradeSchema = z.object({
@@ -46,11 +49,14 @@ router.post('/analyze', validateRequest(analyzeMarketSchema), async (req, res) =
     const { symbol, timeframe, indicators } = req.body;
     
     // Get technical analysis data
-    const technicalAnalysis = new TechnicalAnalysis();
+    const technicalAnalysis = new TechnicalAnalysisService();
     const analysis = await technicalAnalysis.analyze(symbol, timeframe, indicators);
     
+    // Get market data
+    const marketData = new MarketDataService();
+    const data = await marketData.getData(symbol, timeframe);
+
     // Get market sentiment and news
-    const marketData = new MarketData();
     const sentiment = await marketData.getSentiment(symbol);
     const news = await marketData.getRelevantNews(symbol);
 
@@ -104,7 +110,7 @@ router.post('/signal', validateRequest(generateSignalSchema), async (req, res) =
     const { symbol, timeframe, strategy } = req.body;
     
     // Get market data
-    const technicalAnalysis = new TechnicalAnalysis();
+    const technicalAnalysis = new TechnicalAnalysisService();
     const analysis = await technicalAnalysis.analyze(symbol, timeframe);
     
     // Generate AI signal
@@ -157,7 +163,7 @@ router.post('/risk', validateRequest(riskAssessmentSchema), async (req, res) => 
     const { position } = req.body;
     
     // Calculate risk metrics
-    const riskManager = new RiskManagement();
+    const riskManager = new RiskManagementService();
     const riskMetrics = await riskManager.analyzePosition(position);
     
     // Generate AI risk assessment
