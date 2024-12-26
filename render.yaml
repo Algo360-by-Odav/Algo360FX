@@ -6,7 +6,7 @@ services:
     plan: starter
     rootDir: server
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: node dist/index.js
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
@@ -49,6 +49,8 @@ services:
         value: wss://algo360fx-api.onrender.com
       - key: VITE_APP_ENV
         value: production
+      - key: HOST
+        value: "0.0.0.0"
 
   - type: redis
     name: algo360fx-redis
