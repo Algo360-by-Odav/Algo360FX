@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { body, validationResult } from 'express-validator/check';
+import { body, validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { config } from '../config/config';

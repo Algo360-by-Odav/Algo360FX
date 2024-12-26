@@ -52,13 +52,13 @@ router.post('/analyze', validateRequest(analyzeMarketSchema), async (req, res) =
     const technicalAnalysis = new TechnicalAnalysis();
     const analysis = await technicalAnalysis.analyze(symbol, timeframe, indicators);
     
-    // Get market data
-    const marketData = new MarketData();
-    const data = await marketData.getData(symbol, timeframe);
-
     // Get market sentiment and news
+    const marketData = new MarketData();
     const sentiment = await marketData.getSentiment(symbol);
     const news = await marketData.getRelevantNews(symbol);
+
+    // Get market data
+    const data = await marketData.getData(symbol, timeframe);
 
     // Generate AI analysis
     const prompt = `
@@ -66,6 +66,7 @@ router.post('/analyze', validateRequest(analyzeMarketSchema), async (req, res) =
       Technical Analysis: ${JSON.stringify(analysis)}
       Market Sentiment: ${JSON.stringify(sentiment)}
       Recent News: ${JSON.stringify(news)}
+      Market Data: ${JSON.stringify(data)}
       
       Provide a comprehensive trading analysis including:
       1. Current market trend and key levels
@@ -92,6 +93,7 @@ router.post('/analyze', validateRequest(analyzeMarketSchema), async (req, res) =
       technicalData: analysis,
       sentiment,
       news,
+      data,
       metadata: {
         symbol,
         timeframe,

@@ -19,13 +19,10 @@ export class TechnicalAnalysis {
     analysis.indicators = technicalIndicators;
 
     // Add trend analysis
-    analysis.trend = this.analyzeTrend(historicalData, Object.values(technicalIndicators).flat());
+    analysis.trend = this.analyzeTrend(historicalData, technicalIndicators);
 
     // Add support/resistance levels
     analysis.levels = this.findKeyLevels(historicalData);
-
-    // Add pattern recognition
-    analysis.patterns = this.detectPatterns(historicalData);
 
     return analysis;
   }
@@ -128,19 +125,33 @@ export class TechnicalAnalysis {
       SimpleMAOscillator: false,
       SimpleMASignal: false
     };
+    
     const results = MACD.calculate(input);
+    const lastResult = results[results.length - 1] || { histogram: 0 };
+    
     return {
-      histogram: results[results.length - 1]?.histogram || 0
+      histogram: lastResult.histogram
     };
   }
 
   private calculateBollingerBands(data: MarketData[]): TechnicalIndicator[] {
     const closePrices = data.map(d => d.close);
+    const bands = this.calculateBollingerBandsValue(closePrices);
     
     return [
       {
-        name: 'Bollinger Bands',
-        value: this.calculateBollingerBandsValue(closePrices),
+        name: 'Bollinger Upper',
+        value: bands.upper,
+        period: 20
+      },
+      {
+        name: 'Bollinger Middle',
+        value: bands.middle,
+        period: 20
+      },
+      {
+        name: 'Bollinger Lower',
+        value: bands.lower,
         period: 20
       }
     ];
@@ -153,24 +164,27 @@ export class TechnicalAnalysis {
       stdDev: 2
     };
     const results = BollingerBands.calculate(input);
+    const lastResult = results[results.length - 1] || { upper: 0, middle: 0, lower: 0 };
     return {
-      upper: results[results.length - 1]?.upper || 0,
-      middle: results[results.length - 1]?.middle || 0,
-      lower: results[results.length - 1]?.lower || 0
+      upper: lastResult.upper,
+      middle: lastResult.middle,
+      lower: lastResult.lower
     };
   }
 
-  private analyzeTrend(data: MarketData[], indicators: TechnicalIndicator[]) {
+  private analyzeTrend(data: MarketData[], indicators: Record<string, TechnicalIndicator[]>) {
     const closes = data.map(d => d.close);
-    const sma20 = indicators.find(i => i.name === 'SMA' && i.period === 20)?.value;
-    const sma50 = indicators.find(i => i.name === 'SMA' && i.period === 50)?.value;
-    const sma200 = indicators.find(i => i.name === 'SMA' && i.period === 200)?.value;
+    const smaIndicators = indicators.sma || [];
+    
+    const sma20 = smaIndicators.find(i => i.period === 20)?.value ?? 0;
+    const sma50 = smaIndicators.find(i => i.period === 50)?.value ?? 0;
+    const sma200 = smaIndicators.find(i => i.period === 200)?.value ?? 0;
     
     return {
       shortTerm: closes[closes.length - 1] > sma20 ? 'bullish' : 'bearish',
       mediumTerm: closes[closes.length - 1] > sma50 ? 'bullish' : 'bearish',
       longTerm: closes[closes.length - 1] > sma200 ? 'bullish' : 'bearish',
-      strength: this.calculateTrendStrength(data),
+      strength: this.calculateTrendStrength(data)
     };
   }
 
@@ -183,9 +197,10 @@ export class TechnicalAnalysis {
   private findKeyLevels(data: MarketData[]) {
     const highs = data.map(d => d.high);
     const lows = data.map(d => d.low);
+    
     return {
-      support: Math.min(...lows),
       resistance: Math.max(...highs),
+      support: Math.min(...lows)
     };
   }
 
