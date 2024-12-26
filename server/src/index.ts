@@ -18,16 +18,35 @@ console.log('Express app created');
 const httpServer = createServer(app);
 console.log('HTTP server created');
 
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://algo360fx-frontend.onrender.com'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
 const io = new Server(httpServer, {
   path: '/ws',
   cors: {
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173'],
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   },
-  transports: ['websocket']
+  transports: ['websocket', 'polling']
 });
 console.log('Socket.IO server initialized');
 
@@ -42,22 +61,7 @@ const optimizationWS = new OptimizationWebSocketServer(io);
 optimizationWS.initialize();
 console.log('Optimization WebSocket server initialized');
 
-// Connect to MongoDB
-console.log('Connecting to MongoDB...');
-mongoose.connect(config.mongoUri)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1); // Exit if MongoDB connection fails
-  });
-
 // Middleware
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173', 'http://localhost:5000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
 app.use(express.json());
 
 // Routes
@@ -79,10 +83,22 @@ app.use((err: Error, _req: express.Request, res: express.Response, next: express
   next(err);
 });
 
-// Start server
-httpServer.listen(config.port, () => {
-  console.log(`Server running on port ${config.port}`);
-  console.log('WebSocket server endpoints:');
-  console.log('- Trading: ws://localhost:5000/ws');
-  console.log('- Optimization: ws://localhost:5000/ws');
-});
+// Connect to MongoDB
+console.log('Connecting to MongoDB...');
+mongoose.connect(config.mongoUri)
+  .then(() => {
+    console.log('Connected to MongoDB');
+    
+    // Start the server
+    const PORT = config.port;
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log('WebSocket server endpoints:');
+      console.log('- Trading: ws://localhost:5000/ws');
+      console.log('- Optimization: ws://localhost:5000/ws');
+    });
+  })
+  .catch((error) => {
+    console.error('MongoDB connection error:', error);
+    process.exit(1);
+  });
