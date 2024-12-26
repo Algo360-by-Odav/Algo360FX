@@ -1,6 +1,6 @@
 import express from 'express';
 import { getMarketData, placeMarketOrder } from '../services/metaapi';
-import { auth } from '../middleware/auth';
+import auth from '../middleware/auth';
 
 const router = express.Router();
 
@@ -9,10 +9,10 @@ router.get('/:symbol', auth, async (req, res) => {
   try {
     const { symbol } = req.params;
     const data = await getMarketData(symbol);
-    res.json(data);
+    return res.json(data);
   } catch (error) {
     console.error('Error fetching market data:', error);
-    res.status(500).json({ error: 'Failed to fetch market data' });
+    return res.status(500).json({ error: 'Failed to fetch market data' });
   }
 });
 
@@ -30,10 +30,10 @@ router.post('/order', auth, async (req, res) => {
     }
 
     const order = await placeMarketOrder(symbol, type, volume);
-    res.json(order);
+    return res.json(order);
   } catch (error) {
     console.error('Error placing market order:', error);
-    res.status(500).json({ error: 'Failed to place market order' });
+    return res.status(500).json({ error: 'Failed to place market order' });
   }
 });
 

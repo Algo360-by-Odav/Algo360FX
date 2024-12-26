@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { check, validationResult } from 'express-validator';
+import { checkSchema, validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
@@ -19,7 +19,12 @@ const mockSendEmail = async (to: string, code: string) => {
 
 // Send verification code
 router.post('/verify/send', 
-  check('email').isEmail(),
+  checkSchema({
+    email: {
+      isEmail: true,
+      errorMessage: 'Please enter a valid email'
+    }
+  }),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -52,10 +57,18 @@ router.post('/verify/send',
 
 // Verify code
 router.post('/verify/code',
-  [
-    check('email').isEmail(),
-    check('code').isLength({ min: 6, max: 6 }),
-  ],
+  checkSchema({
+    email: {
+      isEmail: true,
+      errorMessage: 'Please enter a valid email'
+    },
+    code: {
+      isLength: {
+        options: { min: 6, max: 6 },
+        errorMessage: 'Verification code must be 6 digits long'
+      }
+    }
+  }),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -97,13 +110,30 @@ router.post('/verify/code',
 
 // Register new user
 router.post('/register',
-  [
-    check('email').isEmail(),
-    check('password').isLength({ min: 8 }),
-    check('firstName').notEmpty(),
-    check('lastName').notEmpty(),
-    check('verificationCode').notEmpty(),
-  ],
+  checkSchema({
+    email: {
+      isEmail: true,
+      errorMessage: 'Please enter a valid email'
+    },
+    password: {
+      isLength: {
+        options: { min: 8 },
+        errorMessage: 'Password must be at least 8 characters long'
+      }
+    },
+    firstName: {
+      notEmpty: true,
+      errorMessage: 'First name is required'
+    },
+    lastName: {
+      notEmpty: true,
+      errorMessage: 'Last name is required'
+    },
+    verificationCode: {
+      notEmpty: true,
+      errorMessage: 'Verification code is required'
+    }
+  }),
   async (req: Request, res: Response) => {
     console.log('Registration request body:', req.body);
     
@@ -206,10 +236,16 @@ router.post('/register',
 
 // Login
 router.post('/login',
-  [
-    check('email').isEmail(),
-    check('password').exists(),
-  ],
+  checkSchema({
+    email: {
+      isEmail: true,
+      errorMessage: 'Please enter a valid email'
+    },
+    password: {
+      exists: true,
+      errorMessage: 'Password is required'
+    }
+  }),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

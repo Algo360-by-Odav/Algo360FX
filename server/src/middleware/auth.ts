@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
+const auth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
@@ -24,12 +24,11 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     }
 
     const decoded = jwt.verify(token, config.JWT_SECRET) as UserPayload;
-
     req.user = decoded;
     next();
-  } catch (error) {
-    res.status(401).json({ error: 'Please authenticate' });
+  } catch (err) {
+    res.status(401).send({ error: 'Please authenticate.' });
   }
 };
 
-export default authenticateToken;
+export default auth;

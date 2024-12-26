@@ -1,5 +1,5 @@
 import { SMA, RSI, MACD, BollingerBands } from 'technicalindicators';
-import { MarketData, TechnicalIndicator } from '../types/services';
+import { MarketData } from '../types/market';
 import axios from 'axios';
 
 export class TechnicalAnalysis {
@@ -27,96 +27,69 @@ export class TechnicalAnalysis {
     return analysis;
   }
 
-  private calculateIndicators(data: MarketData[], requestedIndicators: string[] = []): Record<string, TechnicalIndicator[]> {
-    const indicators: Record<string, TechnicalIndicator[]> = {};
-    
-    // Filter and calculate only requested indicators, or all if none specified
-    const calculateAll = requestedIndicators.length === 0;
-    
-    if (calculateAll || requestedIndicators.includes('sma')) {
-      indicators.sma = this.calculateSMA(data);
+  private calculateIndicators(data: MarketData[], requestedIndicators: string[]): Record<string, any> {
+    const closes = data.map(d => d.close);
+    const indicators: Record<string, any> = {};
+
+    // Calculate SMA if requested or no specific indicators requested
+    if (requestedIndicators.includes('sma') || requestedIndicators.length === 0) {
+      const sma20 = this.calculateSMA(closes, 20);
+      const sma50 = this.calculateSMA(closes, 50);
+      const sma200 = this.calculateSMA(closes, 200);
+
+      indicators.sma = {
+        sma20: sma20[sma20.length - 1] || 0,
+        sma50: sma50[sma50.length - 1] || 0,
+        sma200: sma200[sma200.length - 1] || 0
+      };
     }
-    
-    if (calculateAll || requestedIndicators.includes('rsi')) {
-      indicators.rsi = this.calculateRSI(data);
+
+    // Calculate RSI if requested or no specific indicators requested
+    if (requestedIndicators.includes('rsi') || requestedIndicators.length === 0) {
+      const rsi = this.calculateRSI(closes);
+      indicators.rsi = rsi[rsi.length - 1] || 50; // Default to neutral if undefined
     }
-    
-    if (calculateAll || requestedIndicators.includes('macd')) {
-      indicators.macd = this.calculateMACD(data);
+
+    // Calculate MACD if requested or no specific indicators requested
+    if (requestedIndicators.includes('macd') || requestedIndicators.length === 0) {
+      const macd = this.calculateMACD(closes);
+      indicators.macd = {
+        line: macd.MACD[macd.MACD.length - 1] || 0,
+        signal: macd.signal[macd.signal.length - 1] || 0,
+        histogram: macd.histogram[macd.histogram.length - 1] || 0
+      };
     }
-    
-    if (calculateAll || requestedIndicators.includes('bollinger')) {
-      indicators.bollinger = this.calculateBollingerBands(data);
+
+    // Calculate Bollinger Bands if requested or no specific indicators requested
+    if (requestedIndicators.includes('bollinger') || requestedIndicators.length === 0) {
+      const bollinger = this.calculateBollingerBands(closes);
+      indicators.bollinger = {
+        upper: bollinger.upper[bollinger.upper.length - 1] || 0,
+        middle: bollinger.middle[bollinger.middle.length - 1] || 0,
+        lower: bollinger.lower[bollinger.lower.length - 1] || 0
+      };
     }
-    
+
     return indicators;
   }
 
-  private calculateSMA(data: MarketData[]): TechnicalIndicator[] {
-    const closePrices = data.map(d => d.close);
-    
-    return [
-      {
-        name: 'SMA',
-        value: this.calculateSMAValue(closePrices, 20),
-        period: 20
-      },
-      {
-        name: 'SMA',
-        value: this.calculateSMAValue(closePrices, 50),
-        period: 50
-      },
-      {
-        name: 'SMA',
-        value: this.calculateSMAValue(closePrices, 200),
-        period: 200
-      }
-    ];
-  }
-
-  private calculateSMAValue(data: number[], period: number): number {
+  private calculateSMA(data: number[], period: number): number[] {
     const input = {
       values: data,
       period
     };
-    const results = SMA.calculate(input);
-    return results[results.length - 1] || 0;
+    return SMA.calculate(input);
   }
 
-  private calculateRSI(data: MarketData[]): TechnicalIndicator[] {
-    const closePrices = data.map(d => d.close);
-    
-    return [
-      {
-        name: 'RSI',
-        value: this.calculateRSIValue(closePrices, 14),
-        period: 14
-      }
-    ];
-  }
-
-  private calculateRSIValue(data: number[], period: number): number {
+  private calculateRSI(data: number[]): number[] {
     const input = {
       values: data,
-      period
+      period: 14
     };
-    const results = RSI.calculate(input);
-    return results[results.length - 1] || 0;
+    return RSI.calculate(input);
   }
 
-  private calculateMACD(data: MarketData[]): TechnicalIndicator[] {
-    const closePrices = data.map(d => d.close);
-    
-    return [
-      {
-        name: 'MACD',
-        value: this.calculateMACDValue(closePrices).histogram,
-        period: 26
-      }
-    ];
-  }
-
-  private calculateMACDValue(data: number[]): { histogram: number } {
+  private calculateMACD(data: number[]) {
     const input = {
       values: data,
       fastPeriod: 12,
@@ -125,73 +98,35 @@ export class TechnicalAnalysis {
       SimpleMAOscillator: false,
       SimpleMASignal: false
     };
-    
-    const results = MACD.calculate(input);
-    const lastResult = results[results.length - 1] || { histogram: 0 };
-    
-    return {
-      histogram: lastResult.histogram
-    };
+    return MACD.calculate(input);
   }
 
-  private calculateBollingerBands(data: MarketData[]): TechnicalIndicator[] {
-    const closePrices = data.map(d => d.close);
-    const bands = this.calculateBollingerBandsValue(closePrices);
-    
-    return [
-      {
-        name: 'Bollinger Upper',
-        value: bands.upper,
-        period: 20
-      },
-      {
-        name: 'Bollinger Middle',
-        value: bands.middle,
-        period: 20
-      },
-      {
-        name: 'Bollinger Lower',
-        value: bands.lower,
-        period: 20
-      }
-    ];
-  }
-
-  private calculateBollingerBandsValue(data: number[]): { upper: number, middle: number, lower: number } {
+  private calculateBollingerBands(data: number[]) {
     const input = {
-      period: 20,
       values: data,
+      period: 20,
       stdDev: 2
     };
-    const results = BollingerBands.calculate(input);
-    const lastResult = results[results.length - 1] || { upper: 0, middle: 0, lower: 0 };
-    return {
-      upper: lastResult.upper,
-      middle: lastResult.middle,
-      lower: lastResult.lower
-    };
+    return BollingerBands.calculate(input);
   }
 
-  private analyzeTrend(data: MarketData[], indicators: Record<string, TechnicalIndicator[]>) {
-    const closes = data.map(d => d.close);
-    const smaIndicators = indicators.sma || [];
-    
-    const sma20 = smaIndicators.find(i => i.period === 20)?.value ?? 0;
-    const sma50 = smaIndicators.find(i => i.period === 50)?.value ?? 0;
-    const sma200 = smaIndicators.find(i => i.period === 200)?.value ?? 0;
-    
-    return {
-      shortTerm: closes[closes.length - 1] > sma20 ? 'bullish' : 'bearish',
-      mediumTerm: closes[closes.length - 1] > sma50 ? 'bullish' : 'bearish',
-      longTerm: closes[closes.length - 1] > sma200 ? 'bullish' : 'bearish',
-      strength: this.calculateTrendStrength(data)
-    };
-  }
+  private analyzeTrend(data: MarketData[], indicators: Record<string, any>): string {
+    const lastClose = data[data.length - 1].close;
+    const sma20 = indicators.sma?.sma20 || 0;
+    const sma50 = indicators.sma?.sma50 || 0;
+    const sma200 = indicators.sma?.sma200 || 0;
 
-  private calculateTrendStrength(data: MarketData[]) {
-    const closes = data.map(d => d.close);
-    const sma20 = this.calculateSMAValue(closes, 20);
-    return closes[closes.length - 1] > sma20 ? 'strong' : 'weak';
+    if (lastClose > sma20 && sma20 > sma50 && sma50 > sma200) {
+      return 'strong_uptrend';
+    } else if (lastClose < sma20 && sma20 < sma50 && sma50 < sma200) {
+      return 'strong_downtrend';
+    } else if (lastClose > sma20 && lastClose > sma50) {
+      return 'uptrend';
+    } else if (lastClose < sma20 && lastClose < sma50) {
+      return 'downtrend';
+    } else {
+      return 'sideways';
+    }
   }
 
   private findKeyLevels(data: MarketData[]) {

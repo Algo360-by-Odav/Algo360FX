@@ -5,6 +5,9 @@ let metaApi: any = null;
 
 export async function initializeMetaApi() {
   if (!metaApi) {
+    if (!config.META_API_TOKEN) {
+      throw new Error('MetaAPI token not configured');
+    }
     metaApi = new MetaApi(config.META_API_TOKEN);
   }
   return metaApi;
@@ -16,6 +19,10 @@ export async function getMetaApiConnection() {
   }
 
   try {
+    if (!config.MT5_ACCOUNT_ID) {
+      throw new Error('MT5 account ID not configured');
+    }
+
     const account = await metaApi.metatraderAccountApi.getAccount(config.MT5_ACCOUNT_ID);
     if (!account) {
       throw new Error('MT5 account not found');
