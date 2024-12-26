@@ -9,13 +9,24 @@ interface Config {
   isDevelopment: boolean;
 }
 
+const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+// Default production URLs for Render deployment
+const defaultProductionApiUrl = 'https://algo360fx-server.onrender.com';
+const defaultProductionWsUrl = 'wss://algo360fx-server.onrender.com';
+
 export const config: Config = {
-  apiUrl: import.meta.env.VITE_API_URL || 'https://algo360fx-frontend.onrender.com',
-  wsUrl: import.meta.env.VITE_WS_URL || 'wss://algo360fx-frontend.onrender.com',
+  apiUrl: isLocalhost 
+    ? 'http://localhost:5000'
+    : (import.meta.env.VITE_API_URL || defaultProductionApiUrl),
+  wsUrl: isLocalhost
+    ? 'ws://localhost:5000'
+    : (import.meta.env.VITE_WS_URL || defaultProductionWsUrl),
   wsPath: import.meta.env.VITE_WS_PATH || '/ws',
   appName: import.meta.env.VITE_APP_NAME || 'Algo360FX',
   appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0',
-  environment: import.meta.env.VITE_APP_ENV || 'production',
-  isProduction: import.meta.env.VITE_APP_ENV === 'production',
-  isDevelopment: import.meta.env.VITE_APP_ENV === 'development',
+  environment: import.meta.env.MODE || 'production',
+  isProduction: import.meta.env.MODE === 'production',
+  isDevelopment: import.meta.env.MODE === 'development' || isLocalhost,
 };

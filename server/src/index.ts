@@ -1,7 +1,6 @@
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
-import mongoose from 'mongoose';
 import { Server } from 'socket.io';
 import TradingWebSocketServer from './websocket/trading';
 import OptimizationWebSocketServer from './websocket/optimization';
@@ -11,6 +10,9 @@ import notificationsRouter from './routes/notifications';
 import marketRouter from './routes/market';
 import userRouter from './routes/user';
 import { config } from './config/config';
+import { connectDatabase } from './config/database';
+
+console.log('MetaApi SDK loaded');
 
 const app = express();
 console.log('Express app created');
@@ -70,22 +72,18 @@ app.use((err: Error, _req: express.Request, res: express.Response, next: express
   next(err);
 });
 
-// Connect to MongoDB
-console.log('Connecting to MongoDB...');
-mongoose.connect(config.MONGO_URI)
+// Connect to MongoDB and start server
+connectDatabase()
   .then(() => {
-    console.log('Connected to MongoDB');
-    
-    // Start the server
     const PORT = config.PORT;
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log('WebSocket server endpoints:');
-      console.log('- Trading: ws://localhost:5000/ws');
-      console.log('- Optimization: ws://localhost:5000/ws');
+      console.log(`- Trading: ws://localhost:${PORT}${config.WS_PATH}`);
+      console.log(`- Optimization: ws://localhost:${PORT}${config.WS_PATH}`);
     });
   })
   .catch((error) => {
-    console.error('MongoDB connection error:', error);
+    console.error('Failed to start server:', error);
     process.exit(1);
   });
