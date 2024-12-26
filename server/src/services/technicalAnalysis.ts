@@ -1,5 +1,5 @@
 import { SMA, RSI, MACD, BollingerBands } from 'technicalindicators';
-import { MarketData } from '../types/market';
+import { MarketData, MACDOutput, BollingerBandsOutput } from '../types/market';
 import axios from 'axios';
 
 export class TechnicalAnalysis {
@@ -52,21 +52,23 @@ export class TechnicalAnalysis {
 
     // Calculate MACD if requested or no specific indicators requested
     if (requestedIndicators.includes('macd') || requestedIndicators.length === 0) {
-      const macd = this.calculateMACD(closes);
+      const macdResults = this.calculateMACD(closes);
+      const lastMACD = macdResults[macdResults.length - 1];
       indicators.macd = {
-        line: macd.MACD[macd.MACD.length - 1] || 0,
-        signal: macd.signal[macd.signal.length - 1] || 0,
-        histogram: macd.histogram[macd.histogram.length - 1] || 0
+        line: lastMACD.MACD,
+        signal: lastMACD.signal,
+        histogram: lastMACD.histogram
       };
     }
 
     // Calculate Bollinger Bands if requested or no specific indicators requested
     if (requestedIndicators.includes('bollinger') || requestedIndicators.length === 0) {
-      const bollinger = this.calculateBollingerBands(closes);
+      const bbandsResults = this.calculateBollingerBands(closes);
+      const lastBBands = bbandsResults[bbandsResults.length - 1];
       indicators.bollinger = {
-        upper: bollinger.upper[bollinger.upper.length - 1] || 0,
-        middle: bollinger.middle[bollinger.middle.length - 1] || 0,
-        lower: bollinger.lower[bollinger.lower.length - 1] || 0
+        upper: lastBBands.upper,
+        middle: lastBBands.middle,
+        lower: lastBBands.lower
       };
     }
 
@@ -89,7 +91,7 @@ export class TechnicalAnalysis {
     return RSI.calculate(input);
   }
 
-  private calculateMACD(data: number[]) {
+  private calculateMACD(data: number[]): MACDOutput[] {
     const input = {
       values: data,
       fastPeriod: 12,
@@ -98,16 +100,16 @@ export class TechnicalAnalysis {
       SimpleMAOscillator: false,
       SimpleMASignal: false
     };
-    return MACD.calculate(input);
+    return MACD.calculate(input) as MACDOutput[];
   }
 
-  private calculateBollingerBands(data: number[]) {
+  private calculateBollingerBands(data: number[]): BollingerBandsOutput[] {
     const input = {
       values: data,
       period: 20,
       stdDev: 2
     };
-    return BollingerBands.calculate(input);
+    return BollingerBands.calculate(input) as BollingerBandsOutput[];
   }
 
   private analyzeTrend(data: MarketData[], indicators: Record<string, any>): string {

@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { checkSchema, validationResult } from 'express-validator';
+const { body, validationResult } = require('express-validator');
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
@@ -19,12 +19,7 @@ const mockSendEmail = async (to: string, code: string) => {
 
 // Send verification code
 router.post('/verify/send', 
-  checkSchema({
-    email: {
-      isEmail: true,
-      errorMessage: 'Please enter a valid email'
-    }
-  }),
+  body('email').isEmail().withMessage('Please enter a valid email'),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -57,18 +52,8 @@ router.post('/verify/send',
 
 // Verify code
 router.post('/verify/code',
-  checkSchema({
-    email: {
-      isEmail: true,
-      errorMessage: 'Please enter a valid email'
-    },
-    code: {
-      isLength: {
-        options: { min: 6, max: 6 },
-        errorMessage: 'Verification code must be 6 digits long'
-      }
-    }
-  }),
+  body('email').isEmail().withMessage('Please enter a valid email'),
+  body('code').isLength({ min: 6, max: 6 }).withMessage('Verification code must be 6 digits long'),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -110,30 +95,11 @@ router.post('/verify/code',
 
 // Register new user
 router.post('/register',
-  checkSchema({
-    email: {
-      isEmail: true,
-      errorMessage: 'Please enter a valid email'
-    },
-    password: {
-      isLength: {
-        options: { min: 8 },
-        errorMessage: 'Password must be at least 8 characters long'
-      }
-    },
-    firstName: {
-      notEmpty: true,
-      errorMessage: 'First name is required'
-    },
-    lastName: {
-      notEmpty: true,
-      errorMessage: 'Last name is required'
-    },
-    verificationCode: {
-      notEmpty: true,
-      errorMessage: 'Verification code is required'
-    }
-  }),
+  body('email').isEmail().withMessage('Please enter a valid email'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
+  body('firstName').notEmpty().withMessage('First name is required'),
+  body('lastName').notEmpty().withMessage('Last name is required'),
+  body('verificationCode').notEmpty().withMessage('Verification code is required'),
   async (req: Request, res: Response) => {
     console.log('Registration request body:', req.body);
     
@@ -236,16 +202,8 @@ router.post('/register',
 
 // Login
 router.post('/login',
-  checkSchema({
-    email: {
-      isEmail: true,
-      errorMessage: 'Please enter a valid email'
-    },
-    password: {
-      exists: true,
-      errorMessage: 'Password is required'
-    }
-  }),
+  body('email').isEmail().withMessage('Please enter a valid email'),
+  body('password').exists().withMessage('Password is required'),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

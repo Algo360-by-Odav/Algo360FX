@@ -1,5 +1,5 @@
 import WebSocket, { WebSocketServer } from 'ws';
-import MetaApi from 'metaapi.cloud-sdk';
+import type { MetaApi, MetatraderAccount } from 'metaapi.cloud-sdk';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -9,7 +9,7 @@ const WS_PORT = parseInt(process.env.MT5_WS_PORT || '6780');
 interface MT5Connection {
   ws: WebSocket;
   account?: any;
-  terminal?: any;
+  terminal?: MetatraderAccount;
 }
 
 export class MT5Bridge {
@@ -85,16 +85,13 @@ export class MT5Bridge {
 
       case 'place_order':
         try {
-          const { symbol, volume, price } = message.data;
+          const { symbol, volume } = message.data;
           const terminal = connection.terminal;
           if (!terminal) throw new Error('Not connected to MT5');
 
           const result = await terminal.createMarketBuyOrder(
             symbol,
             volume,
-            price,
-            0.1,
-            0.1,
             { comment: 'Order from Algo360FX' }
           );
 
