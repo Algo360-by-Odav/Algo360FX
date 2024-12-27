@@ -51,7 +51,7 @@ export class MarketDataService {
     });
 
     // Handle connection status changes
-    WebSocketService.subscribeToStatus((status) => {
+    WebSocketService.subscribeToConnectionStatus((status) => {
       if (status === 'connected') {
         // Resubscribe to all symbols when reconnected
         this.subscribedSymbols.forEach(symbol => {
@@ -100,7 +100,7 @@ export class MarketDataService {
 
   private subscribeToSymbol(symbol: string) {
     if (WebSocketService.isConnected()) {
-      WebSocketService.emit('subscribe', symbol);
+      WebSocketService.subscribe('marketData', symbol);
       this.subscribedSymbols.add(symbol);
     } else {
       console.error(`Cannot subscribe to ${symbol}: WebSocket not connected`);
@@ -109,7 +109,7 @@ export class MarketDataService {
 
   private unsubscribeFromSymbol(symbol: string) {
     if (WebSocketService.isConnected()) {
-      WebSocketService.emit('unsubscribe', symbol);
+      WebSocketService.unsubscribe('marketData', symbol);
       this.subscribedSymbols.delete(symbol);
     } else {
       console.error(`Cannot unsubscribe from ${symbol}: WebSocket not connected`);
