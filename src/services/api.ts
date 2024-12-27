@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { config } from '../config/config';
 
+// Create axios instance with base configuration
 const api = axios.create({
   baseURL: config.apiUrl,
   timeout: 30000,
@@ -31,7 +32,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Handle unauthorized access
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      window.location.href = '/auth/login';
     }
 
     // Extract error message
@@ -41,6 +42,8 @@ api.interceptors.response.use(
       errorMessage = data.message || data.error || errorMessage;
     } else if (error.response?.data && typeof error.response.data === 'string') {
       errorMessage = error.response.data;
+    } else if (error.message) {
+      errorMessage = error.message;
     }
 
     // Create a new error with the extracted message
@@ -50,69 +53,180 @@ api.interceptors.response.use(
   }
 );
 
-// API endpoints
-export const endpoints = {
-  auth: {
-    login: '/auth/login',
-    register: '/auth/register',
-    logout: '/auth/logout',
-    profile: '/auth/profile',
-  },
-  settings: {
-    get: '/settings',
-    update: '/settings',
-  },
-  trading: {
-    orders: '/trading/orders',
-    positions: '/trading/positions',
-    history: '/trading/history',
-  },
-  market: {
-    quotes: '/market/quotes',
-    charts: '/market/charts',
-    orderbook: '/market/orderbook',
-  },
-  analytics: {
-    performance: '/analytics/performance',
-    risk: '/analytics/risk',
-    patterns: '/analytics/patterns',
-    clusters: '/analytics/clusters',
-    liquidity: '/analytics/liquidity',
-  },
-};
+// API endpoints interface
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+interface RegisterData {
+  email: string;
+  username: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  role?: string;
+}
 
 // API methods
 export const apiService = {
   // Auth
-  login: (credentials: { email: string; password: string }) =>
-    api.post(endpoints.auth.login, credentials),
-  register: (userData: { email: string; password: string; name: string }) =>
-    api.post(endpoints.auth.register, userData),
-  logout: () => api.post(endpoints.auth.logout),
-  getProfile: () => api.get(endpoints.auth.profile),
+  async login(credentials: LoginCredentials) {
+    try {
+      const response = await api.post('/auth/login', credentials);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async register(userData: RegisterData) {
+    try {
+      const response = await api.post('/auth/register', userData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async logout() {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      throw error;
+    }
+    localStorage.removeItem('token');
+  },
+
+  async getProfile() {
+    try {
+      const response = await api.get('/auth/profile');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 
   // Settings
-  getSettings: () => api.get(endpoints.settings.get),
-  updateSettings: (settings: any) => api.put(endpoints.settings.update, settings),
+  async getSettings() {
+    try {
+      const response = await api.get('/settings');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async updateSettings(settings: any) {
+    try {
+      const response = await api.put('/settings', settings);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 
   // Trading
-  getOrders: () => api.get(endpoints.trading.orders),
-  getPositions: () => api.get(endpoints.trading.positions),
-  getTradeHistory: () => api.get(endpoints.trading.history),
+  async getOrders() {
+    try {
+      const response = await api.get('/trading/orders');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getPositions() {
+    try {
+      const response = await api.get('/trading/positions');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getTradeHistory() {
+    try {
+      const response = await api.get('/trading/history');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 
   // Market Data
-  getQuotes: (symbols: string[]) => api.get(endpoints.market.quotes, { params: { symbols } }),
-  getChartData: (symbol: string, timeframe: string) =>
-    api.get(endpoints.market.charts, { params: { symbol, timeframe } }),
-  getOrderBook: (symbol: string) =>
-    api.get(endpoints.market.orderbook, { params: { symbol } }),
+  async getQuotes(symbols: string[]) {
+    try {
+      const response = await api.get('/market/quotes', { params: { symbols } });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getChartData(symbol: string, timeframe: string) {
+    try {
+      const response = await api.get('/market/charts', { params: { symbol, timeframe } });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getOrderBook(symbol: string) {
+    try {
+      const response = await api.get('/market/orderbook', { params: { symbol } });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 
   // Analytics
-  getPerformanceAnalytics: () => api.get(endpoints.analytics.performance),
-  getRiskMetrics: () => api.get(endpoints.analytics.risk),
-  getPatternAnalysis: () => api.get(endpoints.analytics.patterns),
-  getClusterAnalysis: () => api.get(endpoints.analytics.clusters),
-  getLiquidityAnalysis: () => api.get(endpoints.analytics.liquidity),
+  async getPerformanceAnalytics() {
+    try {
+      const response = await api.get('/analytics/performance');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getRiskMetrics() {
+    try {
+      const response = await api.get('/analytics/risk');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getPatternAnalysis() {
+    try {
+      const response = await api.get('/analytics/patterns');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getClusterAnalysis() {
+    try {
+      const response = await api.get('/analytics/clusters');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getLiquidityAnalysis() {
+    try {
+      const response = await api.get('/analytics/liquidity');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
 
 export { api };
