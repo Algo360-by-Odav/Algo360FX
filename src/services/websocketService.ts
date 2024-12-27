@@ -26,11 +26,21 @@ class WebSocketService {
       return;
     }
 
+    // Disconnect and clean up any existing socket
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
     // Clear any existing reconnect timer
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+
+    // Reset reconnect attempts
+    this.reconnectAttempts = 0;
 
     console.log('Connecting to Socket.IO at', this.wsUrl);
     this.notifyStatusChange('connecting');
@@ -39,59 +49,66 @@ class WebSocketService {
       this.socket = io(this.wsUrl, {
         path: '/ws',
         reconnection: true,
-        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-        timeout: 20000,
-        transports: ['websocket', 'polling'],
+        timeout: 10000,
+        transports: ['websocket'],
         forceNew: true,
-        autoConnect: true,
+        autoConnect: false,
         secure: this.isProduction,
         rejectUnauthorized: false
       });
 
-      this.socket.on('connect', () => {
-        console.log('Socket.IO connected');
-        this.reconnectAttempts = 0;
-        this.notifyStatusChange('connected');
-        
-        // Resubscribe to all events after reconnection
-        this.subscribers.forEach((_, type) => {
-          this.socket?.emit('subscribe', type);
-        });
-      });
+      // Set up event handlers before connecting
+      this.setupSocketHandlers();
 
-      this.socket.on('disconnect', () => {
-        console.log('Socket.IO disconnected');
-        this.notifyStatusChange('disconnected');
-      });
-
-      this.socket.on('connect_error', (error) => {
-        console.error('Socket.IO connection error:', error);
-        this.notifyStatusChange('disconnected');
-        this.handleReconnect();
-      });
-
-      this.socket.on('error', (error) => {
-        console.error('Socket.IO error:', error);
-        this.notifyStatusChange('disconnected');
-        this.handleReconnect();
-      });
-
-      // Handle incoming messages
-      this.socket.onAny((eventName, data) => {
-        if (this.subscribers.has(eventName)) {
-          this.subscribers.get(eventName)?.forEach(callback => callback(data));
-        }
-      });
-
-      // Force initial connection attempt
+      // Now connect
       this.socket.connect();
 
     } catch (error) {
       console.error('Error creating Socket.IO instance:', error);
       this.handleReconnect();
     }
+  }
+
+  private setupSocketHandlers() {
+    if (!this.socket) return;
+
+    this.socket.on('connect', () => {
+      console.log('Socket.IO connected');
+      this.reconnectAttempts = 0;
+      this.notifyStatusChange('connected');
+      
+      // Resubscribe to all events after reconnection
+      this.subscribers.forEach((_, type) => {
+        this.socket?.emit('subscribe', type);
+      });
+    });
+
+    this.socket.on('disconnect', () => {
+      console.log('Socket.IO disconnected');
+      this.notifyStatusChange('disconnected');
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('Socket.IO connection error:', error);
+      this.notifyStatusChange('disconnected');
+      this.handleReconnect();
+    });
+
+    this.socket.on('error', (error) => {
+      console.error('Socket.IO error:', error);
+      this.notifyStatusChange('disconnected');
+      this.handleReconnect();
+    });
+
+    // Handle incoming messages
+    this.socket.onAny((eventName, data) => {
+      if (this.subscribers.has(eventName)) {
+        this.subscribers.get(eventName)?.forEach(callback => callback(data));
+      }
+    });
   }
 
   private handleReconnect() {

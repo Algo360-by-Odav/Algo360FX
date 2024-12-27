@@ -7,9 +7,58 @@ import {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+type ProgressCallback = (progress: number) => void;
+type ResultCallback = (result: OptimizationResultNew) => void;
+type ErrorCallback = (error: string) => void;
+
 export class OptimizationService {
+  private progressCallback?: ProgressCallback;
+  private resultCallback?: ResultCallback;
+  private errorCallback?: ErrorCallback;
+
+  onProgress(callback: ProgressCallback) {
+    this.progressCallback = callback;
+  }
+
+  onResult(callback: ResultCallback) {
+    this.resultCallback = callback;
+  }
+
+  onError(callback: ErrorCallback) {
+    this.errorCallback = callback;
+  }
+
+  private emitProgress(progress: number) {
+    if (this.progressCallback) {
+      this.progressCallback(progress);
+    }
+  }
+
+  private emitResult(result: OptimizationResultNew) {
+    if (this.resultCallback) {
+      this.resultCallback(result);
+    }
+  }
+
+  private emitError(error: string) {
+    if (this.errorCallback) {
+      this.errorCallback(error);
+    }
+  }
+
+  async startOptimization(strategyId: string, config: OptimizationConfig) {
+    try {
+      const result = await this.optimizeStrategy(strategyId, config);
+      this.emitResult(result);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Optimization failed';
+      this.emitError(errorMessage);
+      throw error;
+    }
+  }
+
   // Mock function to generate realistic-looking optimization results
-  async optimizeStrategy(
+  private async optimizeStrategy(
     strategyId: string,
     config: OptimizationConfig
   ): Promise<OptimizationResultNew> {
@@ -18,6 +67,9 @@ export class OptimizationService {
     const generations = [];
 
     for (let i = 0; i < totalGenerations; i++) {
+      const progress = ((i + 1) / totalGenerations) * 100;
+      this.emitProgress(progress);
+
       const bestFitness = Math.random() * (1 - 0.5) + 0.5 + (i / totalGenerations) * 0.5;
       const averageFitness = bestFitness - Math.random() * 0.2;
 

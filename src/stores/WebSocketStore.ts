@@ -18,7 +18,7 @@ export class WebSocketStore {
   }
 
   private setupWebSocket = () => {
-    WebSocketService.subscribeToStatus((status) => {
+    WebSocketService.subscribeToConnectionStatus((status) => {
       this.isConnected = status === 'connected';
       if (status === 'connected') {
         this.lastError = null;

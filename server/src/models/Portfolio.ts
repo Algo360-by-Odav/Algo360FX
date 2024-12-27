@@ -56,5 +56,6 @@ PortfolioSchema.index({
   category: 'text',
 });
 
-export const Portfolio = mongoose.model<IPortfolio>('Portfolio', PortfolioSchema);
+// Check if the model exists before creating it
+export const Portfolio = mongoose.models.Portfolio || mongoose.model<IPortfolio>('Portfolio', PortfolioSchema);
 export default Portfolio;

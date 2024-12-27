@@ -25,7 +25,9 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Parse CORS_ORIGIN from environment variable
-const corsOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()) : ['http://localhost:3000'];
+const corsOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()) 
+  : ['http://localhost:3000', 'http://localhost:3001'];
 
 export const config: Config = {
   PORT: parseInt(process.env.PORT || '5000', 10),

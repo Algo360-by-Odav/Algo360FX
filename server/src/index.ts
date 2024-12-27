@@ -30,6 +30,69 @@ app.use(cors({
 // Apply general rate limiter to all routes
 app.use(generalLimiter);
 
+// Parse JSON bodies
+app.use(express.json());
+
+// API Documentation route
+app.get('/', (_req: express.Request, res: express.Response) => {
+  res.json({
+    name: 'Algo360FX API',
+    version: '1.0.0',
+    description: 'Trading and market analysis platform API',
+    endpoints: {
+      '/api/health': 'Health check endpoint',
+      '/auth/*': 'Authentication endpoints',
+      '/user/*': 'User management endpoints',
+      '/market/*': 'Market data and trading endpoints',
+      '/notifications/*': 'Notification endpoints',
+      '/search/*': 'Search functionality endpoints'
+    }
+  });
+});
+
+// API Routes with versioning
+app.use('/api', (req, res, next) => {
+  next();
+});
+
+app.use('/api/health', async (_req: express.Request, res: express.Response) => {
+  try {
+    // Check database connection
+    const dbStatus = postgresConnection?.isInitialized || mongoose.connection.readyState === 1;
+    if (!dbStatus) {
+      return res.status(503).json({ 
+        status: 'unhealthy',
+        database: 'disconnected',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // All checks passed
+    res.json({ 
+      status: 'healthy',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({ 
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// API Routes
+app.use('/api/auth', authRouter);
+app.use('/api/user', userRouter);
+app.use('/api/market', marketRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/search', searchRouter);
+
+// Add market endpoints to root path
+app.use('/', marketRouter);
+
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
 const io = new Server(httpServer, {
@@ -39,7 +102,11 @@ const io = new Server(httpServer, {
     methods: ['GET', 'POST'],
     credentials: true
   },
-  transports: ['websocket', 'polling']
+  transports: ['websocket'],
+  pingTimeout: 10000,
+  pingInterval: 5000,
+  maxHttpBufferSize: 1e6, // 1 MB
+  connectTimeout: 10000
 });
 console.log('Socket.IO server initialized');
 
@@ -53,21 +120,6 @@ console.log('Initializing Optimization WebSocket server...');
 const optimizationWS = new OptimizationWebSocketServer(io);
 optimizationWS.initialize();
 console.log('Optimization WebSocket server initialized');
-
-// Middleware
-app.use(express.json());
-
-// Routes
-app.use('/api/auth', authRouter);
-app.use('/api/notifications', notificationsRouter);
-app.use('/api/market', marketRouter);
-app.use('/api/search', searchRouter);
-app.use('/api/user', userRouter);
-
-// Health check endpoint
-app.get('/api/health', (_req: express.Request, res: express.Response) => {
-  res.json({ status: 'ok' });
-});
 
 // Error handling middleware
 app.use((err: Error, _req: express.Request, res: express.Response, next: express.NextFunction) => {

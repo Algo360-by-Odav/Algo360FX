@@ -199,7 +199,7 @@ export class TradingStore {
   private setupWebSocket() {
     WebSocketService.connect();
 
-    WebSocketService.subscribeToStatus((status) => {
+    WebSocketService.subscribeToConnectionStatus((status) => {
       runInAction(() => {
         this.isConnected = status === 'connected';
         if (!this.isConnected) {

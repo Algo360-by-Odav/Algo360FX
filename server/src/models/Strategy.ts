@@ -49,6 +49,7 @@ strategySchema.index({
   category: 'text'
 });
 
-const Strategy = mongoose.model<IStrategy>('Strategy', strategySchema);
+// Check if the model exists before creating it
+export const Strategy = mongoose.models.Strategy || mongoose.model<IStrategy>('Strategy', strategySchema);
 
 export default Strategy;
