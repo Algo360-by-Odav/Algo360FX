@@ -4,11 +4,12 @@ import auth from '../middleware/auth';
 import { Position } from '../models/Position';
 import { Portfolio } from '../models/Portfolio';
 import { Strategy } from '../models/Strategy';
+import { UserPayload } from '../types/auth';
 
 const router = express.Router();
 
 // Get market data for a symbol
-router.get('/:symbol', auth, async (req, res) => {
+router.get('/:symbol', auth, async (req: express.Request, res: express.Response) => {
   try {
     const { symbol } = req.params;
     const data = await getMarketData(symbol);
@@ -20,7 +21,7 @@ router.get('/:symbol', auth, async (req, res) => {
 });
 
 // Place a market order
-router.post('/order', auth, async (req, res) => {
+router.post('/order', auth, async (req: express.Request, res: express.Response) => {
   try {
     const { symbol, type, volume } = req.body;
 
@@ -41,34 +42,34 @@ router.post('/order', auth, async (req, res) => {
 });
 
 // Get all positions
-router.get('/positions', auth, async (req, res) => {
+router.get('/positions', auth, async (req: express.Request, res: express.Response) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
+    const user = req.user as UserPayload;
+    if (!user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const positions = await Position.find({ userId });
-    res.json(positions);
+    const positions = await Position.find({ userId: user.id });
+    return res.json(positions);
   } catch (error) {
     console.error('Error fetching positions:', error);
-    res.status(500).json({ error: 'Failed to fetch positions' });
+    return res.status(500).json({ error: 'Failed to fetch positions' });
   }
 });
 
 // Get portfolio
-router.get('/portfolio', auth, async (req, res) => {
+router.get('/portfolio', auth, async (req: express.Request, res: express.Response) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
+    const user = req.user as UserPayload;
+    if (!user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const portfolio = await Portfolio.findOne({ userId });
+    const portfolio = await Portfolio.findOne({ userId: user.id });
     if (!portfolio) {
       // Create default portfolio if none exists
       const newPortfolio = await Portfolio.create({
-        userId,
+        userId: user.id,
         balance: 10000,
         equity: 10000,
         margin: 0,
@@ -79,46 +80,45 @@ router.get('/portfolio', auth, async (req, res) => {
       return res.json(newPortfolio);
     }
 
-    res.json(portfolio);
+    return res.json(portfolio);
   } catch (error) {
     console.error('Error fetching portfolio:', error);
-    res.status(500).json({ error: 'Failed to fetch portfolio' });
+    return res.status(500).json({ error: 'Failed to fetch portfolio' });
   }
 });
 
 // Get all strategies
-router.get('/strategies', auth, async (req, res) => {
+router.get('/strategies', auth, async (req: express.Request, res: express.Response) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
+    const user = req.user as UserPayload;
+    if (!user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const strategies = await Strategy.find({ userId });
-    res.json(strategies);
+    const strategies = await Strategy.find({ userId: user.id });
+    return res.json(strategies);
   } catch (error) {
     console.error('Error fetching strategies:', error);
-    res.status(500).json({ error: 'Failed to fetch strategies' });
+    return res.status(500).json({ error: 'Failed to fetch strategies' });
   }
 });
 
 // Create a new strategy
-router.post('/strategies', auth, async (req, res) => {
+router.post('/strategies', auth, async (req: express.Request, res: express.Response) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
+    const user = req.user as UserPayload;
+    if (!user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
     const strategy = await Strategy.create({
       ...req.body,
-      userId
+      userId: user.id
     });
-
-    res.status(201).json(strategy);
+    return res.json(strategy);
   } catch (error) {
     console.error('Error creating strategy:', error);
-    res.status(500).json({ error: 'Failed to create strategy' });
+    return res.status(500).json({ error: 'Failed to create strategy' });
   }
 });
 

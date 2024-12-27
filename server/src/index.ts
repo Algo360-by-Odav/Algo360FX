@@ -12,6 +12,8 @@ import userRouter from './routes/user';
 import { config } from './config/config';
 import { connectDatabase } from './config/database';
 import { generalLimiter } from './middleware/rateLimiter';
+import { postgresConnection } from './config/database';
+import mongoose from 'mongoose';
 
 console.log('MetaApi SDK loaded');
 
@@ -51,7 +53,7 @@ app.get('/', (_req: express.Request, res: express.Response) => {
 });
 
 // API Routes with versioning
-app.use('/api', (req, res, next) => {
+app.use('/api', (_req: express.Request, _res: express.Response, next: express.NextFunction) => {
   next();
 });
 
