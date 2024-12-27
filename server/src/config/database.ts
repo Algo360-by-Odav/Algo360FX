@@ -11,7 +11,7 @@ let mongoServer: MongoMemoryServer | null = null;
 const postgresConnection = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL || '',
-  entities: ['src/entities/**/*.ts'],
+  entities: ['src/models/**/*.ts'],
   migrations: ['src/migrations/**/*.ts'],
   subscribers: ['src/subscribers/**/*.ts'],
   synchronize: process.env.NODE_ENV !== 'production',

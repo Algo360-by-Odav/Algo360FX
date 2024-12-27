@@ -1,6 +1,6 @@
 import express from 'express';
 import auth from '../middleware/auth';
-import { UserPreferences } from '../../models/UserPreferences';
+import { UserPreferences } from '../models/UserPreferences';
 import { postgresConnection } from '../config/database';
 
 const router = express.Router();
