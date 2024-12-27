@@ -136,7 +136,7 @@ const Register: React.FC = observer(() => {
             Sign Up
           </Button>
           <Box sx={{ textAlign: 'center' }}>
-            <Link component={RouterLink} to="/auth/sign-in" variant="body2">
+            <Link component={RouterLink} to="/auth/login" variant="body2">
               Already have an account? Sign in
             </Link>
           </Box>
