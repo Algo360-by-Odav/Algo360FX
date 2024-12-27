@@ -62,7 +62,7 @@ services:
 
   - type: redis
     name: algo360fx-cache
-    plan: free
+    plan: starter
     region: singapore
     maxmemoryPolicy: noeviction
     ipAllowList:
