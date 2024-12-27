@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Container, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 
 const AuthContainer = styled(Box)({
   minHeight: '100vh',
@@ -24,6 +24,13 @@ const AuthCard = styled(Paper)({
 });
 
 const AuthLayout: React.FC = () => {
+  const location = useLocation();
+
+  // If we're at /auth, redirect to /auth/login
+  if (location.pathname === '/auth' || location.pathname === '/auth/') {
+    return <Navigate to="/auth/login" replace />;
+  }
+
   return (
     <AuthContainer>
       <Container maxWidth="sm">
