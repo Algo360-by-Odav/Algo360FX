@@ -54,14 +54,15 @@ services:
       - key: VITE_WS_PATH
         value: "/ws"
 
+  # Redis Cache Service
   - type: redis
     name: algo360fx-cache
     plan: starter
     region: singapore
-    maxmemoryPolicy: noeviction
     ipAllowList:
       - source: 0.0.0.0/0
         description: everywhere
+    maxmemoryPolicy: noeviction
 
 databases:
   - name: algo360fx-db
