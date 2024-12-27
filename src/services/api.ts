@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import { config } from '../config/config';
 
 const api = axios.create({
-  baseURL: config.apiBaseUrl,
+  baseURL: config.apiUrl,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -39,6 +39,8 @@ api.interceptors.response.use(
     if (error.response?.data && typeof error.response.data === 'object') {
       const data = error.response.data as any;
       errorMessage = data.message || data.error || errorMessage;
+    } else if (error.response?.data && typeof error.response.data === 'string') {
+      errorMessage = error.response.data;
     }
 
     // Create a new error with the extracted message
