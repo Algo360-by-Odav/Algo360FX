@@ -62,6 +62,9 @@ function App() {
               <Route path="reset-password/:token" element={<ResetPasswordForm />} />
             </Route>
 
+            {/* Legacy Auth Route - Redirect to new path */}
+            <Route path="/login" element={<Navigate to="/auth/login" replace />} />
+            
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/app" element={<MainLayout />}>
