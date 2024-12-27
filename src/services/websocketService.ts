@@ -16,7 +16,9 @@ class WebSocketService {
 
   constructor() {
     this.isProduction = import.meta.env.MODE === 'production';
-    this.wsUrl = this.isProduction ? config.wsUrl : 'ws://localhost:5000';
+    this.wsUrl = this.isProduction ? 
+      'wss://algo360fx-server.onrender.com' : 
+      'ws://localhost:5000';
   }
 
   connect() {
@@ -31,54 +33,65 @@ class WebSocketService {
     }
 
     console.log('Connecting to Socket.IO at', this.wsUrl);
+    this.notifyStatusChange('connecting');
 
-    this.socket = io(this.wsUrl, {
-      path: config.wsPath,
-      reconnection: true,
-      reconnectionAttempts: this.maxReconnectAttempts,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
-      transports: ['websocket'],
-      forceNew: true,
-      autoConnect: true,
-      secure: this.isProduction
-    });
-
-    this.socket.on('connect', () => {
-      console.log('Socket.IO connected');
-      this.reconnectAttempts = 0;
-      this.notifyStatusChange('connected');
-      
-      // Resubscribe to all events after reconnection
-      this.subscribers.forEach((_, type) => {
-        this.socket?.emit('subscribe', type);
+    try {
+      this.socket = io(this.wsUrl, {
+        path: '/ws',
+        reconnection: true,
+        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+        transports: ['websocket', 'polling'],
+        forceNew: true,
+        autoConnect: true,
+        secure: this.isProduction,
+        rejectUnauthorized: false
       });
-    });
 
-    this.socket.on('disconnect', () => {
-      console.log('Socket.IO disconnected');
-      this.notifyStatusChange('disconnected');
-    });
+      this.socket.on('connect', () => {
+        console.log('Socket.IO connected');
+        this.reconnectAttempts = 0;
+        this.notifyStatusChange('connected');
+        
+        // Resubscribe to all events after reconnection
+        this.subscribers.forEach((_, type) => {
+          this.socket?.emit('subscribe', type);
+        });
+      });
 
-    this.socket.on('connect_error', (error) => {
-      console.error('Socket.IO connection error:', error);
-      this.notifyStatusChange('disconnected');
+      this.socket.on('disconnect', () => {
+        console.log('Socket.IO disconnected');
+        this.notifyStatusChange('disconnected');
+      });
+
+      this.socket.on('connect_error', (error) => {
+        console.error('Socket.IO connection error:', error);
+        this.notifyStatusChange('disconnected');
+        this.handleReconnect();
+      });
+
+      this.socket.on('error', (error) => {
+        console.error('Socket.IO error:', error);
+        this.notifyStatusChange('disconnected');
+        this.handleReconnect();
+      });
+
+      // Handle incoming messages
+      this.socket.onAny((eventName, data) => {
+        if (this.subscribers.has(eventName)) {
+          this.subscribers.get(eventName)?.forEach(callback => callback(data));
+        }
+      });
+
+      // Force initial connection attempt
+      this.socket.connect();
+
+    } catch (error) {
+      console.error('Error creating Socket.IO instance:', error);
       this.handleReconnect();
-    });
-
-    this.socket.on('error', (error) => {
-      console.error('Socket.IO error:', error);
-      this.notifyStatusChange('disconnected');
-      this.handleReconnect();
-    });
-
-    // Handle incoming messages
-    this.socket.onAny((eventName, data) => {
-      if (this.subscribers.has(eventName)) {
-        this.subscribers.get(eventName)?.forEach(callback => callback(data));
-      }
-    });
+    }
   }
 
   private handleReconnect() {
@@ -88,6 +101,14 @@ class WebSocketService {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.log('Max reconnection attempts reached');
       this.notifyStatusChange('disconnected');
+      
+      // Reset reconnect attempts after a longer delay
+      setTimeout(() => {
+        console.log('Resetting reconnection attempts');
+        this.reconnectAttempts = 0;
+        this.connect();
+      }, 30000); // Wait 30 seconds before trying again
+      
       return;
     }
 
@@ -95,7 +116,7 @@ class WebSocketService {
     const baseDelay = 1000;
     const maxDelay = 30000;
     const jitter = Math.random() * 1000;
-    const delay = Math.min(baseDelay * Math.pow(2, this.reconnectAttempts) + jitter, maxDelay);
+    const delay = Math.min(baseDelay * Math.pow(1.5, this.reconnectAttempts) + jitter, maxDelay);
     
     console.log(`Reconnecting after ${Math.round(delay)}ms...`);
     
