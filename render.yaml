@@ -78,7 +78,7 @@ services:
 
 databases:
   - name: algo360fx-db
-    plan: starter
+    plan: free
     region: singapore
     ipAllowList: 
       - source: 0.0.0.0/0
