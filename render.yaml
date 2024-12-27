@@ -33,10 +33,6 @@ services:
       - key: CORS_ORIGIN
         value: "https://algo360fx-client.onrender.com"
     autoDeploy: true
-    disk:
-      name: algo360fx-server-data
-      mountPath: /data
-      sizeGB: 10
 
   # Frontend Static Site
   - type: web
