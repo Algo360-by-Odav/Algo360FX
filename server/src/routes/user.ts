@@ -1,5 +1,4 @@
 import express from 'express';
-import { User } from '../entities/User';
 import { UserPreferences } from '../entities/UserPreferences';
 import auth from '../middleware/auth';
 import { UserPayload } from '../types/auth';
@@ -14,8 +13,18 @@ router.get('/preferences', auth, async (req: express.Request, res: express.Respo
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const preferences = await UserPreferences.findOne({ userId: user.id });
-    return res.json(preferences || {});
+    const preferences = await UserPreferences.createQueryBuilder('userPreferences')
+      .where('userPreferences.userId = :userId', { userId: user.id })
+      .getOne();
+
+    if (!preferences) {
+      const defaultPreferences = new UserPreferences();
+      defaultPreferences.userId = user.id;
+      await defaultPreferences.save();
+      return res.json(defaultPreferences);
+    }
+
+    return res.json(preferences);
   } catch (error) {
     console.error('Error fetching user preferences:', error);
     return res.status(500).json({ error: 'Failed to fetch user preferences' });
@@ -30,11 +39,20 @@ router.put('/preferences', auth, async (req: express.Request, res: express.Respo
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const preferences = await UserPreferences.findOneAndUpdate(
-      { userId: user.id },
-      { $set: req.body },
-      { new: true, upsert: true }
-    );
+    const preferences = await UserPreferences.createQueryBuilder('userPreferences')
+      .where('userPreferences.userId = :userId', { userId: user.id })
+      .getOne();
+
+    if (!preferences) {
+      const newPreferences = new UserPreferences();
+      newPreferences.userId = user.id;
+      Object.assign(newPreferences, req.body);
+      await newPreferences.save();
+      return res.json(newPreferences);
+    }
+
+    Object.assign(preferences, req.body);
+    await preferences.save();
     return res.json(preferences);
   } catch (error) {
     console.error('Error updating user preferences:', error);

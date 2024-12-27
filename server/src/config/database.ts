@@ -1,11 +1,24 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { DataSource } from 'typeorm';
-import { config } from './config';
+import { config } from 'dotenv';
 import { join } from 'path';
+
+config();
 
 let mongoServer: MongoMemoryServer | null = null;
 let postgresConnection: DataSource | null = null;
+
+export const postgresConnection = new DataSource({
+  type: 'postgres',
+  url: process.env.DATABASE_URL,
+  entities: ['src/entities/**/*.ts'],
+  migrations: ['src/migrations/**/*.ts'],
+  subscribers: ['src/subscribers/**/*.ts'],
+  synchronize: process.env.NODE_ENV !== 'production',
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  logging: process.env.NODE_ENV !== 'production',
+});
 
 export const connectDatabase = async () => {
   const maxRetries = 3;
@@ -14,35 +27,20 @@ export const connectDatabase = async () => {
   while (retryCount < maxRetries) {
     try {
       console.log(`Connecting to database (attempt ${retryCount + 1}/${maxRetries})...`);
-      console.log('Database URL:', config.DATABASE_URL.replace(/:[^:@]+@/, ':****@')); // Hide password in logs
+      console.log('Database URL:', process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@')); // Hide password in logs
       
       // Check if using PostgreSQL
-      if (config.DATABASE_URL?.includes('postgresql')) {
+      if (process.env.DATABASE_URL?.includes('postgresql')) {
         // PostgreSQL connection
         const isRender = process.env.RENDER === 'true';
         
-        postgresConnection = new DataSource({
-          type: 'postgres',
-          url: config.DATABASE_URL,
-          synchronize: config.NODE_ENV === 'development',
-          logging: config.NODE_ENV === 'development',
-          entities: [join(__dirname, '../entities/**/*.{ts,js}')],
-          migrations: [join(__dirname, '../migrations/**/*.{ts,js}')],
-          ssl: isRender || config.SSL_ENABLED ? {
-            rejectUnauthorized: false // Required for Render's SSL
-          } : false,
-          extra: {
-            max: 20, // Connection pool settings
-            idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 5000, // Increased timeout
-          }
-        });
-
-        await postgresConnection.initialize();
+        if (!postgresConnection?.isInitialized) {
+          await postgresConnection.initialize();
+        }
         console.log('Connected to PostgreSQL database');
         
         // Run migrations in production
-        if (config.NODE_ENV === 'production') {
+        if (process.env.NODE_ENV === 'production') {
           try {
             await postgresConnection.runMigrations();
             console.log('Database migrations completed');
@@ -56,11 +54,11 @@ export const connectDatabase = async () => {
       }
 
       // MongoDB connections
-      if (!config.DATABASE_URL) {
+      if (!process.env.DATABASE_URL) {
         throw new Error('DATABASE_URL is not defined in environment variables');
       }
 
-      if (config.NODE_ENV === 'development' && !config.DATABASE_URL.includes('mongodb+srv')) {
+      if (process.env.NODE_ENV === 'development' && !process.env.DATABASE_URL.includes('mongodb+srv')) {
         // MongoDB Memory Server for development
         mongoServer = await MongoMemoryServer.create();
         const uri = mongoServer.getUri();
@@ -68,7 +66,7 @@ export const connectDatabase = async () => {
         console.log('Connected to MongoDB Memory Server');
       } else {
         // MongoDB Atlas connection with retries
-        await mongoose.connect(config.DATABASE_URL, {
+        await mongoose.connect(process.env.DATABASE_URL, {
           serverSelectionTimeoutMS: 10000, // Increased timeout
           socketTimeoutMS: 45000,
           connectTimeoutMS: 10000,

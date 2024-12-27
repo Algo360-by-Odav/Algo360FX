@@ -74,8 +74,8 @@ router.get('/portfolio', auth, async (req: express.Request, res: express.Respons
         equity: 10000,
         margin: 0,
         freeMargin: 10000,
-        marginLevel: 100,
-        currency: 'USD'
+        marginLevel: 0,
+        positions: []
       });
       return res.json(newPortfolio);
     }
