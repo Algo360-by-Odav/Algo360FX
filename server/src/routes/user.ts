@@ -1,6 +1,6 @@
 import express from 'express';
 import auth from '../middleware/auth';
-import { UserPreferences } from '../models/UserPreferences';
+import { UserPreferences } from '../../models/UserPreferences';
 import { postgresConnection } from '../config/database';
 
 const router = express.Router();
@@ -24,7 +24,18 @@ router.get('/preferences', auth, async (req, res) => {
         theme: 'light',
         notifications: true,
         language: 'en',
-        timezone: 'UTC'
+        timezone: 'UTC',
+        chartPreferences: {
+          defaultTimeframe: '1H',
+          indicators: [],
+          layout: 'default'
+        },
+        tradingPreferences: {
+          defaultLotSize: 0.01,
+          riskPercentage: 1,
+          defaultStopLoss: 50,
+          defaultTakeProfit: 100
+        }
       });
 
       await userPreferencesRepository.save(defaultPreferences);
