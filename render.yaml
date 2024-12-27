@@ -8,8 +8,6 @@ services:
     buildCommand: cd server && npm run build
     startCommand: cd server && npm run start:prod
     healthCheckPath: /api/health
-    domains:
-      - algo360fx-server.onrender.com
     envVars:
       - key: NODE_VERSION
         value: "18.x"
@@ -40,8 +38,6 @@ services:
     env: static
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
-    domains:
-      - algo360fx-client.onrender.com
     pullRequestPreviewsEnabled: true
     headers:
       - path: /*
