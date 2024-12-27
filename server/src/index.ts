@@ -115,8 +115,7 @@ console.log('Socket.IO server initialized');
 
 // Initialize and start WebSocket servers
 console.log('Initializing Trading WebSocket server...');
-const tradingWS = new TradingWebSocketServer(io);
-tradingWS.initialize();
+const tradingWS = new TradingWebSocketServer(httpServer);
 console.log('Trading WebSocket server initialized');
 
 console.log('Initializing Optimization WebSocket server...');

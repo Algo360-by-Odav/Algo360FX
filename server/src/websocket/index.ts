@@ -1,214 +1,197 @@
 import { WebSocket, WebSocketServer } from 'ws';
-import { Server } from 'http';
+import { createServer, Server } from 'http';
 import { v4 as uuidv4 } from 'uuid';
+import { config } from 'dotenv';
+import { MarketData } from '../types/market';
+
+// Load environment variables
+config();
 
 interface Client {
   id: string;
   ws: WebSocket;
   subscriptions: Set<string>;
+  heartbeat: Date;
+  pingTimeout?: NodeJS.Timeout;
+  marketDataInterval?: NodeJS.Timeout;
 }
 
-class TradingWebSocketServer {
+class WebSocketManager {
   private wss: WebSocketServer;
-  private clients: Map<string, Client> = new Map();
-  private marketData: Map<string, any> = new Map();
-  private heartbeatInterval: NodeJS.Timeout;
+  private clients: Map<string, Client>;
+  private httpServer: Server;
+  private readonly PING_INTERVAL = 30000; // 30 seconds
+  private readonly PING_TIMEOUT = 5000; // 5 seconds
 
-  constructor(server: Server) {
-    this.wss = new WebSocketServer({ server });
-    this.setupWebSocket();
-    this.initializeMarketData();
-    this.startHeartbeat();
+  constructor(port: number) {
+    this.httpServer = createServer();
+    this.wss = new WebSocketServer({ server: this.httpServer });
+    this.clients = new Map();
+
+    this.httpServer.listen(port, () => {
+      console.log(`WebSocket server is running on port ${port}`);
+    });
+
+    this.setupWebSocketServer();
   }
 
-  private setupWebSocket() {
+  private setupWebSocketServer(): void {
     this.wss.on('connection', (ws: WebSocket) => {
       const clientId = uuidv4();
       const client: Client = {
         id: clientId,
         ws,
-        subscriptions: new Set()
+        subscriptions: new Set(),
+        heartbeat: new Date()
       };
 
       this.clients.set(clientId, client);
       console.log(`Client connected: ${clientId}`);
 
-      // Send initial market data
-      this.sendMessage(ws, 'connect', { status: 'connected', clientId });
-
-      ws.on('message', (message: string) => {
-        try {
-          const data = JSON.parse(message.toString());
-          this.handleMessage(client, data);
-        } catch (error: unknown) {
-          this.handleError(error);
-        }
-      });
-
-      ws.on('close', () => {
-        console.log(`Client disconnected: ${clientId}`);
-        this.clients.delete(clientId);
-      });
-
-      ws.on('error', (error: unknown) => {
-        this.handleError(error);
-        this.clients.delete(clientId);
-      });
+      this.setupPingPong(client);
+      this.setupMessageHandling(client);
+      this.setupDisconnectHandling(client);
     });
   }
 
-  private initializeMarketData() {
-    // Initialize with some default market data
-    const symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD'];
-    symbols.forEach(symbol => {
-      this.marketData.set(symbol, {
-        symbol,
-        bid: this.randomPrice(1.0, 1.2),
-        ask: this.randomPrice(1.0, 1.2),
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    // Start updating market data periodically
+  private setupPingPong(client: Client): void {
+    // Send ping to client every PING_INTERVAL
     setInterval(() => {
-      this.updateMarketData();
-    }, 1000);
-  }
+      if (!client.ws || client.ws.readyState !== WebSocket.OPEN) return;
 
-  private updateMarketData() {
-    this.marketData.forEach((data, symbol) => {
-      const change = (Math.random() - 0.5) * 0.0010;
-      const bid = Number((data.bid + change).toFixed(5));
-      const ask = Number((bid + 0.0002).toFixed(5));
+      client.ws.ping();
 
-      const updatedData = {
-        symbol,
-        bid,
-        ask,
-        timestamp: new Date().toISOString()
-      };
-
-      this.marketData.set(symbol, updatedData);
-
-      // Send updates to subscribed clients
-      this.clients.forEach(client => {
-        if (client.subscriptions.has(symbol)) {
-          this.sendMessage(client.ws, 'market_data', updatedData);
+      // Set up timeout for pong response
+      client.pingTimeout = setTimeout(() => {
+        if (client.ws) {
+          client.ws.terminate();
         }
-      });
+      }, this.PING_TIMEOUT);
+    }, this.PING_INTERVAL);
+
+    // Handle pong response from client
+    client.ws.on('pong', () => {
+      client.heartbeat = new Date();
+      if (client.pingTimeout) {
+        clearTimeout(client.pingTimeout);
+      }
     });
   }
 
-  private handleMessage(client: Client, data: any) {
-    const { type, payload } = data;
+  private setupMessageHandling(client: Client): void {
+    client.ws.on('message', async (message: string) => {
+      try {
+        const data = JSON.parse(message.toString());
+        await this.handleMessage(client, data);
+      } catch (error) {
+        console.error('Error handling message:', error);
+        this.sendError(client, 'Invalid message format');
+      }
+    });
+  }
 
-    switch (type) {
-      case 'subscribe_market_data':
-        this.handleSubscription(client, payload.symbol);
+  private setupDisconnectHandling(client: Client): void {
+    client.ws.on('close', () => {
+      this.handleDisconnect(client);
+    });
+
+    client.ws.on('error', (error) => {
+      console.error(`WebSocket error for client ${client.id}:`, error);
+      this.handleDisconnect(client);
+    });
+  }
+
+  private handleDisconnect(client: Client): void {
+    // Clear intervals and timeouts
+    if (client.marketDataInterval) {
+      clearInterval(client.marketDataInterval);
+    }
+    if (client.pingTimeout) {
+      clearTimeout(client.pingTimeout);
+    }
+
+    // Remove client from clients map
+    this.clients.delete(client.id);
+    console.log(`Client disconnected: ${client.id}`);
+  }
+
+  private async handleMessage(client: Client, data: any): Promise<void> {
+    switch (data.type) {
+      case 'subscribe':
+        await this.handleSubscribe(client, data);
         break;
-      case 'unsubscribe_market_data':
-        this.handleUnsubscription(client, payload.symbol);
-        break;
-      case 'place_order':
-        this.handlePlaceOrder(client, payload);
-        break;
-      case 'cancel_order':
-        this.handleCancelOrder(client, payload);
+      case 'unsubscribe':
+        await this.handleUnsubscribe(client, data);
         break;
       default:
-        this.sendError(client.ws, `Unknown message type: ${type}`);
+        this.sendError(client, 'Unknown message type');
     }
   }
 
-  private handleSubscription(client: Client, symbol: string) {
-    if (!this.marketData.has(symbol)) {
-      this.sendError(client.ws, `Invalid symbol: ${symbol}`);
+  private async handleSubscribe(client: Client, data: any): Promise<void> {
+    const { symbol, timeframe } = data;
+    const subscriptionKey = `${symbol}-${timeframe}`;
+
+    if (client.subscriptions.has(subscriptionKey)) {
       return;
     }
 
-    client.subscriptions.add(symbol);
-    const data = this.marketData.get(symbol);
-    this.sendMessage(client.ws, 'market_data', data);
+    client.subscriptions.add(subscriptionKey);
+
+    // Set up market data interval
+    client.marketDataInterval = setInterval(async () => {
+      try {
+        const marketData = await this.fetchMarketData(symbol, timeframe);
+        this.sendMarketData(client, marketData);
+      } catch (error) {
+        console.error('Error fetching market data:', error);
+        this.sendError(client, 'Error fetching market data');
+      }
+    }, 1000); // Update every second
   }
 
-  private handleUnsubscription(client: Client, symbol: string) {
-    client.subscriptions.delete(symbol);
+  private async handleUnsubscribe(client: Client, data: any): Promise<void> {
+    const { symbol, timeframe } = data;
+    const subscriptionKey = `${symbol}-${timeframe}`;
+
+    client.subscriptions.delete(subscriptionKey);
+
+    if (client.marketDataInterval) {
+      clearInterval(client.marketDataInterval);
+    }
   }
 
-  private handlePlaceOrder(client: Client, order: any) {
-    // Simulate order processing
-    const orderId = uuidv4();
-    const processedOrder = {
-      ...order,
-      id: orderId,
-      status: 'PENDING',
-      timestamp: new Date().toISOString()
+  private async fetchMarketData(symbol: string, timeframe: string): Promise<MarketData> {
+    // Implement market data fetching logic here
+    return {
+      symbol,
+      timeframe,
+      timestamp: new Date(),
+      open: 0,
+      high: 0,
+      low: 0,
+      close: 0,
+      volume: 0
     };
-
-    // Send order confirmation
-    this.sendMessage(client.ws, 'order_update', processedOrder);
-
-    // Simulate order execution after a short delay
-    setTimeout(() => {
-      const executedOrder = {
-        ...processedOrder,
-        status: 'FILLED',
-        filledPrice: this.marketData.get(order.symbol)?.bid || 0,
-      };
-      this.sendMessage(client.ws, 'order_update', executedOrder);
-    }, 500);
   }
 
-  private handleCancelOrder(client: Client, { orderId }: { orderId: string }) {
-    // Simulate order cancellation
-    this.sendMessage(client.ws, 'order_update', {
-      id: orderId,
-      status: 'CANCELLED',
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  private sendMessage(ws: WebSocket, type: string, payload: any) {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type, payload }));
+  private sendMarketData(client: Client, data: MarketData): void {
+    if (client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(JSON.stringify({
+        type: 'marketData',
+        data
+      }));
     }
   }
 
-  private sendError(ws: WebSocket, message: string) {
-    this.sendMessage(ws, 'error', { message });
-  }
-
-  private randomPrice(min: number, max: number): number {
-    return Number((Math.random() * (max - min) + min).toFixed(5));
-  }
-
-  private startHeartbeat() {
-    this.heartbeatInterval = setInterval(() => {
-      this.clients.forEach((client, id) => {
-        if (client.ws.readyState === WebSocket.OPEN) {
-          this.sendMessage(client.ws, 'heartbeat', { timestamp: new Date().toISOString() });
-        } else {
-          this.clients.delete(id);
-        }
-      });
-    }, 30000); // Send heartbeat every 30 seconds
-  }
-
-  private handleError(error: unknown) {
-    console.error('WebSocket error:', error);
-    if (error instanceof Error) {
-      this.clients.forEach((client) => {
-        if (client.ws.readyState === WebSocket.OPEN) {
-          this.sendMessage(client.ws, 'error', { message: error.message });
-        }
-      });
+  private sendError(client: Client, message: string): void {
+    if (client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(JSON.stringify({
+        type: 'error',
+        message
+      }));
     }
-  }
-
-  public close() {
-    clearInterval(this.heartbeatInterval);
-    this.wss.close();
   }
 }
 
-export default TradingWebSocketServer;
+export default WebSocketManager;

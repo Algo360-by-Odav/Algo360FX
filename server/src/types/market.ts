@@ -1,5 +1,7 @@
 export interface MarketData {
-  timestamp: string;
+  symbol: string;
+  timeframe: string;
+  timestamp: Date;
   open: number;
   high: number;
   low: number;
