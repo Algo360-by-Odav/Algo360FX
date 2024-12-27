@@ -57,29 +57,30 @@ app.use('/api', (_req: express.Request, _res: express.Response, next: express.Ne
   next();
 });
 
-app.use('/api/health', async (req: express.Request, res: express.Response) => {
+app.use('/api/health', async (_req: express.Request, res: express.Response) => {
   try {
     // Check database connection
     const dbStatus = postgresConnection?.isInitialized || mongoose.connection.readyState === 1;
+
     if (!dbStatus) {
-      return res.status(503).json({ 
+      return res.status(503).json({
         status: 'unhealthy',
-        database: 'disconnected',
+        error: 'Database connection failed',
         timestamp: new Date().toISOString()
       });
     }
 
     // All checks passed
-    return res.json({ 
+    return res.json({
       status: 'healthy',
       database: 'connected',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Health check failed:', error);
-    return res.status(503).json({ 
+    return res.status(503).json({
       status: 'unhealthy',
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     });
   }

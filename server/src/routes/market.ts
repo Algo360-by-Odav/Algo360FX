@@ -44,12 +44,12 @@ router.post('/order', auth, async (req: express.Request, res: express.Response) 
 // Get all positions
 router.get('/positions', auth, async (req: express.Request, res: express.Response) => {
   try {
-    const user = req.user as UserPayload;
-    if (!user?.id) {
+    const userPayload = req.user as UserPayload | undefined;
+    if (!userPayload?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const positions = await Position.find({ userId: user.id });
+    const positions = await Position.find({ userId: userPayload.id });
     return res.json(positions);
   } catch (error) {
     console.error('Error fetching positions:', error);
@@ -60,16 +60,16 @@ router.get('/positions', auth, async (req: express.Request, res: express.Respons
 // Get portfolio
 router.get('/portfolio', auth, async (req: express.Request, res: express.Response) => {
   try {
-    const user = req.user as UserPayload;
-    if (!user?.id) {
+    const userPayload = req.user as UserPayload | undefined;
+    if (!userPayload?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const portfolio = await Portfolio.findOne({ userId: user.id });
+    const portfolio = await Portfolio.findOne({ userId: userPayload.id });
     if (!portfolio) {
       // Create default portfolio if none exists
       const newPortfolio = await Portfolio.create({
-        userId: user.id,
+        userId: userPayload.id,
         balance: 10000,
         equity: 10000,
         margin: 0,
@@ -90,12 +90,12 @@ router.get('/portfolio', auth, async (req: express.Request, res: express.Respons
 // Get all strategies
 router.get('/strategies', auth, async (req: express.Request, res: express.Response) => {
   try {
-    const user = req.user as UserPayload;
-    if (!user?.id) {
+    const userPayload = req.user as UserPayload | undefined;
+    if (!userPayload?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const strategies = await Strategy.find({ userId: user.id });
+    const strategies = await Strategy.find({ userId: userPayload.id });
     return res.json(strategies);
   } catch (error) {
     console.error('Error fetching strategies:', error);
@@ -106,14 +106,14 @@ router.get('/strategies', auth, async (req: express.Request, res: express.Respon
 // Create a new strategy
 router.post('/strategies', auth, async (req: express.Request, res: express.Response) => {
   try {
-    const user = req.user as UserPayload;
-    if (!user?.id) {
+    const userPayload = req.user as UserPayload | undefined;
+    if (!userPayload?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
     const strategy = await Strategy.create({
       ...req.body,
-      userId: user.id
+      userId: userPayload.id
     });
     return res.json(strategy);
   } catch (error) {

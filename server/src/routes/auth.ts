@@ -316,7 +316,8 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     }
 
     // Check if token is expired (24 hours)
-    if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
+    const now = new Date();
+    if (!user.resetPasswordExpires || user.resetPasswordExpires < now) {
       return res.status(400).json({ error: 'Reset token has expired' });
     }
 
@@ -329,8 +330,8 @@ router.post('/reset-password', async (req: Request, res: Response) => {
       {
         $set: {
           password: hashedPassword,
-          resetPasswordToken: null,
-          resetPasswordExpires: null
+          resetPasswordToken: undefined,
+          resetPasswordExpires: undefined
         }
       }
     );
