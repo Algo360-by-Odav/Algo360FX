@@ -78,13 +78,24 @@ services:
       npm ci --production=false
       npm run build
     staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
     envVars:
       - key: NODE_VERSION
         value: 18.x
       - key: VITE_API_URL
-        value: https://api.algo360fx.com
+        value: https://algo360fx-server.onrender.com
       - key: VITE_WS_URL
-        value: wss://api.algo360fx.com
+        value: wss://algo360fx-server.onrender.com
       - key: VITE_WS_PATH
         value: /ws
       - key: VITE_APP_NAME
@@ -99,21 +110,11 @@ services:
         value: contact@algo360fx.com
       - key: VITE_ENABLE_ANALYTICS
         value: "true"
-      - key: VITE_ENABLE_SENTRY
-        value: "true"
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    autoDeploy: true
     domains:
       - algo360fx.com
       - www.algo360fx.com
     pullRequestPreviewsEnabled: true
-    autoDeploy: true
 
   - type: redis
     name: algo360fx-redis

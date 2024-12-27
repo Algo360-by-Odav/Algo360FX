@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -136,7 +136,7 @@ const Register: React.FC = observer(() => {
             Sign Up
           </Button>
           <Box sx={{ textAlign: 'center' }}>
-            <Link href="/auth/login" variant="body2">
+            <Link component={RouterLink} to="/auth/login" variant="body2">
               Already have an account? Sign in
             </Link>
           </Box>
