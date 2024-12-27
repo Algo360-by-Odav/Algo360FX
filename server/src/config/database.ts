@@ -2,16 +2,15 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
-import { join } from 'path';
 
+// Load environment variables
 config();
 
+// Initialize database connections
 let mongoServer: MongoMemoryServer | null = null;
-let postgresConnection: DataSource | null = null;
-
-export const postgresConnection = new DataSource({
+const postgresConnection = new DataSource({
   type: 'postgres',
-  url: process.env.DATABASE_URL,
+  url: process.env.DATABASE_URL || '',
   entities: ['src/entities/**/*.ts'],
   migrations: ['src/migrations/**/*.ts'],
   subscribers: ['src/subscribers/**/*.ts'],
@@ -27,30 +26,28 @@ export const connectDatabase = async () => {
   while (retryCount < maxRetries) {
     try {
       console.log(`Connecting to database (attempt ${retryCount + 1}/${maxRetries})...`);
-      console.log('Database URL:', process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@')); // Hide password in logs
       
-      // Check if using PostgreSQL
+      // Log database URL with hidden credentials
+      if (process.env.DATABASE_URL) {
+        console.log('Database URL:', process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'));
+      }
+      
+      // PostgreSQL connection
       if (process.env.DATABASE_URL?.includes('postgresql')) {
-        // PostgreSQL connection
-        const isRender = process.env.RENDER === 'true';
-        
-        if (!postgresConnection?.isInitialized) {
+        if (!postgresConnection.isInitialized) {
           await postgresConnection.initialize();
-        }
-        console.log('Connected to PostgreSQL database');
-        
-        // Run migrations in production
-        if (process.env.NODE_ENV === 'production') {
-          try {
-            await postgresConnection.runMigrations();
-            console.log('Database migrations completed');
-          } catch (error) {
-            console.error('Error running migrations:', error);
-            throw error;
+          console.log('Connected to PostgreSQL database');
+          
+          // Run migrations in production
+          if (process.env.NODE_ENV === 'production') {
+            try {
+              await postgresConnection.runMigrations();
+              console.log('Database migrations completed');
+            } catch (migrationError) {
+              console.error('Error running migrations:', migrationError);
+            }
           }
         }
-        
-        return;
       }
 
       // MongoDB connections
@@ -65,63 +62,51 @@ export const connectDatabase = async () => {
         await mongoose.connect(uri);
         console.log('Connected to MongoDB Memory Server');
       } else {
-        // MongoDB Atlas connection with retries
+        // MongoDB Atlas connection
         await mongoose.connect(process.env.DATABASE_URL, {
-          serverSelectionTimeoutMS: 10000, // Increased timeout
+          serverSelectionTimeoutMS: 10000,
           socketTimeoutMS: 45000,
           connectTimeoutMS: 10000,
-          retryWrites: true,
-          retryReads: true
         });
         console.log('Connected to MongoDB Atlas');
       }
 
-      // MongoDB connection event handlers
-      mongoose.connection.on('error', (err) => {
-        console.error('Database connection error:', err);
-      });
-
-      mongoose.connection.on('disconnected', () => {
-        console.log('Database disconnected');
-      });
-
-      // If we reach here, connection was successful
-      return;
-
+      // All connections successful
+      return true;
     } catch (error) {
-      console.error(`Error connecting to database (attempt ${retryCount + 1}/${maxRetries}):`, error);
+      console.error('Database connection error:', error);
       retryCount++;
       
       if (retryCount === maxRetries) {
-        console.error('Max retries reached. Unable to connect to database.');
-        throw error;
+        throw new Error(`Failed to connect to database after ${maxRetries} attempts`);
       }
       
-      // Wait before retrying (exponential backoff)
-      const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-      console.log(`Retrying in ${delay/1000} seconds...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 5000));
     }
   }
 };
 
 export const disconnectDatabase = async () => {
   try {
-    if (postgresConnection?.isInitialized) {
+    if (postgresConnection.isInitialized) {
       await postgresConnection.destroy();
-      console.log('Disconnected from PostgreSQL');
+      console.log('PostgreSQL connection closed');
     }
-    
+
     if (mongoose.connection.readyState !== 0) {
       await mongoose.disconnect();
-      if (mongoServer) {
-        await mongoServer.stop();
-        mongoServer = null;
-      }
-      console.log('Disconnected from MongoDB');
+      console.log('MongoDB connection closed');
+    }
+
+    if (mongoServer) {
+      await mongoServer.stop();
+      console.log('MongoDB Memory Server stopped');
     }
   } catch (error) {
-    console.error('Error disconnecting from database:', error);
+    console.error('Error disconnecting from databases:', error);
     throw error;
   }
 };
+
+export { postgresConnection };
