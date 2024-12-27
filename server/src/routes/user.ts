@@ -1,12 +1,13 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import auth from '../middleware/auth';
 import { UserPreferences } from '../models/UserPreferences';
 import { postgresConnection } from '../config/database';
+import { DeepPartial } from 'typeorm';
 
 const router = express.Router();
 
 // Get user preferences
-router.get('/preferences', auth, async (req, res) => {
+router.get('/preferences', auth, async (req: Request, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -19,7 +20,7 @@ router.get('/preferences', auth, async (req, res) => {
 
     if (!preferences) {
       // Create default preferences if none exist
-      const defaultPreferences = userPreferencesRepository.create({
+      const defaultPreferences: DeepPartial<UserPreferences> = {
         userId: req.user.id,
         theme: 'light',
         notifications: true,
@@ -36,10 +37,11 @@ router.get('/preferences', auth, async (req, res) => {
           defaultStopLoss: 50,
           defaultTakeProfit: 100
         }
-      });
+      };
 
-      await userPreferencesRepository.save(defaultPreferences);
-      return res.json(defaultPreferences);
+      const newPreferences = userPreferencesRepository.create(defaultPreferences);
+      const savedPreferences = await userPreferencesRepository.save(newPreferences);
+      return res.json(savedPreferences);
     }
 
     return res.json(preferences);
@@ -50,7 +52,7 @@ router.get('/preferences', auth, async (req, res) => {
 });
 
 // Update user preferences
-router.put('/preferences', auth, async (req, res) => {
+router.put('/preferences', auth, async (req: Request, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -62,16 +64,19 @@ router.put('/preferences', auth, async (req, res) => {
     });
 
     if (!preferences) {
-      preferences = userPreferencesRepository.create({
+      // Create new preferences if none exist
+      const newPreferences: DeepPartial<UserPreferences> = {
         userId: req.user.id,
         ...req.body
-      });
+      };
+      preferences = userPreferencesRepository.create(newPreferences);
     } else {
-      userPreferencesRepository.merge(preferences, req.body);
+      // Update existing preferences
+      userPreferencesRepository.merge(preferences, req.body as DeepPartial<UserPreferences>);
     }
 
-    await userPreferencesRepository.save(preferences);
-    return res.json(preferences);
+    const savedPreferences = await userPreferencesRepository.save(preferences);
+    return res.json(savedPreferences);
   } catch (error) {
     console.error('Error updating user preferences:', error);
     return res.status(500).json({ error: 'Failed to update user preferences' });
