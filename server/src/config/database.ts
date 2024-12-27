@@ -2,18 +2,22 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
+import path from 'path';
 
 // Load environment variables
 config();
 
 // Initialize database connections
 let mongoServer: MongoMemoryServer | null = null;
+
+const rootDir = path.resolve(__dirname, '..');
+
 const postgresConnection = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL || '',
-  entities: ['src/models/**/*.ts'],
-  migrations: ['src/migrations/**/*.ts'],
-  subscribers: ['src/subscribers/**/*.ts'],
+  entities: [path.join(rootDir, 'models', '**', '*.{ts,js}')],
+  migrations: [path.join(rootDir, 'migrations', '**', '*.{ts,js}')],
+  subscribers: [path.join(rootDir, 'subscribers', '**', '*.{ts,js}')],
   synchronize: process.env.NODE_ENV !== 'production',
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   logging: process.env.NODE_ENV !== 'production',
@@ -91,16 +95,19 @@ export const connectDatabase = async (): Promise<boolean> => {
 
 export const disconnectDatabase = async () => {
   try {
+    // Close PostgreSQL connection
     if (postgresConnection.isInitialized) {
       await postgresConnection.destroy();
       console.log('PostgreSQL connection closed');
     }
 
-    if (mongoose.connection.readyState !== 0) {
+    // Close MongoDB connection
+    if (mongoose.connection.readyState === 1) {
       await mongoose.disconnect();
       console.log('MongoDB connection closed');
     }
 
+    // Close MongoDB Memory Server if it exists
     if (mongoServer) {
       await mongoServer.stop();
       console.log('MongoDB Memory Server stopped');
