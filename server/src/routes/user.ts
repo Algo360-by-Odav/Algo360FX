@@ -1,26 +1,33 @@
 import express from 'express';
-import { UserPreferences } from '../entities/UserPreferences';
 import auth from '../middleware/auth';
-import { UserPayload } from '../types/auth';
+import { UserPreferences } from '../models/UserPreferences';
+import { postgresConnection } from '../config/database';
 
 const router = express.Router();
 
 // Get user preferences
-router.get('/preferences', auth, async (req: express.Request, res: express.Response) => {
+router.get('/preferences', auth, async (req, res) => {
   try {
-    const user = req.user as UserPayload;
-    if (!user?.id) {
+    if (!req.user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const preferences = await UserPreferences.createQueryBuilder('userPreferences')
-      .where('userPreferences.userId = :userId', { userId: user.id })
-      .getOne();
+    const userPreferencesRepository = postgresConnection.getRepository(UserPreferences);
+    const preferences = await userPreferencesRepository.findOne({ 
+      where: { userId: req.user.id }
+    });
 
     if (!preferences) {
-      const defaultPreferences = new UserPreferences();
-      defaultPreferences.userId = user.id;
-      await defaultPreferences.save();
+      // Create default preferences if none exist
+      const defaultPreferences = userPreferencesRepository.create({
+        userId: req.user.id,
+        theme: 'light',
+        notifications: true,
+        language: 'en',
+        timezone: 'UTC'
+      });
+
+      await userPreferencesRepository.save(defaultPreferences);
       return res.json(defaultPreferences);
     }
 
@@ -32,27 +39,27 @@ router.get('/preferences', auth, async (req: express.Request, res: express.Respo
 });
 
 // Update user preferences
-router.put('/preferences', auth, async (req: express.Request, res: express.Response) => {
+router.put('/preferences', auth, async (req, res) => {
   try {
-    const user = req.user as UserPayload;
-    if (!user?.id) {
+    if (!req.user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const preferences = await UserPreferences.createQueryBuilder('userPreferences')
-      .where('userPreferences.userId = :userId', { userId: user.id })
-      .getOne();
+    const userPreferencesRepository = postgresConnection.getRepository(UserPreferences);
+    let preferences = await userPreferencesRepository.findOne({ 
+      where: { userId: req.user.id }
+    });
 
     if (!preferences) {
-      const newPreferences = new UserPreferences();
-      newPreferences.userId = user.id;
-      Object.assign(newPreferences, req.body);
-      await newPreferences.save();
-      return res.json(newPreferences);
+      preferences = userPreferencesRepository.create({
+        userId: req.user.id,
+        ...req.body
+      });
+    } else {
+      userPreferencesRepository.merge(preferences, req.body);
     }
 
-    Object.assign(preferences, req.body);
-    await preferences.save();
+    await userPreferencesRepository.save(preferences);
     return res.json(preferences);
   } catch (error) {
     console.error('Error updating user preferences:', error);

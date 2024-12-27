@@ -19,7 +19,7 @@ const postgresConnection = new DataSource({
   logging: process.env.NODE_ENV !== 'production',
 });
 
-export const connectDatabase = async () => {
+export const connectDatabase = async (): Promise<boolean> => {
   const maxRetries = 3;
   let retryCount = 0;
 
@@ -85,6 +85,8 @@ export const connectDatabase = async () => {
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
   }
+
+  return false; // In case all retries fail
 };
 
 export const disconnectDatabase = async () => {

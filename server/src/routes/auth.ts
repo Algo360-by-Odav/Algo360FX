@@ -291,24 +291,24 @@ router.get('/profile', async (req: Request, res: Response) => {
 });
 
 // Get current authenticated user
-router.get('/me', async (req: Request, res: Response) => {
+router.get('/me', async (req: Request, res: Response): Promise<Response> => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, config.JWT_SECRET) as { userId: string };
-    const user = await User.findById(decoded.userId).select('-password');
+    const decoded = jwt.verify(token, config.JWT_SECRET) as { id: string };
+    const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    return res.json(user);
   } catch (error) {
     console.error('Auth check error:', error);
-    res.status(401).json({ error: 'Invalid token' });
+    return res.status(401).json({ error: 'Invalid token' });
   }
 });
 

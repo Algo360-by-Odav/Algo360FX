@@ -3,13 +3,6 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
 import { UserPayload } from '../types/auth';
 
-interface UserPayload {
-  userId: string;
-  email: string;
-  id?: string;
-  _id?: string;
-}
-
 declare global {
   namespace Express {
     interface Request {
@@ -18,7 +11,7 @@ declare global {
   }
 }
 
-const auth = async (req: Request, res: Response, next: NextFunction) => {
+const auth = async (req: Request, res: Response, next: NextFunction): Promise<void | Response> => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
@@ -39,7 +32,7 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
-    res.status(401).json({ error: 'Invalid token' });
+    return res.status(401).json({ error: 'Invalid token' });
   }
 };
 
