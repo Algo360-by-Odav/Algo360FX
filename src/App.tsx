@@ -51,11 +51,11 @@ function App() {
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<IntroAnimation />} />
+            <Route path="" element={<IntroAnimation />} />
             
             {/* Auth Routes */}
-            <Route path="/auth" element={<AuthLayout />}>
-              <Route index element={<Navigate to="/auth/login" replace />} />
+            <Route path="auth" element={<AuthLayout />}>
+              <Route index element={<Navigate to="auth/login" replace />} />
               <Route path="login" element={<LoginForm />} />
               <Route path="register" element={<RegisterForm />} />
               <Route path="forgot-password" element={<ForgotPasswordForm />} />
@@ -63,11 +63,11 @@ function App() {
             </Route>
 
             {/* Legacy Auth Route - Redirect to new path */}
-            <Route path="/login" element={<Navigate to="/auth/login" replace />} />
+            <Route path="login" element={<Navigate to="auth/login" replace />} />
             
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
-              <Route path="/app" element={<MainLayout />}>
+              <Route path="app" element={<MainLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="trading" element={<TradingPage />} />
@@ -97,7 +97,7 @@ function App() {
             </Route>
             
             {/* Catch all */}
-            <Route path="*" element={<Navigate to="/auth/login" replace />} />
+            <Route path="*" element={<Navigate to="auth/login" replace />} />
           </Routes>
         </Suspense>
         <TradingAssistant />
