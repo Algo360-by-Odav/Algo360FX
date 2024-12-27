@@ -1,10 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
+import { UserPayload } from '../types/auth';
 
 interface UserPayload {
   userId: string;
   email: string;
+  id?: string;
+  _id?: string;
 }
 
 declare global {
@@ -18,16 +21,25 @@ declare global {
 const auth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-
+    
     if (!token) {
-      throw new Error();
+      return res.status(401).json({ error: 'No token provided' });
     }
 
     const decoded = jwt.verify(token, config.JWT_SECRET) as UserPayload;
+    
+    // Ensure we have both id and _id for compatibility
+    if (decoded._id && !decoded.id) {
+      decoded.id = decoded._id;
+    } else if (decoded.id && !decoded._id) {
+      decoded._id = decoded.id;
+    }
+
     req.user = decoded;
     next();
-  } catch (err) {
-    res.status(401).send({ error: 'Please authenticate.' });
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    res.status(401).json({ error: 'Invalid token' });
   }
 };
 

@@ -168,7 +168,13 @@ router.post('/register',
 
       // Generate JWT token
       const token = jwt.sign(
-        { id: user._id, email: user.email },
+        { 
+          id: user._id.toString(),
+          _id: user._id.toString(),
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName
+        },
         config.JWT_SECRET,
         { expiresIn: '24h' }
       );
@@ -229,7 +235,13 @@ router.post('/login',
       }
 
       const token = jwt.sign(
-        { id: user._id, email: user.email },
+        { 
+          id: user._id.toString(),
+          _id: user._id.toString(),
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName
+        },
         config.JWT_SECRET,
         { expiresIn: '24h' }
       );
