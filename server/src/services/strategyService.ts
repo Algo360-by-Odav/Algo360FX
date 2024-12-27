@@ -40,7 +40,7 @@ export async function searchStrategies(query: string): Promise<SearchResult[]> {
       { score: { $meta: 'textScore' } }
     ).sort({ score: { $meta: 'textScore' } });
 
-    return strategies.map(strategy => ({
+    return strategies.map((strategy: StrategyDocument) => ({
       id: strategy._id.toString(),
       type: 'strategy',
       title: strategy.name,
@@ -48,6 +48,7 @@ export async function searchStrategies(query: string): Promise<SearchResult[]> {
       score: strategy.__textScore || 0
     }));
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Search strategies error:', error);
     return [];
   }
@@ -55,40 +56,37 @@ export async function searchStrategies(query: string): Promise<SearchResult[]> {
 
 export async function createStrategy(data: Partial<IStrategy>): Promise<StrategyDocument> {
   const strategy = new Strategy(data);
-  return await strategy.save();
+  return strategy.save();
 }
 
 export async function updateStrategy(id: string, data: Partial<IStrategy>): Promise<StrategyDocument | null> {
-  return await Strategy.findByIdAndUpdate(id, data, { new: true });
+  return Strategy.findByIdAndUpdate(id, data, { new: true });
 }
 
 export async function deleteStrategy(id: string): Promise<boolean> {
   const result = await Strategy.findByIdAndDelete(id);
-  return result !== null;
+  return !!result;
 }
 
 export async function getStrategyById(id: string): Promise<StrategyDocument | null> {
-  return await Strategy.findById(id);
+  return Strategy.findById(id);
 }
 
 export async function runBacktest(id: string, startDate: Date, endDate: Date): Promise<StrategyDocument | null> {
   const strategy = await Strategy.findById(id);
   if (!strategy) return null;
 
-  // TODO: Implement actual backtest logic here
-  const backtestResults = {
-    // Mock results
-    returns: 0.15,
-    sharpeRatio: 1.2,
-    maxDrawdown: -0.1,
-    trades: 100
-  };
-
+  // Implement backtesting logic here
+  // This is a placeholder that just updates the backtest dates
   strategy.backtest = {
     startDate,
     endDate,
-    results: backtestResults
+    results: {
+      profitLoss: 0,
+      winRate: 0,
+      trades: []
+    }
   };
 
-  return await strategy.save();
+  return strategy.save();
 }

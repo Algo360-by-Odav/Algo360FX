@@ -1,10 +1,14 @@
 import { SMA, RSI, MACD, BollingerBands } from 'technicalindicators';
 import { MarketData, MACDOutput, BollingerBandsOutput } from '../types/market';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
+import { config } from 'dotenv';
+
+// Load environment variables
+config();
 
 export class TechnicalAnalysis {
   private async getHistoricalData(symbol: string, timeframe: string): Promise<MarketData[]> {
-    const response = await axios.get(`${process.env.MARKET_DATA_API}/historical`, {
+    const response: AxiosResponse<MarketData[]> = await axios.get(`${process.env.MARKET_DATA_API}/historical`, {
       params: { symbol, timeframe }
     });
     return response.data;
@@ -52,23 +56,21 @@ export class TechnicalAnalysis {
 
     // Calculate MACD if requested or no specific indicators requested
     if (requestedIndicators.includes('macd') || requestedIndicators.length === 0) {
-      const macdResults = this.calculateMACD(closes);
-      const lastMACD = macdResults[macdResults.length - 1];
-      indicators.macd = {
-        line: lastMACD.MACD,
-        signal: lastMACD.signal,
-        histogram: lastMACD.histogram
+      const macd = this.calculateMACD(closes);
+      indicators.macd = macd[macd.length - 1] || {
+        MACD: 0,
+        signal: 0,
+        histogram: 0
       };
     }
 
     // Calculate Bollinger Bands if requested or no specific indicators requested
-    if (requestedIndicators.includes('bollinger') || requestedIndicators.length === 0) {
-      const bbandsResults = this.calculateBollingerBands(closes);
-      const lastBBands = bbandsResults[bbandsResults.length - 1];
-      indicators.bollinger = {
-        upper: lastBBands.upper,
-        middle: lastBBands.middle,
-        lower: lastBBands.lower
+    if (requestedIndicators.includes('bb') || requestedIndicators.length === 0) {
+      const bb = this.calculateBollingerBands(closes);
+      indicators.bb = bb[bb.length - 1] || {
+        upper: 0,
+        middle: 0,
+        lower: 0
       };
     }
 
@@ -76,40 +78,36 @@ export class TechnicalAnalysis {
   }
 
   private calculateSMA(data: number[], period: number): number[] {
-    const input = {
+    return SMA.calculate({
       values: data,
       period
-    };
-    return SMA.calculate(input);
+    });
   }
 
-  private calculateRSI(data: number[]): number[] {
-    const input = {
+  private calculateRSI(data: number[], period: number = 14): number[] {
+    return RSI.calculate({
       values: data,
-      period: 14
-    };
-    return RSI.calculate(input);
+      period
+    });
   }
 
   private calculateMACD(data: number[]): MACDOutput[] {
-    const input = {
+    return MACD.calculate({
       values: data,
       fastPeriod: 12,
       slowPeriod: 26,
       signalPeriod: 9,
       SimpleMAOscillator: false,
       SimpleMASignal: false
-    };
-    return MACD.calculate(input) as MACDOutput[];
+    });
   }
 
-  private calculateBollingerBands(data: number[]): BollingerBandsOutput[] {
-    const input = {
+  private calculateBollingerBands(data: number[], period: number = 20, stdDev: number = 2): BollingerBandsOutput[] {
+    return BollingerBands.calculate({
       values: data,
-      period: 20,
-      stdDev: 2
-    };
-    return BollingerBands.calculate(input) as BollingerBandsOutput[];
+      period,
+      stdDev
+    });
   }
 
   private analyzeTrend(data: MarketData[], indicators: Record<string, any>): string {
@@ -131,13 +129,13 @@ export class TechnicalAnalysis {
     }
   }
 
-  private findKeyLevels(data: MarketData[]) {
+  private findKeyLevels(data: MarketData[]): { support: number[]; resistance: number[] } {
     const highs = data.map(d => d.high);
     const lows = data.map(d => d.low);
     
     return {
-      resistance: Math.max(...highs),
-      support: Math.min(...lows)
+      support: [Math.min(...lows)],
+      resistance: [Math.max(...highs)]
     };
   }
 }
