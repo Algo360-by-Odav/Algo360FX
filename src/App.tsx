@@ -54,7 +54,7 @@ function App() {
             <Route path="/" element={<IntroAnimation />} />
             
             {/* Auth Routes */}
-            <Route path="auth">
+            <Route path="/auth" element={<AuthLayout />}>
               <Route index element={<Navigate to="/auth/login" replace />} />
               <Route path="login" element={<LoginForm />} />
               <Route path="register" element={<RegisterForm />} />
@@ -64,7 +64,7 @@ function App() {
 
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
-              <Route path="app" element={<MainLayout />}>
+              <Route path="/app" element={<MainLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="trading" element={<TradingPage />} />
