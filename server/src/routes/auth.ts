@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
 import { User } from '../models/User';
 import mongoose from 'mongoose';
+import { authLimiter, verificationLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ const mockSendEmail = async (to: string, code: string) => {
 
 // Send verification code
 router.post('/verify/send', 
+  verificationLimiter,
   body('email').isEmail().withMessage('Please enter a valid email'),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -52,6 +54,7 @@ router.post('/verify/send',
 
 // Verify code
 router.post('/verify/code',
+  authLimiter,
   body('email').isEmail().withMessage('Please enter a valid email'),
   body('code').isLength({ min: 6, max: 6 }).withMessage('Verification code must be 6 digits long'),
   async (req: Request, res: Response) => {
@@ -95,6 +98,7 @@ router.post('/verify/code',
 
 // Register new user
 router.post('/register',
+  authLimiter,
   body('email').isEmail().withMessage('Please enter a valid email'),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
   body('firstName').notEmpty().withMessage('First name is required'),
@@ -202,6 +206,7 @@ router.post('/register',
 
 // Login
 router.post('/login',
+  authLimiter,
   body('email').isEmail().withMessage('Please enter a valid email'),
   body('password').exists().withMessage('Password is required'),
   async (req: Request, res: Response) => {

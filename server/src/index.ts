@@ -11,6 +11,7 @@ import marketRouter from './routes/market';
 import userRouter from './routes/user';
 import { config } from './config/config';
 import { connectDatabase } from './config/database';
+import { generalLimiter } from './middleware/rateLimiter';
 
 console.log('MetaApi SDK loaded');
 
@@ -25,6 +26,9 @@ app.use(cors({
   origin: config.CORS_ORIGIN,
   credentials: true
 }));
+
+// Apply general rate limiter to all routes
+app.use(generalLimiter);
 
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
