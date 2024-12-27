@@ -14,6 +14,33 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [react()],
     base: '/',
+    build: {
+      outDir: 'dist',
+      sourcemap: true,
+      chunkSizeWarningLimit: 1600,
+      rollupOptions: {
+        input: {
+          main: resolve(__dirname, 'index.html'),
+        },
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+            mui: ['@mui/material', '@mui/icons-material'],
+            charts: ['recharts', 'chart.js', 'react-chartjs-2'],
+          }
+        }
+      },
+      commonjsOptions: {
+        esmExternals: ['react', 'react-dom'],
+        transformMixedEsModules: true
+      }
+    },
+    optimizeDeps: {
+      include: ['recharts'],
+      esbuildOptions: {
+        target: 'es2020'
+      }
+    },
     server: {
       port: 3000,
       host: true,
@@ -38,29 +65,6 @@ export default defineConfig(({ command, mode }) => {
       host: true,
       strictPort: true,
     },
-    build: {
-      outDir: 'dist',
-      sourcemap: true,
-      chunkSizeWarningLimit: 1600,
-      rollupOptions: {
-        input: {
-          main: resolve(__dirname, 'index.html'),
-        },
-        output: {
-          manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom'],
-            mui: ['@mui/material', '@mui/icons-material'],
-            chart: ['chart.js', 'react-chartjs-2'],
-          }
-        }
-      },
-      envDir: '.',
-      define: {
-        'process.env.NODE_ENV': JSON.stringify(mode),
-        'process.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL),
-        'process.env.VITE_WS_URL': JSON.stringify(env.VITE_WS_URL),
-      }
-    },
     resolve: {
       alias: {
         '@': resolve(__dirname, './src'),
@@ -72,6 +76,11 @@ export default defineConfig(({ command, mode }) => {
         '@assets': resolve(__dirname, './src/assets'),
         '@styles': resolve(__dirname, './src/styles')
       }
+    },
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(mode),
+      'process.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL),
+      'process.env.VITE_WS_URL': JSON.stringify(env.VITE_WS_URL)
     }
   };
 });
