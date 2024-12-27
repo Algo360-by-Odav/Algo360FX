@@ -114,13 +114,18 @@ const io = new Server(httpServer, {
 console.log('Socket.IO server initialized');
 
 // Initialize and start WebSocket servers
+const wsServers = {
+  trading: null as TradingWebSocketServer | null,
+  optimization: null as OptimizationWebSocketServer | null
+};
+
 console.log('Initializing Trading WebSocket server...');
-const tradingWS = new TradingWebSocketServer(httpServer);
+wsServers.trading = new TradingWebSocketServer(httpServer);
 console.log('Trading WebSocket server initialized');
 
 console.log('Initializing Optimization WebSocket server...');
-const optimizationWS = new OptimizationWebSocketServer(io);
-optimizationWS.initialize();
+wsServers.optimization = new OptimizationWebSocketServer(io);
+wsServers.optimization.initialize();
 console.log('Optimization WebSocket server initialized');
 
 // Error handling middleware
