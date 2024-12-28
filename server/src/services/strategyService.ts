@@ -2,59 +2,94 @@ import { IStrategy } from '../models/Strategy';
 import { Document, Types, model, Schema } from 'mongoose';
 import { SearchResult } from '../types/search';
 
-interface StrategyParameters {
-  timeframe: string;
-  entryConditions: {
-    indicator: string;
-    condition: 'above' | 'below' | 'crosses';
-    value: number;
-  }[];
-  exitConditions: {
-    indicator: string;
-    condition: 'above' | 'below' | 'crosses';
-    value: number;
-  }[];
-  riskManagement: {
-    stopLoss: number;
-    takeProfit: number;
-    maxDrawdown: number;
-    positionSize: number;
-  };
+// Enums for better type safety
+export enum TimeFrame {
+  M1 = 'M1',
+  M5 = 'M5',
+  M15 = 'M15',
+  M30 = 'M30',
+  H1 = 'H1',
+  H4 = 'H4',
+  D1 = 'D1',
+  W1 = 'W1',
+  MN = 'MN'
 }
 
-interface BacktestResults {
-  totalTrades: number;
-  winningTrades: number;
-  losingTrades: number;
-  winRate: number;
-  profitFactor: number;
-  netProfit: number;
-  maxDrawdown: number;
-  sharpeRatio: number;
-  trades: Array<{
-    entryTime: Date;
-    exitTime: Date;
-    entryPrice: number;
-    exitPrice: number;
-    type: 'buy' | 'sell';
-    profit: number;
-    volume: number;
-  }>;
+export enum IndicatorType {
+  SMA = 'SMA',
+  EMA = 'EMA',
+  RSI = 'RSI',
+  MACD = 'MACD',
+  BB = 'BB'
 }
 
-interface StrategyBacktest {
-  startDate: Date;
-  endDate: Date;
-  results: BacktestResults;
+export enum ConditionType {
+  Above = 'above',
+  Below = 'below',
+  Crosses = 'crosses'
+}
+
+export enum OrderType {
+  Buy = 'buy',
+  Sell = 'sell'
+}
+
+// Interfaces with readonly properties for better immutability
+export interface IndicatorCondition {
+  readonly indicator: IndicatorType;
+  readonly condition: ConditionType;
+  readonly value: number;
+}
+
+export interface RiskManagement {
+  readonly stopLoss: number;
+  readonly takeProfit: number;
+  readonly maxDrawdown: number;
+  readonly positionSize: number;
+}
+
+export interface StrategyParameters {
+  readonly timeframe: TimeFrame;
+  readonly entryConditions: ReadonlyArray<IndicatorCondition>;
+  readonly exitConditions: ReadonlyArray<IndicatorCondition>;
+  readonly riskManagement: RiskManagement;
+}
+
+export interface Trade {
+  readonly entryTime: Date;
+  readonly exitTime: Date;
+  readonly entryPrice: number;
+  readonly exitPrice: number;
+  readonly type: OrderType;
+  readonly profit: number;
+  readonly volume: number;
+}
+
+export interface BacktestResults {
+  readonly totalTrades: number;
+  readonly winningTrades: number;
+  readonly losingTrades: number;
+  readonly winRate: number;
+  readonly profitFactor: number;
+  readonly netProfit: number;
+  readonly maxDrawdown: number;
+  readonly sharpeRatio: number;
+  readonly trades: ReadonlyArray<Trade>;
+}
+
+export interface StrategyBacktest {
+  readonly startDate: Date;
+  readonly endDate: Date;
+  readonly results: BacktestResults;
 }
 
 export interface StrategyDocument extends Document, IStrategy {
-  _id: Types.ObjectId;
-  __textScore?: number;
-  name: string;
-  description: string;
-  parameters: StrategyParameters;
-  backtest?: StrategyBacktest;
+  readonly _id: Types.ObjectId;
+  readonly __textScore?: number;
+  readonly name: string;
+  readonly description: string;
+  readonly parameters: StrategyParameters;
+  readonly backtest?: StrategyBacktest;
 }
 
 const strategySchema = new Schema<StrategyDocument>({
@@ -62,15 +97,15 @@ const strategySchema = new Schema<StrategyDocument>({
   description: { type: String, required: true },
   parameters: {
     type: {
-      timeframe: { type: String, required: true },
+      timeframe: { type: String, enum: Object.values(TimeFrame), required: true },
       entryConditions: [{
-        indicator: { type: String, required: true },
-        condition: { type: String, enum: ['above', 'below', 'crosses'], required: true },
+        indicator: { type: String, enum: Object.values(IndicatorType), required: true },
+        condition: { type: String, enum: Object.values(ConditionType), required: true },
         value: { type: Number, required: true }
       }],
       exitConditions: [{
-        indicator: { type: String, required: true },
-        condition: { type: String, enum: ['above', 'below', 'crosses'], required: true },
+        indicator: { type: String, enum: Object.values(IndicatorType), required: true },
+        condition: { type: String, enum: Object.values(ConditionType), required: true },
         value: { type: Number, required: true }
       }],
       riskManagement: {
@@ -99,7 +134,7 @@ const strategySchema = new Schema<StrategyDocument>({
         exitTime: { type: Date, required: true },
         entryPrice: { type: Number, required: true },
         exitPrice: { type: Number, required: true },
-        type: { type: String, enum: ['buy', 'sell'], required: true },
+        type: { type: String, enum: Object.values(OrderType), required: true },
         profit: { type: Number, required: true },
         volume: { type: Number, required: true }
       }]
@@ -114,7 +149,7 @@ strategySchema.index({ name: 'text', description: 'text' });
 
 const Strategy = model<StrategyDocument>('Strategy', strategySchema);
 
-export async function searchStrategies(query: string): Promise<SearchResult[]> {
+export async function searchStrategies(query: string): Promise<ReadonlyArray<SearchResult>> {
   try {
     const strategies = await Strategy.find(
       { $text: { $search: query } },
