@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '@/stores/AuthStore';
 import { UserRole } from '@/types/user';
+import { api } from '@/services/api';
 
 const Register: React.FC = observer(() => {
   const navigate = useNavigate();
@@ -47,23 +48,19 @@ const Register: React.FC = observer(() => {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('https://algo360fx-server.onrender.com/api/auth/verify/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: formData.email }),
+      const response = await api.post('/auth/verify/send', {
+        email: formData.email
       });
 
-      const data = await response.json();
-      if (data.success) {
+      if (response.data.success) {
         setStep(2);
         setError('');
       } else {
-        setError(data.error || 'Failed to send verification code');
+        setError(response.data.error || 'Failed to send verification code');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to send verification code');
+      console.error('Error sending verification code:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to send verification code');
     } finally {
       setIsSubmitting(false);
     }
@@ -77,11 +74,20 @@ const Register: React.FC = observer(() => {
 
     setIsSubmitting(true);
     try {
-      // Move to registration step after verification
-      setStep(3);
-      setError('');
+      const response = await api.post('/auth/verify/code', {
+        email: formData.email,
+        code: formData.verificationCode
+      });
+
+      if (response.data.success) {
+        setStep(3);
+        setError('');
+      } else {
+        setError(response.data.error || 'Invalid verification code');
+      }
     } catch (err: any) {
-      setError(err.message || 'Invalid verification code');
+      console.error('Error verifying code:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to verify code');
     } finally {
       setIsSubmitting(false);
     }
@@ -90,6 +96,14 @@ const Register: React.FC = observer(() => {
   const validateForm = () => {
     if (!formData.email) {
       setError('Email is required');
+      return false;
+    }
+    if (!formData.firstName) {
+      setError('First name is required');
+      return false;
+    }
+    if (!formData.lastName) {
+      setError('Last name is required');
       return false;
     }
     if (!formData.password) {
@@ -104,12 +118,8 @@ const Register: React.FC = observer(() => {
       setError('Passwords do not match');
       return false;
     }
-    if (!formData.firstName) {
-      setError('First name is required');
-      return false;
-    }
-    if (!formData.lastName) {
-      setError('Last name is required');
+    if (!formData.verificationCode) {
+      setError('Verification code is required');
       return false;
     }
     return true;
@@ -117,7 +127,7 @@ const Register: React.FC = observer(() => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm() || isSubmitting) return;
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
     try {
@@ -130,7 +140,7 @@ const Register: React.FC = observer(() => {
       });
       navigate('/auth/login');
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+      setError(err.response?.data?.error || err.message || 'Registration failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -148,17 +158,17 @@ const Register: React.FC = observer(() => {
           alignItems: 'center',
         }}
       >
-        <Typography component="h1" variant="h5" gutterBottom>
+        <Typography component="h1" variant="h5">
           Create your Algo360FX Account
         </Typography>
 
         {error && (
-          <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+          <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
             {error}
           </Alert>
         )}
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
           {step === 1 && (
             <>
               <TextField
@@ -172,25 +182,26 @@ const Register: React.FC = observer(() => {
                 autoFocus
                 value={formData.email}
                 onChange={handleChange}
-                disabled={isSubmitting}
+                error={!!error}
               />
               <Button
                 fullWidth
                 variant="contained"
                 onClick={handleSendCode}
                 disabled={isSubmitting}
-                sx={{ mt: 2 }}
+                sx={{ mt: 3, mb: 2 }}
               >
-                {isSubmitting ? <CircularProgress size={24} /> : 'Send Verification Code'}
+                {isSubmitting ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  'Send Verification Code'
+                )}
               </Button>
             </>
           )}
 
           {step === 2 && (
             <>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Please enter the verification code sent to {formData.email}
-              </Typography>
               <TextField
                 margin="normal"
                 required
@@ -201,16 +212,20 @@ const Register: React.FC = observer(() => {
                 autoFocus
                 value={formData.verificationCode}
                 onChange={handleChange}
-                disabled={isSubmitting}
+                error={!!error}
               />
               <Button
                 fullWidth
                 variant="contained"
                 onClick={handleVerifyCode}
                 disabled={isSubmitting}
-                sx={{ mt: 2 }}
+                sx={{ mt: 3, mb: 2 }}
               >
-                {isSubmitting ? <CircularProgress size={24} /> : 'Verify Code'}
+                {isSubmitting ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  'Verify Code'
+                )}
               </Button>
             </>
           )}
@@ -224,9 +239,10 @@ const Register: React.FC = observer(() => {
                 id="firstName"
                 label="First Name"
                 name="firstName"
+                autoComplete="given-name"
                 value={formData.firstName}
                 onChange={handleChange}
-                disabled={isSubmitting}
+                error={!!error}
               />
               <TextField
                 margin="normal"
@@ -235,9 +251,10 @@ const Register: React.FC = observer(() => {
                 id="lastName"
                 label="Last Name"
                 name="lastName"
+                autoComplete="family-name"
                 value={formData.lastName}
                 onChange={handleChange}
-                disabled={isSubmitting}
+                error={!!error}
               />
               <TextField
                 margin="normal"
@@ -247,9 +264,10 @@ const Register: React.FC = observer(() => {
                 label="Password"
                 type="password"
                 id="password"
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={handleChange}
-                disabled={isSubmitting}
+                error={!!error}
               />
               <TextField
                 margin="normal"
@@ -259,9 +277,10 @@ const Register: React.FC = observer(() => {
                 label="Confirm Password"
                 type="password"
                 id="confirmPassword"
+                autoComplete="new-password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                disabled={isSubmitting}
+                error={!!error}
               />
               <Button
                 type="submit"
@@ -270,10 +289,23 @@ const Register: React.FC = observer(() => {
                 disabled={isSubmitting}
                 sx={{ mt: 3, mb: 2 }}
               >
-                {isSubmitting ? <CircularProgress size={24} /> : 'Create Account'}
+                {isSubmitting ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  'Register'
+                )}
               </Button>
             </>
           )}
+
+          <Button
+            fullWidth
+            variant="text"
+            onClick={() => navigate('/auth/login')}
+            sx={{ mt: 1 }}
+          >
+            Already have an account? Sign in
+          </Button>
         </Box>
       </Paper>
     </Container>
