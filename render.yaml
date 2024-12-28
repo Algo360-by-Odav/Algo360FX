@@ -9,7 +9,7 @@ services:
       cd server
       npm ci
       npm run build
-    startCommand: cd server && npm run start:prod
+    startCommand: cd server && npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
@@ -51,46 +51,39 @@ services:
   # Frontend Static Site
   - type: web
     name: algo360fx-client
-    env: static
+    env: node
+    region: singapore
+    plan: free
     buildCommand: |
       npm ci
       npm run build
-    staticPublishPath: dist
-    pullRequestPreviewsEnabled: true
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    startCommand: npm start
+    healthCheckPath: /
     envVars:
-      - key: VITE_API_URL
-        value: "https://algo360fx-server.onrender.com"
-      - key: VITE_WS_URL
-        value: "wss://algo360fx-server.onrender.com"
-      - key: VITE_WS_PATH
-        value: "/ws"
       - key: NODE_VERSION
         value: "18.x"
       - key: NODE_ENV
         value: "production"
+      - key: VITE_API_URL
+        value: "https://algo360fx-server.onrender.com/api"
+      - key: VITE_WS_URL
+        value: "wss://algo360fx-server.onrender.com"
+      - key: VITE_WS_PATH
+        value: "/ws"
+      - key: VITE_APP_NAME
+        value: "Algo360FX"
+      - key: VITE_APP_VERSION
+        value: "1.0.0"
 
   # Redis Cache Service
   - type: redis
     name: algo360fx-cache
-    plan: starter
     region: singapore
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: everywhere
+    plan: free
     maxmemoryPolicy: noeviction
+    ipAllowList: []
 
 databases:
   - name: algo360fx-db
-    plan: free
     region: singapore
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: everywhere
+    plan: free
