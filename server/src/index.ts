@@ -88,6 +88,7 @@ app.use('/api/health', async (_req: express.Request, res: express.Response) => {
 
 // API Routes
 app.use('/api/auth', authRouter);
+app.use('/auth', authRouter);
 app.use('/api/user', userRouter);
 app.use('/api/market', marketRouter);
 app.use('/api/notifications', notificationsRouter);
