@@ -48,7 +48,6 @@ export async function searchStrategies(query: string): Promise<SearchResult[]> {
       score: strategy.__textScore || 0
     }));
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Search strategies error:', error);
     return [];
   }

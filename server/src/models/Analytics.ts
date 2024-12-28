@@ -1,12 +1,25 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export interface AnalyticsData {
+  timestamp: Date;
+  value: number;
+  metadata?: Record<string, string | number | boolean>;
+}
+
+export interface AnalyticsParameters {
+  timeframe?: string;
+  period?: number;
+  source?: string;
+  settings?: Record<string, string | number | boolean>;
+}
+
 export interface IAnalytics extends Document {
   name: string;
   description: string;
   category: string;
   type: string;
-  data: Record<string, any>;
-  parameters: Record<string, any>;
+  data: Record<string, AnalyticsData>;
+  parameters: AnalyticsParameters;
   relatedStrategies: mongoose.Types.ObjectId[];
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -35,12 +48,22 @@ const AnalyticsSchema = new Schema({
   },
   data: {
     type: Map,
-    of: Schema.Types.Mixed,
+    of: {
+      type: new Schema({
+        timestamp: Date,
+        value: Number,
+        metadata: Schema.Types.Mixed,
+      }),
+    },
     required: true,
   },
   parameters: {
-    type: Map,
-    of: Schema.Types.Mixed,
+    type: new Schema({
+      timeframe: String,
+      period: Number,
+      source: String,
+      settings: Schema.Types.Mixed,
+    }),
     default: {},
   },
   relatedStrategies: [{

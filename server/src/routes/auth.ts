@@ -1,10 +1,9 @@
 import express, { Request, Response } from 'express';
-const { body, validationResult } = require('express-validator');
+import { body, validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
 import { User } from '../models/User';
-import mongoose from 'mongoose';
 import { authLimiter, verificationLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();

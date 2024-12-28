@@ -117,7 +117,7 @@ app.get('/', (_req: express.Request, res: express.Response) => {
 });
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Global error handler:', err);
   res.status(500).json({ error: 'Internal server error', details: err.message });
 });

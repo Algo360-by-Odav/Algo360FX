@@ -18,7 +18,7 @@ const getCertificates = (): CertificateConfig => {
         key: readFileSync(resolve(__dirname, '../certs/localhost.key'), 'utf8'),
         ca: readFileSync(resolve(__dirname, '../certs/localhost.ca'), 'utf8')
       };
-    } catch (error) {
+    } catch (_error) {
       console.warn('SSL certificates not found for development. Running without SSL.');
       return {
         cert: '',

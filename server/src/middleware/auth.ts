@@ -3,11 +3,10 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
 import { UserPayload } from '../types/auth';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: UserPayload;
-    }
+// Extend Express Request type using module augmentation
+declare module 'express' {
+  interface Request {
+    user?: UserPayload;
   }
 }
 
