@@ -48,22 +48,9 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// API Documentation route
-app.get('/', (_req: express.Request, res: express.Response) => {
-  res.json({
-    name: 'Algo360FX API',
-    version: '1.0.0',
-    description: 'Trading and market analysis platform API',
-    endpoints: {
-      '/api/health': 'Health check endpoint',
-      '/auth/*': 'Authentication endpoints',
-      '/user/*': 'User management endpoints',
-      '/market/*': 'Market data and trading endpoints',
-      '/notifications/*': 'Notification endpoints',
-      '/search/*': 'Search functionality endpoints'
-    }
-  });
-});
+// Auth routes first
+app.use('/api/auth', authRouter);
+app.use('/auth', authRouter);
 
 // API Routes with versioning
 app.use('/api', (_req: express.Request, _res: express.Response, next: express.NextFunction) => {
@@ -99,9 +86,7 @@ app.use('/api/health', async (_req: express.Request, res: express.Response) => {
   }
 });
 
-// API Routes
-app.use('/api/auth', authRouter);
-app.use('/auth', authRouter);
+// Other API routes
 app.use('/api/user', userRouter);
 app.use('/user', userRouter);
 app.use('/api/market', marketRouter);
@@ -113,6 +98,23 @@ app.use('/search', searchRouter);
 
 // Add market endpoints to root path for backward compatibility
 app.use('/', marketRouter);
+
+// API Documentation route
+app.get('/', (_req: express.Request, res: express.Response) => {
+  res.json({
+    name: 'Algo360FX API',
+    version: '1.0.0',
+    description: 'Trading and market analysis platform API',
+    endpoints: {
+      '/api/health': 'Health check endpoint',
+      '/auth/*': 'Authentication endpoints',
+      '/user/*': 'User management endpoints',
+      '/market/*': 'Market data and trading endpoints',
+      '/notifications/*': 'Notification endpoints',
+      '/search/*': 'Search functionality endpoints'
+    }
+  });
+});
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
