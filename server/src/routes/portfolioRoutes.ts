@@ -1,12 +1,12 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 const router = express.Router();
 
-router.get('/', (req: express.Request, res: express.Response) => {
+router.get('/', (req: Request, res: Response) => {
   // TODO: Implement portfolio retrieval
   res.json({ message: 'Portfolio data endpoint' });
 });
 
-router.post('/', (req: express.Request, res: express.Response) => {
+router.post('/', (req: Request, res: Response) => {
   // TODO: Implement portfolio update
   res.json({ message: 'Portfolio updated' });
 });
