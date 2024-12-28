@@ -58,7 +58,12 @@ app.use('/api', (_req: express.Request, _res: express.Response, next: express.Ne
   next();
 });
 
-app.use('/api/health', async (_req: express.Request, res: express.Response) => {
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const wsMetrics = {
+    connections: 0
+  };
+
   try {
     // Check database connection
     const dbStatus = postgresConnection?.isInitialized || mongoose.connection.readyState === 1;
@@ -67,9 +72,7 @@ app.use('/api/health', async (_req: express.Request, res: express.Response) => {
     const wsStatus = wsServers.trading.isHealthy() || wsServers.optimization.isHealthy() || false;
     
     // Get WebSocket metrics
-    const wsMetrics = {
-      connections: wsServers.trading.getConnections() + wsServers.optimization.getConnections()
-    };
+    wsMetrics.connections = wsServers.trading.getConnections() + wsServers.optimization.getConnections();
 
     if (!dbStatus || !wsStatus) {
       return res.status(503).json({

@@ -1,90 +1,111 @@
-import WebSocket, { Server } from 'ws';
-import { WebSocketClient, BaseMessage } from '../types/websocket';
+import { WebSocketServer, WebSocket } from 'ws';
+import { Server } from 'http';
+import { logger } from '../utils/logger';
 
-class WebSocketBase {
-  protected clients: Map<string, WebSocketClient>;
-  protected server: Server;
+export class WebSocketBase {
+  private wss: WebSocketServer;
+  private pingInterval: NodeJS.Timeout | null = null;
+  private readonly PING_INTERVAL = 30000; // 30 seconds
+  private readonly CLOSE_TIMEOUT = 60000; // 60 seconds
 
   constructor(server: Server) {
-    this.clients = new Map();
-    this.server = server;
+    this.wss = new WebSocketServer({ 
+      server,
+      path: process.env.WS_PATH || '/ws',
+      perMessageDeflate: {
+        zlibDeflateOptions: {
+          chunkSize: 1024,
+          memLevel: 7,
+          level: 3
+        },
+        zlibInflateOptions: {
+          chunkSize: 10 * 1024
+        },
+        clientNoContextTakeover: true,
+        serverNoContextTakeover: true,
+        serverMaxWindowBits: 10,
+        concurrencyLimit: 10,
+        threshold: 1024
+      }
+    });
+
     this.setupWebSocket();
+    this.startPingInterval();
   }
 
-  protected setupWebSocket(): void {
-    this.server.on('connection', (ws: WebSocket) => {
-      const client: WebSocketClient = {
-        ws,
-        id: this.generateClientId(),
-        subscriptions: new Set(),
-        heartbeat: new Date()
-      };
+  private setupWebSocket() {
+    this.wss.on('connection', (ws: WebSocket) => {
+      logger.info('Client connected to WebSocket');
+      
+      ws.on('message', (message: string) => {
+        try {
+          const data = JSON.parse(message.toString());
+          this.handleMessage(ws, data);
+        } catch (error) {
+          logger.error('Error parsing WebSocket message:', error);
+          ws.send(JSON.stringify({ 
+            type: 'error', 
+            data: { message: 'Invalid message format' } 
+          }));
+        }
+      });
 
-      this.clients.set(client.id, client);
-      this.setupClientHandlers(client);
+      ws.on('close', () => {
+        logger.info('Client disconnected from WebSocket');
+      });
+
+      ws.on('error', (error) => {
+        logger.error('WebSocket error:', error);
+      });
+
+      // Send initial connection success message
+      ws.send(JSON.stringify({ 
+        type: 'connection', 
+        data: { status: 'connected' } 
+      }));
     });
 
-    setInterval(() => {
-      this.checkHeartbeats();
-    }, 30000);
-  }
-
-  protected setupClientHandlers(client: WebSocketClient): void {
-    client.ws.on('message', async (data: WebSocket.Data) => {
-      try {
-        const message = JSON.parse(data.toString()) as BaseMessage;
-        await this.handleMessage(client, message);
-      } catch (error) {
-        this.sendError(client, error.message);
-      }
-    });
-
-    client.ws.on('close', () => {
-      this.handleDisconnect(client);
-    });
-
-    client.ws.on('pong', () => {
-      if (this.clients.has(client.id)) {
-        this.clients.get(client.id)!.heartbeat = new Date();
-      }
+    this.wss.on('error', (error) => {
+      logger.error('WebSocket server error:', error);
     });
   }
 
-  protected generateClientId(): string {
-    return Math.random().toString(36).substring(2, 15);
+  private startPingInterval() {
+    this.pingInterval = setInterval(() => {
+      this.wss.clients.forEach((ws: WebSocket) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.ping();
+        }
+      });
+    }, this.PING_INTERVAL);
   }
 
-  protected handleDisconnect(client: WebSocketClient): void {
-    this.clients.delete(client.id);
-  }
-
-  protected sendError(client: WebSocketClient, message: string): void {
-    client.ws.send(JSON.stringify({ type: 'error', message }));
-  }
-
-  protected async handleMessage(client: WebSocketClient, data: BaseMessage): Promise<void> {
-    throw new Error('Method not implemented');
-  }
-
-  protected checkHeartbeats(): void {
-    const now = new Date();
-    for (const [clientId, client] of this.clients.entries()) {
-      if (now.getTime() - client.heartbeat.getTime() > 30000) {
-        client.ws.terminate();
-        this.clients.delete(clientId);
-      }
+  protected handleMessage(ws: WebSocket, message: any) {
+    // Base message handling - to be overridden by child classes
+    if (message.type === 'ping') {
+      ws.send(JSON.stringify({ 
+        type: 'pong', 
+        data: { timestamp: Date.now() } 
+      }));
     }
   }
 
-  public isHealthy(): boolean {
-    return this.server?.clients?.size !== undefined;
-  }
-
-  public getMetrics(): { connections: number } {
+  public getMetrics() {
     return {
-      connections: this.server?.clients?.size || 0
+      connectedClients: this.wss.clients.size,
+      uptime: process.uptime()
     };
   }
-}
 
-export default WebSocketBase;
+  public close() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
+    
+    this.wss.clients.forEach((ws: WebSocket) => {
+      ws.close();
+    });
+    
+    this.wss.close();
+  }
+}
