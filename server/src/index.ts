@@ -1,6 +1,6 @@
 import express from 'express';
-import cors from 'cors';
 import { createServer } from 'http';
+import cors from 'cors';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import userRoutes from './routes/userRoutes';
@@ -28,15 +28,6 @@ app.use('/user', userRoutes);
 app.use('/portfolio', portfolioRoutes);
 app.use('/strategies', strategyRoutes);
 app.use('/positions', positionRoutes);
-
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log('Client connected');
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected');
-  });
-});
 
 const PORT = process.env.PORT || 5000;
 

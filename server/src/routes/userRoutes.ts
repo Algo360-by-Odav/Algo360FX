@@ -1,5 +1,6 @@
-import express from 'express';
-const router = express.Router();
+import express, { Router } from 'express';
+
+const router = Router();
 
 // User preferences
 router.get('/preferences', (req, res) => {
