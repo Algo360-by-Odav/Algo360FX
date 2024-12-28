@@ -1,6 +1,5 @@
-import { Router } from 'express';
-
-const router = Router();
+import express = require('express');
+const router = express.Router();
 
 // User preferences
 router.get('/preferences', (req, res) => {

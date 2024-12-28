@@ -1,8 +1,8 @@
-import express from 'express';
+import express = require('express');
 import { createServer } from 'http';
-import cors from 'cors';
+import cors = require('cors');
 import { Server } from 'socket.io';
-import dotenv from 'dotenv';
+import dotenv = require('dotenv');
 import userRoutes from './routes/userRoutes';
 import portfolioRoutes from './routes/portfolioRoutes';
 import strategyRoutes from './routes/strategyRoutes';
