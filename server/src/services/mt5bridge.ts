@@ -8,8 +8,68 @@ const WS_PORT = parseInt(process.env.MT5_WS_PORT || '6780');
 
 interface MT5Connection {
   ws: WebSocket;
-  account?: any;
   terminal?: MetatraderAccount;
+}
+
+interface MT5Message {
+  type: string;
+  data: Record<string, unknown>;
+}
+
+interface MT5Response {
+  type: string;
+  data: Record<string, unknown>;
+}
+
+interface MT5ConnectMessage extends MT5Message {
+  type: 'connect';
+  data: {
+    accountId: string;
+  };
+}
+
+interface MT5OrderMessage extends MT5Message {
+  type: 'place_order';
+  data: {
+    symbol: string;
+    volume: number;
+    type?: 'buy' | 'sell';
+    stopLoss?: number;
+    takeProfit?: number;
+  };
+}
+
+interface MT5PriceUpdate {
+  symbol: string;
+  bid: number;
+  ask: number;
+  time: string;
+  brokerTime: string;
+}
+
+interface MT5Position {
+  id: string;
+  symbol: string;
+  type: 'POSITION_TYPE_BUY' | 'POSITION_TYPE_SELL';
+  volume: number;
+  openPrice: number;
+  currentPrice: number;
+  profit: number;
+  swap: number;
+  commission: number;
+  openTime: string;
+}
+
+interface MT5Order {
+  id: string;
+  symbol: string;
+  type: string;
+  state: string;
+  volume: number;
+  openPrice: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  openTime: string;
 }
 
 export class MT5Bridge {
@@ -22,7 +82,7 @@ export class MT5Bridge {
     this.wss = new WebSocketServer({ port: WS_PORT });
   }
 
-  public async start() {
+  public async start(): Promise<void> {
     console.log(`MT5 Bridge starting on port ${WS_PORT}`);
     
     this.wss.on('connection', (ws: WebSocket) => {
@@ -32,14 +92,11 @@ export class MT5Bridge {
 
       ws.on('message', async (message: WebSocket.RawData) => {
         try {
-          const data = JSON.parse(message.toString());
+          const data = JSON.parse(message.toString()) as MT5Message;
           await this.handleMessage(connectionId, data);
         } catch (error) {
           console.error('Error handling message:', error);
-          ws.send(JSON.stringify({
-            type: 'error',
-            data: 'Failed to process message'
-          }));
+          this.sendError(ws, 'Failed to process message');
         }
       });
 
@@ -56,66 +113,53 @@ export class MT5Bridge {
     console.log(`MT5 Bridge Server running on port ${WS_PORT}`);
   }
 
-  private async handleMessage(connectionId: string, message: any) {
+  private async handleMessage(connectionId: string, message: MT5Message): Promise<void> {
     const connection = this.connections.get(connectionId);
     if (!connection) return;
 
     const { ws } = connection;
 
     switch (message.type) {
-      case 'connect':
+      case 'connect': {
+        const connectMessage = message as MT5ConnectMessage;
         try {
-          const terminal = await this.metaApi.metatraderAccountApi.getAccount(message.data.accountId);
+          const terminal = await this.metaApi.metatraderAccountApi.getAccount(connectMessage.data.accountId);
           if (!terminal) throw new Error('Account not found');
 
           connection.terminal = terminal;
           await this.startUpdates(connectionId);
 
-          ws.send(JSON.stringify({
-            type: 'connected',
-            data: { accountId: message.data.accountId }
-          }));
-        } catch (error: any) {
-          ws.send(JSON.stringify({
-            type: 'error',
-            data: { message: error.message }
-          }));
+          this.sendResponse(ws, 'connected', { accountId: connectMessage.data.accountId });
+        } catch (error) {
+          this.sendError(ws, error instanceof Error ? error.message : 'Failed to connect');
         }
         break;
+      }
 
-      case 'place_order':
+      case 'place_order': {
+        const orderMessage = message as MT5OrderMessage;
         try {
-          const { symbol, volume } = message.data;
+          const { symbol, volume, type = 'buy', stopLoss, takeProfit } = orderMessage.data;
           const terminal = connection.terminal;
           if (!terminal) throw new Error('Not connected to MT5');
 
-          const result = await terminal.createMarketBuyOrder(
-            symbol,
-            volume,
-            { comment: 'Order from Algo360FX' }
-          );
+          const result = type === 'buy' 
+            ? await terminal.createMarketBuyOrder(symbol, volume, { stopLoss, takeProfit, comment: 'Order from Algo360FX' })
+            : await terminal.createMarketSellOrder(symbol, volume, { stopLoss, takeProfit, comment: 'Order from Algo360FX' });
 
-          ws.send(JSON.stringify({
-            type: 'order_placed',
-            data: result
-          }));
+          this.sendResponse(ws, 'order_placed', result);
         } catch (error) {
-          ws.send(JSON.stringify({
-            type: 'error',
-            data: { message: error.message }
-          }));
+          this.sendError(ws, error instanceof Error ? error.message : 'Failed to place order');
         }
         break;
+      }
 
       default:
-        ws.send(JSON.stringify({
-          type: 'error',
-          data: 'Unknown message type'
-        }));
+        this.sendError(ws, 'Unknown message type');
     }
   }
 
-  private async startUpdates(connectionId: string) {
+  private async startUpdates(connectionId: string): Promise<void> {
     const connection = this.connections.get(connectionId);
     if (!connection || !connection.terminal) return;
 
@@ -123,39 +167,50 @@ export class MT5Bridge {
 
     try {
       // Subscribe to price updates
-      terminal.subscribeToMarketData('EURUSD');
+      await terminal.subscribeToMarketData('EURUSD');
       
       // Listen for updates
-      terminal.on('onSymbolPriceUpdated', (price: any) => {
-        ws.send(JSON.stringify({
-          type: 'price_update',
-          data: price
-        }));
+      terminal.on('onSymbolPriceUpdated', (price: MT5PriceUpdate) => {
+        this.sendResponse(ws, 'price_update', price);
       });
 
       // Listen for position updates
-      terminal.on('onPositionUpdated', (position: any) => {
-        ws.send(JSON.stringify({
-          type: 'position_update',
-          data: position
-        }));
+      terminal.on('onPositionUpdated', (position: MT5Position) => {
+        this.sendResponse(ws, 'position_update', position);
       });
 
       // Listen for order updates
-      terminal.on('onOrderUpdated', (order: any) => {
-        ws.send(JSON.stringify({
-          type: 'order_update',
-          data: order
-        }));
+      terminal.on('onOrderUpdated', (order: MT5Order) => {
+        this.sendResponse(ws, 'order_update', order);
+      });
+
+      // Listen for connection status
+      terminal.on('connected', () => {
+        this.sendResponse(ws, 'status', { connected: true });
+      });
+
+      terminal.on('disconnected', () => {
+        this.sendResponse(ws, 'status', { connected: false });
+      });
+
+      terminal.on('error', (error: Error) => {
+        this.sendError(ws, error.message);
       });
 
     } catch (error) {
-      console.error('Failed to start updates:', error);
-      ws.send(JSON.stringify({
-        type: 'error',
-        data: 'Failed to start updates'
-      }));
+      this.sendError(ws, error instanceof Error ? error.message : 'Failed to start updates');
     }
+  }
+
+  private sendResponse(ws: WebSocket, type: string, data: Record<string, unknown>): void {
+    ws.send(JSON.stringify({ type, data }));
+  }
+
+  private sendError(ws: WebSocket, message: string): void {
+    ws.send(JSON.stringify({
+      type: 'error',
+      data: { message }
+    }));
   }
 
   public stop() {
