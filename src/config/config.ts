@@ -13,13 +13,13 @@ const isLocalhost = typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 // Default production URLs for Render deployment
-const defaultProductionApiUrl = 'https://algo360fx-server.onrender.com';
+const defaultProductionApiUrl = 'https://algo360fx-server.onrender.com/api';
 const defaultProductionWsUrl = 'wss://algo360fx-server.onrender.com';
 const defaultWsPath = '/ws';
 
 export const config: Config = {
   apiUrl: isLocalhost 
-    ? 'http://localhost:5000'
+    ? 'http://localhost:5000/api'
     : (import.meta.env.VITE_API_URL || defaultProductionApiUrl),
   wsUrl: isLocalhost
     ? 'ws://localhost:5000'
