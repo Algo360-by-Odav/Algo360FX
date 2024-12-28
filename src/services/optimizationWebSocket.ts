@@ -1,12 +1,84 @@
 import { io, Socket } from 'socket.io-client';
 import { config } from '../config/config';
 
+interface OptimizationParams {
+  strategyId: string;
+  parameters: {
+    name: string;
+    type: 'number' | 'boolean' | 'string';
+    range?: [number, number];
+    step?: number;
+    values?: Array<string | number | boolean>;
+  }[];
+  timeframe: string;
+  startDate: string;
+  endDate: string;
+  maxGenerations: number;
+  populationSize: number;
+  crossoverRate: number;
+  mutationRate: number;
+  optimizationTarget: 'profit' | 'sharpeRatio' | 'drawdown' | 'winRate';
+}
+
+interface OptimizationProgress {
+  generation: number;
+  bestFitness: number;
+  averageFitness: number;
+  progress: number;
+  timeElapsed: number;
+  timeRemaining: number;
+  currentBest: {
+    parameters: Record<string, number | string | boolean>;
+    fitness: number;
+    metrics: {
+      profit: number;
+      sharpeRatio: number;
+      drawdown: number;
+      winRate: number;
+    };
+  };
+}
+
+interface OptimizationResult {
+  bestParameters: Record<string, number | string | boolean>;
+  metrics: {
+    profit: number;
+    sharpeRatio: number;
+    drawdown: number;
+    winRate: number;
+    totalTrades: number;
+    profitFactor: number;
+    maxDrawdown: number;
+  };
+  convergenceHistory: Array<{
+    generation: number;
+    bestFitness: number;
+    averageFitness: number;
+  }>;
+  executionTime: number;
+  generationsCompleted: number;
+}
+
+interface WebSocketConfig {
+  path: string;
+  reconnection: boolean;
+  reconnectionAttempts: number;
+  reconnectionDelay: number;
+  reconnectionDelayMax: number;
+  timeout: number;
+  transports: string[];
+  forceNew: boolean;
+  autoConnect: boolean;
+  secure: boolean;
+  rejectUnauthorized: boolean;
+}
+
 class OptimizationWebSocket {
   private socket: Socket | null = null;
-  private isProduction: boolean;
-  private wsUrl: string;
+  private readonly isProduction: boolean;
+  private readonly wsUrl: string;
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 10;
+  private readonly maxReconnectAttempts: number = 10;
   private reconnectTimer: NodeJS.Timeout | null = null;
 
   constructor() {
@@ -17,7 +89,7 @@ class OptimizationWebSocket {
     this.connect();
   }
 
-  connect() {
+  connect(): void {
     if (this.socket?.connected) {
       return;
     }
@@ -31,7 +103,7 @@ class OptimizationWebSocket {
     console.log('Connecting to optimization Socket.IO at', this.wsUrl);
 
     try {
-      this.socket = io(this.wsUrl, {
+      const config: WebSocketConfig = {
         path: '/ws',
         reconnection: true,
         reconnectionAttempts: this.maxReconnectAttempts,
@@ -43,7 +115,9 @@ class OptimizationWebSocket {
         autoConnect: true,
         secure: this.isProduction,
         rejectUnauthorized: false
-      });
+      };
+
+      this.socket = io(this.wsUrl, config);
 
       this.socket.on('connect', () => {
         console.log('Optimization Socket.IO connected');
@@ -54,12 +128,12 @@ class OptimizationWebSocket {
         console.log('Optimization Socket.IO disconnected');
       });
 
-      this.socket.on('connect_error', (error) => {
+      this.socket.on('connect_error', (error: Error) => {
         console.error('Optimization Socket.IO connection error:', error);
         this.handleReconnect();
       });
 
-      this.socket.on('error', (error) => {
+      this.socket.on('error', (error: Error) => {
         console.error('Optimization Socket.IO error:', error);
         this.handleReconnect();
       });
@@ -73,7 +147,7 @@ class OptimizationWebSocket {
     }
   }
 
-  private handleReconnect() {
+  private handleReconnect(): void {
     this.reconnectAttempts++;
     console.log(`Attempting to reconnect optimization socket (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
     
@@ -103,7 +177,7 @@ class OptimizationWebSocket {
     }, delay);
   }
 
-  disconnect() {
+  disconnect(): void {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
@@ -119,8 +193,7 @@ class OptimizationWebSocket {
     return this.socket?.connected || false;
   }
 
-  // Add optimization-specific methods here
-  startOptimization(params: any) {
+  startOptimization(params: OptimizationParams): void {
     if (!this.socket?.connected) {
       console.warn('Socket not connected. Cannot start optimization.');
       return;
@@ -128,7 +201,7 @@ class OptimizationWebSocket {
     this.socket.emit('start_optimization', params);
   }
 
-  stopOptimization() {
+  stopOptimization(): void {
     if (!this.socket?.connected) {
       console.warn('Socket not connected. Cannot stop optimization.');
       return;
@@ -136,15 +209,15 @@ class OptimizationWebSocket {
     this.socket.emit('stop_optimization');
   }
 
-  onOptimizationProgress(callback: (data: any) => void) {
+  onOptimizationProgress(callback: (data: OptimizationProgress) => void): void {
     this.socket?.on('optimization_progress', callback);
   }
 
-  onOptimizationComplete(callback: (data: any) => void) {
+  onOptimizationComplete(callback: (data: OptimizationResult) => void): void {
     this.socket?.on('optimization_complete', callback);
   }
 
-  onOptimizationError(callback: (error: any) => void) {
+  onOptimizationError(callback: (error: string) => void): void {
     this.socket?.on('optimization_error', callback);
   }
 }
