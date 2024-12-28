@@ -4,33 +4,14 @@ import { logger } from '../utils/logger';
 
 export class WebSocketBase {
   private wss: WebSocketServer;
-  private pingInterval: NodeJS.Timeout | null = null;
-  private readonly PING_INTERVAL = 30000; // 30 seconds
-  private readonly CLOSE_TIMEOUT = 60000; // 60 seconds
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ 
       server,
-      path: process.env.WS_PATH || '/ws',
-      perMessageDeflate: {
-        zlibDeflateOptions: {
-          chunkSize: 1024,
-          memLevel: 7,
-          level: 3
-        },
-        zlibInflateOptions: {
-          chunkSize: 10 * 1024
-        },
-        clientNoContextTakeover: true,
-        serverNoContextTakeover: true,
-        serverMaxWindowBits: 10,
-        concurrencyLimit: 10,
-        threshold: 1024
-      }
+      path: '/ws'
     });
 
     this.setupWebSocket();
-    this.startPingInterval();
   }
 
   private setupWebSocket() {
@@ -64,20 +45,6 @@ export class WebSocketBase {
         data: { status: 'connected' } 
       }));
     });
-
-    this.wss.on('error', (error) => {
-      logger.error('WebSocket server error:', error);
-    });
-  }
-
-  private startPingInterval() {
-    this.pingInterval = setInterval(() => {
-      this.wss.clients.forEach((ws: WebSocket) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.ping();
-        }
-      });
-    }, this.PING_INTERVAL);
   }
 
   protected handleMessage(ws: WebSocket, message: any) {
@@ -98,10 +65,6 @@ export class WebSocketBase {
   }
 
   public close() {
-    if (this.pingInterval) {
-      clearInterval(this.pingInterval);
-    }
-    
     this.wss.clients.forEach((ws: WebSocket) => {
       ws.close();
     });
