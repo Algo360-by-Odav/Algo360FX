@@ -8,15 +8,25 @@ export class WebSocketBase {
   constructor(server: Server) {
     this.wss = new WebSocketServer({ 
       server,
-      path: '/ws'
+      path: '/ws',
+      verifyClient: (info, cb) => {
+        const origin = info.origin || info.req.headers.origin;
+        const allowedOrigin = process.env.CORS_ORIGIN || 'https://algo360fx-client.onrender.com';
+        
+        if (origin === allowedOrigin) {
+          cb(true);
+        } else {
+          cb(false, 403, 'Forbidden');
+        }
+      }
     });
 
     this.setupWebSocket();
   }
 
   private setupWebSocket() {
-    this.wss.on('connection', (ws: WebSocket) => {
-      logger.info('Client connected to WebSocket');
+    this.wss.on('connection', (ws: WebSocket, req) => {
+      logger.info(`Client connected to WebSocket from ${req.socket.remoteAddress}`);
       
       ws.on('message', (message: string) => {
         try {
@@ -31,12 +41,12 @@ export class WebSocketBase {
         }
       });
 
-      ws.on('close', () => {
-        logger.info('Client disconnected from WebSocket');
+      ws.on('close', (code, reason) => {
+        logger.info(`Client disconnected from WebSocket. Code: ${code}, Reason: ${reason}`);
       });
 
       ws.on('error', (error) => {
-        logger.error('WebSocket error:', error);
+        logger.error('WebSocket client error:', error);
       });
 
       // Send initial connection success message
@@ -44,6 +54,10 @@ export class WebSocketBase {
         type: 'connection', 
         data: { status: 'connected' } 
       }));
+    });
+
+    this.wss.on('error', (error) => {
+      logger.error('WebSocket server error:', error);
     });
   }
 

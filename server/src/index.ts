@@ -29,7 +29,7 @@ const corsOptions = {
   origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Upgrade', 'Connection'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 86400
 };
@@ -48,6 +48,15 @@ app.use((req, res, next) => {
 // Parse JSON bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Handle WebSocket upgrade
+app.use((req, res, next) => {
+  if (req.headers.upgrade && req.headers.upgrade.toLowerCase() === 'websocket') {
+    res.setHeader('Upgrade', 'websocket');
+    res.setHeader('Connection', 'Upgrade');
+  }
+  next();
+});
 
 // Auth routes first
 app.use('/api/auth', authRouter);
