@@ -1,263 +1,253 @@
 import React, { useState } from 'react';
+import { observer } from 'mobx-react-lite';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  TextField,
   Button,
+  TextField,
   Typography,
-  Link,
-  CircularProgress,
+  Paper,
+  Container,
   Alert,
-  Grid,
+  CircularProgress,
 } from '@mui/material';
-import { observer } from 'mobx-react-lite';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { useRootStore } from '../../hooks/useRootStore';
+import { useAuth } from '@/hooks/useAuth';
 
 const RegisterForm: React.FC = observer(() => {
   const navigate = useNavigate();
-  const { authStore } = useRootStore();
-
+  const { register, sendVerificationCode, error: authError, isLoading } = useAuth();
+  const [step, setStep] = useState(1); // 1: Email, 2: Verification, 3: Registration
   const [formData, setFormData] = useState({
     email: '',
-    username: '',
     password: '',
     confirmPassword: '',
     firstName: '',
     lastName: '',
+    verificationCode: '',
   });
+  const [error, setError] = useState('');
 
-  const [errors, setErrors] = useState({
-    email: '',
-    username: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-  });
-
-  const validateForm = () => {
-    let isValid = true;
-    const newErrors = {
-      email: '',
-      username: '',
-      password: '',
-      confirmPassword: '',
-      firstName: '',
-      lastName: '',
-    };
-
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-      isValid = false;
-    }
-
-    // Username validation
-    if (!formData.username) {
-      newErrors.username = 'Username is required';
-      isValid = false;
-    } else if (formData.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters long';
-      isValid = false;
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-      isValid = false;
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
-      isValid = false;
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password =
-        'Password must contain at least one uppercase letter, one lowercase letter, and one number';
-      isValid = false;
-    }
-
-    // Confirm password validation
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-      isValid = false;
-    }
-
-    // Name validation
-    if (formData.firstName && formData.firstName.length < 2) {
-      newErrors.firstName = 'First name must be at least 2 characters long';
-      isValid = false;
-    }
-
-    if (formData.lastName && formData.lastName.length < 2) {
-      newErrors.lastName = 'Last name must be at least 2 characters long';
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+    setError('');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
+  const handleSendCode = async () => {
+    if (!formData.email) {
+      setError('Email is required');
       return;
     }
 
     try {
-      await authStore.register({
-        email: formData.email,
-        username: formData.username,
-        password: formData.password,
-        firstName: formData.firstName || undefined,
-        lastName: formData.lastName || undefined,
-      });
-      navigate('/dashboard');
-    } catch (error) {
-      // Error handling is managed by the store
+      await sendVerificationCode(formData.email);
+      setStep(2);
+      setError('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send verification code');
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleVerifyCode = async () => {
+    if (!formData.verificationCode) {
+      setError('Verification code is required');
+      return;
+    }
+
+    // Just move to the next step since verification happens during registration
+    setStep(3);
+    setError('');
+  };
+
+  const validateForm = () => {
+    if (!formData.email) {
+      setError('Email is required');
+      return false;
+    }
+    if (!formData.password) {
+      setError('Password is required');
+      return false;
+    }
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+    if (!formData.firstName) {
+      setError('First name is required');
+      return false;
+    }
+    if (!formData.lastName) {
+      setError('Last name is required');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    try {
+      await register({
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        verificationCode: formData.verificationCode,
+      });
+      navigate('/auth/login');
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    }
   };
 
   return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit}
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        maxWidth: 600,
-        mx: 'auto',
-        p: 3,
-      }}
-    >
-      <Typography variant="h4" component="h1" gutterBottom align="center">
-        Create Your Account
-      </Typography>
-
-      {authStore.error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {authStore.error}
-        </Alert>
-      )}
-
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            error={!!errors.email}
-            helperText={errors.email}
-            disabled={authStore.isLoading}
-          />
-        </Grid>
-
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            error={!!errors.username}
-            helperText={errors.username}
-            disabled={authStore.isLoading}
-          />
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="First Name (Optional)"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleChange}
-            error={!!errors.firstName}
-            helperText={errors.firstName}
-            disabled={authStore.isLoading}
-          />
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Last Name (Optional)"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
-            error={!!errors.lastName}
-            helperText={errors.lastName}
-            disabled={authStore.isLoading}
-          />
-        </Grid>
-
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Password"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            error={!!errors.password}
-            helperText={errors.password}
-            disabled={authStore.isLoading}
-          />
-        </Grid>
-
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Confirm Password"
-            name="confirmPassword"
-            type="password"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            error={!!errors.confirmPassword}
-            helperText={errors.confirmPassword}
-            disabled={authStore.isLoading}
-          />
-        </Grid>
-      </Grid>
-
-      <Button
-        type="submit"
-        variant="contained"
-        fullWidth
-        disabled={authStore.isLoading}
-        sx={{ mt: 2 }}
+    <Container component="main" maxWidth="xs">
+      <Paper
+        elevation={3}
+        sx={{
+          marginTop: 8,
+          padding: 4,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
       >
-        {authStore.isLoading ? (
-          <CircularProgress size={24} color="inherit" />
-        ) : (
-          'Register'
-        )}
-      </Button>
+        <Typography component="h1" variant="h5" gutterBottom>
+          Create your Algo360FX Account
+        </Typography>
 
-      <Box sx={{ mt: 2, textAlign: 'center' }}>
-        <Link
-          component={RouterLink}
-          to="/login"
-          variant="body2"
-          underline="hover"
-        >
-          Already have an account? Sign in
-        </Link>
-      </Box>
-    </Box>
+        {(error || authError) && (
+          <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+            {error || authError}
+          </Alert>
+        )}
+
+        <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+          {step === 1 && (
+            <>
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="email"
+                label="Email Address"
+                name="email"
+                autoComplete="email"
+                autoFocus
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={handleSendCode}
+                disabled={isLoading}
+                sx={{ mt: 2 }}
+              >
+                {isLoading ? <CircularProgress size={24} /> : 'Send Verification Code'}
+              </Button>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Please enter the verification code sent to {formData.email}
+              </Typography>
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="verificationCode"
+                label="Verification Code"
+                name="verificationCode"
+                autoFocus
+                value={formData.verificationCode}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={handleVerifyCode}
+                disabled={isLoading}
+                sx={{ mt: 2 }}
+              >
+                {isLoading ? <CircularProgress size={24} /> : 'Verify Code'}
+              </Button>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="firstName"
+                label="First Name"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="lastName"
+                label="Last Name"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="password"
+                label="Password"
+                type="password"
+                id="password"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="confirmPassword"
+                label="Confirm Password"
+                type="password"
+                id="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={isLoading}
+                sx={{ mt: 3, mb: 2 }}
+              >
+                {isLoading ? <CircularProgress size={24} /> : 'Create Account'}
+              </Button>
+            </>
+          )}
+        </Box>
+      </Paper>
+    </Container>
   );
 });
 

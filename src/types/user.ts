@@ -44,6 +44,7 @@ export interface SignupData {
   firstName: string;
   lastName: string;
   role?: UserRole;
+  verificationCode: string;
 }
 
 export interface LoginData {

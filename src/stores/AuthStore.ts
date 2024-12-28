@@ -70,21 +70,41 @@ export class AuthStore {
     }
   }
 
+  async sendVerificationCode(email: string) {
+    this.setLoading(true);
+    this.setError(null);
+    try {
+      const response = await api.post('/auth/verify/send', { email });
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to send verification code';
+      this.setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      this.setLoading(false);
+    }
+  }
+
   async register(data: SignupData) {
     this.setLoading(true);
     this.setError(null);
     try {
       const response = await api.post('/auth/register', {
-        ...data,
-        firstName: data.firstName || undefined,
-        lastName: data.lastName || undefined,
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        verificationCode: data.verificationCode,
       });
+      
       const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      runInAction(() => {
-        this.setUser(user);
-        this.verificationSent = true;
-      });
+      if (token) {
+        localStorage.setItem('token', token);
+        runInAction(() => {
+          this.setUser(user);
+        });
+      }
+      return response.data;
     } catch (error: any) {
       const errorMessage = error.message || 'Registration failed. Please try again.';
       this.setError(errorMessage);
@@ -95,75 +115,8 @@ export class AuthStore {
   }
 
   async logout() {
-    try {
-      await api.post('/auth/logout');
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      localStorage.removeItem('token');
-      this.setUser(null);
-      this.rootStore.resetStores();
-    }
-  }
-
-  async verifyEmail(token: string) {
-    this.setLoading(true);
-    this.setError(null);
-    try {
-      const response = await api.post('/auth/verify-email', { token });
-      runInAction(() => {
-        if (this.user) {
-          this.user.isVerified = true;
-        }
-      });
-    } catch (error: any) {
-      this.setError(error.message || 'Email verification failed');
-      throw error;
-    } finally {
-      this.setLoading(false);
-    }
-  }
-
-  async resendVerificationEmail() {
-    this.setLoading(true);
-    this.setError(null);
-    try {
-      await api.post('/auth/resend-verification');
-      runInAction(() => {
-        this.verificationSent = true;
-      });
-    } catch (error: any) {
-      this.setError(error.message || 'Failed to resend verification email');
-      throw error;
-    } finally {
-      this.setLoading(false);
-    }
-  }
-
-  async requestPasswordReset(email: string) {
-    this.setLoading(true);
-    this.setError(null);
-    try {
-      await api.post('/auth/forgot-password', { email });
-    } catch (error: any) {
-      this.setError(error.message || 'Failed to request password reset');
-      throw error;
-    } finally {
-      this.setLoading(false);
-    }
-  }
-
-  async resetPassword(token: string, newPassword: string) {
-    this.setLoading(true);
-    this.setError(null);
-    try {
-      await api.post('/auth/reset-password', { token, newPassword });
-    } catch (error: any) {
-      this.setError(error.message || 'Failed to reset password');
-      throw error;
-    } finally {
-      this.setLoading(false);
-    }
+    localStorage.removeItem('token');
+    this.setUser(null);
   }
 }
 

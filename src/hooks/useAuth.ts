@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRootStore } from './useRootStore';
+import { SignupData } from '@/types/user';
 
 export const useAuth = () => {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ export const useAuth = () => {
   const login = useCallback(
     async (email: string, password: string, rememberMe: boolean = false) => {
       try {
-        await authStore.login({ email, password, rememberMe });
+        await authStore.login(email, password);
         navigate('/dashboard');
       } catch (error) {
         // Error handling is managed by the store
@@ -27,19 +28,26 @@ export const useAuth = () => {
     }
   }, [authStore, navigate]);
 
-  const register = useCallback(
-    async (data: {
-      email: string;
-      username: string;
-      password: string;
-      firstName?: string;
-      lastName?: string;
-    }) => {
+  const sendVerificationCode = useCallback(
+    async (email: string) => {
       try {
-        await authStore.register(data);
-        navigate('/dashboard');
+        return await authStore.sendVerificationCode(email);
       } catch (error) {
         // Error handling is managed by the store
+        throw error;
+      }
+    },
+    [authStore]
+  );
+
+  const register = useCallback(
+    async (data: SignupData) => {
+      try {
+        await authStore.register(data);
+        navigate('/auth/login');
+      } catch (error) {
+        // Error handling is managed by the store
+        throw error;
       }
     },
     [authStore, navigate]
@@ -53,6 +61,7 @@ export const useAuth = () => {
     login,
     logout,
     register,
+    sendVerificationCode,
   };
 };
 
