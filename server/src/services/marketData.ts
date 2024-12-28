@@ -189,10 +189,25 @@ export class MarketData {
         }
       });
 
-      return response.data.correlations;
+      const correlationSymbol = response.data.symbol;
+      const correlationResults = response.data.correlations;
+      const timeframe = response.data.timeframe;
+      const marketData = response.data.marketData;
+
+      return {
+        symbol: correlationSymbol,
+        correlations: correlationResults,
+        timeframe,
+        sampleSize: marketData.length
+      };
     } catch (error) {
       console.error('Error fetching correlations:', error);
-      return {};
+      return {
+        symbol: '',
+        correlations: [],
+        timeframe: '',
+        sampleSize: 0
+      };
     }
   }
 

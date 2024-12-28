@@ -1,9 +1,10 @@
 import express from 'express';
-import { createServer } from 'http';
+import http from 'http';
+import { Server as WebSocketServer } from 'ws';
+import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
-import { Server } from 'socket.io';
-import TradingWebSocketServer from './websocket/trading';
-import OptimizationWebSocketServer from './websocket/optimization';
+import TradingWebSocket from './websocket/trading';
+import OptimizationWebSocket from './websocket/optimization';
 import searchRouter from './routes/search';
 import authRouter from './routes/auth';
 import notificationsRouter from './routes/notifications';
@@ -20,17 +21,17 @@ console.log('MetaApi SDK loaded');
 const app = express();
 console.log('Express app created');
 
-const httpServer = createServer(app);
+const httpServer = http.createServer(app);
 console.log('HTTP server created');
 
 // CORS configuration
 const corsOptions = {
-  origin: [config.CORS_ORIGIN, 'https://algo360fx-client.onrender.com'],
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 600 // Increase preflight cache time to 10 minutes
+  maxAge: 86400
 };
 
 app.use(cors(corsOptions));
@@ -61,27 +62,35 @@ app.use('/api/health', async (_req: express.Request, res: express.Response) => {
   try {
     // Check database connection
     const dbStatus = postgresConnection?.isInitialized || mongoose.connection.readyState === 1;
+    
+    // Check WebSocket server health
+    const wsStatus = wsServers.trading.isHealthy() || wsServers.optimization.isHealthy() || false;
+    
+    // Get WebSocket metrics
+    const wsMetrics = {
+      connections: wsServers.trading.getConnections() + wsServers.optimization.getConnections()
+    };
 
-    if (!dbStatus) {
+    if (!dbStatus || !wsStatus) {
       return res.status(503).json({
-        status: 'unhealthy',
-        error: 'Database connection failed',
-        timestamp: new Date().toISOString()
+        status: 'error',
+        database: dbStatus ? 'connected' : 'disconnected',
+        websocket: wsStatus ? 'healthy' : 'unhealthy',
+        metrics: wsMetrics
       });
     }
 
-    // All checks passed
-    return res.json({
+    return res.status(200).json({
       status: 'healthy',
       database: 'connected',
-      timestamp: new Date().toISOString()
+      websocket: 'healthy',
+      metrics: wsMetrics
     });
   } catch (error) {
-    console.error('Health check failed:', error);
-    return res.status(503).json({
-      status: 'unhealthy',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
+    return res.status(500).json({
+      status: 'error',
+      message: 'Internal server error during health check',
+      error: error.message
     });
   }
 });
@@ -128,32 +137,14 @@ app.use((req: express.Request, res: express.Response) => {
   res.status(404).json({ error: 'Not Found', path: req.path, method: req.method });
 });
 
-// Initialize Socket.IO server
-console.log('Initializing Socket.IO server...');
-const io = new Server(httpServer, {
-  cors: corsOptions,
-  path: '/socket.io/',
-  transports: ['websocket', 'polling'],
-  allowEIO3: true,
-  pingTimeout: 60000,
-  pingInterval: 25000
-});
-console.log('Socket.IO server initialized');
+// Create WebSocket servers
+const wsServer = new WebSocketServer({ server: httpServer });
+const io = new SocketIOServer(httpServer);
 
-// Initialize and start WebSocket servers
 const wsServers = {
-  trading: null as TradingWebSocketServer | null,
-  optimization: null as OptimizationWebSocketServer | null
+  trading: new TradingWebSocket(wsServer),
+  optimization: new OptimizationWebSocket(wsServer)
 };
-
-console.log('Initializing Trading WebSocket server...');
-wsServers.trading = new TradingWebSocketServer(httpServer);
-console.log('Trading WebSocket server initialized');
-
-console.log('Initializing Optimization WebSocket server...');
-wsServers.optimization = new OptimizationWebSocketServer(io);
-wsServers.optimization.initialize();
-console.log('Optimization WebSocket server initialized');
 
 // Connect to MongoDB and start server
 connectDatabase()
@@ -162,8 +153,8 @@ connectDatabase()
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log('WebSocket server endpoints:');
-      console.log(`- Trading: ws://localhost:${PORT}/socket.io/`);
-      console.log(`- Optimization: ws://localhost:${PORT}/socket.io/`);
+      console.log(`- Trading: ws://localhost:${PORT}/`);
+      console.log(`- Optimization: ws://localhost:${PORT}/`);
     });
   })
   .catch((error) => {

@@ -31,7 +31,8 @@ router.get('/', async (req, res) => {
         results = await searchPortfolios(query);
         break;
       case 'strategies':
-        results = await searchStrategies(query);
+        const searchResults = await searchStrategies(query);
+        results = Array.from(searchResults);
         break;
       case 'all':
         const [analytics, docs, portfolios, strategies] = await Promise.all([

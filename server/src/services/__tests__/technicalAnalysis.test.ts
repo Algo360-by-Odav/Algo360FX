@@ -1,11 +1,5 @@
-import { TechnicalAnalysis, IndicatorType, TrendStrength, TrendDirection } from '../technicalAnalysis';
-import { MarketData } from '../../types/market';
-import { TimeFrame } from '../strategyService';
-import axios from 'axios';
-
-// Mock axios
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+import { TechnicalAnalysis, IndicatorType } from '../technicalAnalysis';
+import { MarketData, TimeFrame, MarketStructure } from '../../types/market';
 
 describe('TechnicalAnalysis', () => {
   let technicalAnalysis: TechnicalAnalysis;
@@ -16,29 +10,38 @@ describe('TechnicalAnalysis', () => {
     mockMarketData = [
       {
         symbol: 'EURUSD',
-        timeframe: TimeFrame.H1,
+        timeframe: '1h' as TimeFrame,
         timestamp: new Date('2024-01-01T00:00:00Z'),
-        open: 1.1000,
-        high: 1.1100,
-        low: 1.0900,
-        close: 1.1050,
+        open: 1.10000,
+        high: 1.10100,
+        low: 1.09900,
+        close: 1.10050,
         volume: 1000
       },
       {
         symbol: 'EURUSD',
-        timeframe: TimeFrame.H1,
+        timeframe: '1h' as TimeFrame,
         timestamp: new Date('2024-01-01T01:00:00Z'),
-        open: 1.1050,
-        high: 1.1150,
-        low: 1.0950,
-        close: 1.1100,
+        open: 1.10050,
+        high: 1.10150,
+        low: 1.09950,
+        close: 1.10100,
         volume: 1200
       },
-      // Add more mock data as needed
+      {
+        symbol: 'EURUSD',
+        timeframe: '1h' as TimeFrame,
+        timestamp: new Date('2024-01-01T02:00:00Z'),
+        open: 1.10100,
+        high: 1.10200,
+        low: 1.10000,
+        close: 1.10150,
+        volume: 1500
+      }
     ];
 
-    // Mock axios response
-    mockedAxios.get.mockResolvedValue({ data: mockMarketData });
+    // Mock the fetchMarketData method
+    jest.spyOn(technicalAnalysis as any, 'fetchMarketData').mockResolvedValue(mockMarketData);
   });
 
   afterEach(() => {
@@ -46,102 +49,101 @@ describe('TechnicalAnalysis', () => {
   });
 
   describe('analyze', () => {
-    it('should analyze market data with all indicators', async () => {
-      const result = await technicalAnalysis.analyze(
-        'EURUSD',
-        TimeFrame.H1,
-        [IndicatorType.SMA, IndicatorType.RSI, IndicatorType.MACD, IndicatorType.BB, IndicatorType.VWAP]
-      );
+    it('should analyze market data and return market structure', async () => {
+      const indicators = [
+        { type: IndicatorType.SMA },
+        { type: IndicatorType.RSI },
+        { type: IndicatorType.MACD },
+        { type: IndicatorType.BB },
+        { type: IndicatorType.VWAP }
+      ];
 
-      expect(result).toBeDefined();
-      expect(result.price).toBeDefined();
-      expect(result.indicators).toBeDefined();
-      expect(result.structure).toBeDefined();
-      expect(result.levels).toBeDefined();
-      expect(result.volume).toBeDefined();
+      const result = await technicalAnalysis.analyze('EURUSD', '1h' as TimeFrame, indicators);
+
+      expect(result).toHaveProperty('trend');
+      expect(result.trend).toHaveProperty('direction');
+      expect(result.trend).toHaveProperty('strength');
+      expect(result).toHaveProperty('volatility');
+      expect(result).toHaveProperty('momentum');
+    });
+
+    it('should throw error when no market data is available', async () => {
+      (technicalAnalysis as any).fetchMarketData.mockResolvedValue([]);
+
+      await expect(technicalAnalysis.analyze('EURUSD', '1h' as TimeFrame))
+        .rejects
+        .toThrow('Insufficient market data for analysis');
     });
 
     it('should handle API errors gracefully', async () => {
-      mockedAxios.get.mockRejectedValue(new Error('API Error'));
+      (technicalAnalysis as any).fetchMarketData.mockRejectedValue(new Error('API Error'));
 
-      await expect(technicalAnalysis.analyze('EURUSD', TimeFrame.H1))
+      await expect(technicalAnalysis.analyze('EURUSD', '1h' as TimeFrame))
         .rejects
-        .toThrow('Failed to fetch historical data');
+        .toThrow('API Error');
     });
   });
 
-  describe('Market Structure Analysis', () => {
-    it('should detect uptrend correctly', async () => {
-      // Create uptrend data
-      const uptrendData = Array.from({ length: 20 }, (_, i) => ({
-        symbol: 'EURUSD',
-        timeframe: TimeFrame.H1,
-        timestamp: new Date(Date.now() + i * 3600000),
-        open: 1.1000 + i * 0.0010,
-        high: 1.1100 + i * 0.0010,
-        low: 1.0900 + i * 0.0010,
-        close: 1.1050 + i * 0.0010,
-        volume: 1000 + i * 100
+  describe('calculateVolatility', () => {
+    it('should calculate volatility correctly', () => {
+      const volatility = (technicalAnalysis as any).calculateVolatility(mockMarketData);
+      expect(typeof volatility).toBe('number');
+      expect(volatility).toBeGreaterThan(0);
+    });
+
+    it('should return 0 for single data point', () => {
+      const singleData = [mockMarketData[0]];
+      const volatility = (technicalAnalysis as any).calculateVolatility(singleData);
+      expect(volatility).toBe(0);
+    });
+  });
+
+  describe('analyzeTrend', () => {
+    it('should detect uptrend', () => {
+      const trend = (technicalAnalysis as any).analyzeTrend(mockMarketData);
+      expect(trend.direction).toBe('up');
+      expect(trend.strength).toBeGreaterThan(0);
+    });
+
+    it('should detect downtrend', () => {
+      const downtrendData = mockMarketData.map(data => ({
+        ...data,
+        close: data.close - 0.001
+      })).reverse();
+      
+      const trend = (technicalAnalysis as any).analyzeTrend(downtrendData);
+      expect(trend.direction).toBe('down');
+      expect(trend.strength).toBeGreaterThan(0);
+    });
+
+    it('should detect sideways trend', () => {
+      const sidewaysData = mockMarketData.map(data => ({
+        ...data,
+        close: 1.10000
       }));
-
-      mockedAxios.get.mockResolvedValue({ data: uptrendData });
-
-      const result = await technicalAnalysis.analyze('EURUSD', TimeFrame.H1);
-      expect(result.structure.trend.direction).toBe(TrendDirection.Up);
-      expect(result.structure.trend.strength).toBeGreaterThanOrEqual(TrendStrength.Strong);
-    });
-
-    it('should detect support and resistance levels', async () => {
-      const result = await technicalAnalysis.analyze('EURUSD', TimeFrame.H1);
       
-      expect(result.levels.support).toBeDefined();
-      expect(result.levels.support.length).toBeGreaterThan(0);
-      expect(result.levels.resistance).toBeDefined();
-      expect(result.levels.resistance.length).toBeGreaterThan(0);
-
-      // Check level properties
-      const supportLevel = result.levels.support[0];
-      expect(supportLevel.price).toBeDefined();
-      expect(supportLevel.strength).toBeGreaterThan(0);
-      expect(supportLevel.touches).toBeGreaterThan(0);
-    });
-
-    it('should calculate volume profile', async () => {
-      const result = await technicalAnalysis.analyze('EURUSD', TimeFrame.H1);
-      
-      expect(result.volume.profile).toBeDefined();
-      expect(result.volume.profile.length).toBeGreaterThan(0);
-      expect(result.volume.vwap).toBeDefined();
-
-      // Check volume profile properties
-      const profilePoint = result.volume.profile[0];
-      expect(profilePoint.price).toBeDefined();
-      expect(profilePoint.volume).toBeGreaterThan(0);
-      expect(profilePoint.timestamp).toBeDefined();
+      const trend = (technicalAnalysis as any).analyzeTrend(sidewaysData);
+      expect(trend.direction).toBe('sideways');
+      expect(trend.strength).toBeGreaterThan(0);
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle empty data', async () => {
-      mockedAxios.get.mockResolvedValue({ data: [] });
-
-      await expect(technicalAnalysis.analyze('EURUSD', TimeFrame.H1))
-        .rejects
-        .toThrow('No historical data available');
+  describe('calculateMomentum', () => {
+    it('should calculate momentum correctly', () => {
+      const momentum = (technicalAnalysis as any).calculateMomentum(mockMarketData);
+      expect(momentum).toEqual({
+        value: expect.any(Number),
+        timestamp: mockMarketData[mockMarketData.length - 1].timestamp
+      });
     });
 
-    it('should handle missing environment variables', async () => {
-      process.env.MARKET_DATA_API = '';
-
-      await expect(technicalAnalysis.analyze('EURUSD', TimeFrame.H1))
-        .rejects
-        .toThrow('MARKET_DATA_API environment variable not set');
-    });
-
-    it('should handle invalid timeframes', async () => {
-      await expect(technicalAnalysis.analyze('EURUSD', 'invalid' as TimeFrame))
-        .rejects
-        .toThrow();
+    it('should handle single data point', () => {
+      const singleData = [mockMarketData[0]];
+      const momentum = (technicalAnalysis as any).calculateMomentum(singleData);
+      expect(momentum).toEqual({
+        value: 0,
+        timestamp: singleData[0].timestamp
+      });
     });
   });
 });

@@ -1,42 +1,6 @@
-import MetaApi, { 
-  MetatraderAccount, 
-  RpcConnection, 
-  MarketDataSubscription, 
-  MarketDataUnsubscription,
-  SynchronizationListener,
-  ConnectionHealthMonitor,
-  MarketDataError,
-  MarketTradeError,
-  TerminalState,
-  MetatraderAccountInformation,
-  MetatraderSymbolSpecification,
-  MetatraderPosition,
-  MetatraderOrder,
-  MetatraderSymbolPrice,
-  MetatraderCandle,
-  MetatraderTick,
-  MetatraderBook
-} from 'metaapi.cloud-sdk';
+import MetaApi from 'metaapi.cloud-sdk';
 import { config } from '../config/config';
-
-// Enums for better type safety
-export enum OrderType {
-  Buy = 'buy',
-  Sell = 'sell'
-}
-
-export enum OrderTimeInForce {
-  GTC = 'GTC',
-  IOC = 'IOC',
-  FOK = 'FOK'
-}
-
-export enum OrderStatus {
-  Pending = 'PENDING',
-  Executed = 'EXECUTED',
-  Rejected = 'REJECTED',
-  Cancelled = 'CANCELLED'
-}
+import { OrderType, OrderTimeInForce, OrderStatus } from '../types/market';
 
 // Interfaces with readonly properties for better immutability
 export interface SymbolPrice {
@@ -88,7 +52,7 @@ export async function initializeMetaApi(options?: ConnectionOptions): Promise<Me
 }
 
 // Get MetaApi connection with proper error handling and options
-export async function getMetaApiConnection(options: ConnectionOptions = {}): Promise<RpcConnection> {
+export async function getMetaApiConnection(options: ConnectionOptions = {}): Promise<any> {
   if (!metaApi) {
     await initializeMetaApi(options);
   }
@@ -98,7 +62,7 @@ export async function getMetaApiConnection(options: ConnectionOptions = {}): Pro
       throw new Error('MT5 account ID not configured');
     }
 
-    const account: MetatraderAccount = await metaApi!.metatraderAccountApi.getAccount(config.MT5_ACCOUNT_ID);
+    const account: any = await metaApi.metatraderAccountApi.getAccount(config.MT5_ACCOUNT_ID);
     if (!account) {
       throw new Error('MT5 account not found');
     }
@@ -187,5 +151,26 @@ export async function placeMarketOrder(
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error occurred'
     };
+  }
+}
+
+// Subscribe to market data with proper error handling and validation
+export async function subscribeToMarketData(symbol: string, callback: (data: any) => void): Promise<() => void> {
+  if (!symbol || typeof symbol !== 'string') {
+    throw new Error('Invalid symbol provided');
+  }
+
+  const connection = await getMetaApiConnection();
+  try {
+    await connection.subscribeToMarketData(symbol);
+
+    connection.on('onSymbolPriceUpdated', (data: any) => {
+      callback(data);
+    });
+
+    return () => connection.unsubscribeFromMarketData(symbol);
+  } catch (error) {
+    console.error('Error subscribing to market data:', error);
+    throw error instanceof Error ? error : new Error('Unknown error subscribing to market data');
   }
 }

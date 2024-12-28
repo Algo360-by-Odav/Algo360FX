@@ -1,5 +1,5 @@
 import WebSocket, { WebSocketServer } from 'ws';
-import type { MetaApi, MetatraderAccount } from 'metaapi.cloud-sdk';
+import type { MetaApi, MetatraderAccount, MarketDataEvent } from 'metaapi.cloud-sdk';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -143,11 +143,11 @@ export class MT5Bridge {
           const terminal = connection.terminal;
           if (!terminal) throw new Error('Not connected to MT5');
 
-          const result = type === 'buy' 
+          const order = type === 'buy'
             ? await terminal.createMarketBuyOrder(symbol, volume, { stopLoss, takeProfit, comment: 'Order from Algo360FX' })
-            : await terminal.createMarketSellOrder(symbol, volume, { stopLoss, takeProfit, comment: 'Order from Algo360FX' });
+            : await terminal.createMarketBuyOrder(symbol, -volume, { stopLoss, takeProfit, comment: 'Order from Algo360FX' });
 
-          this.sendResponse(ws, 'order_placed', result);
+          this.sendResponse(ws, 'order_placed', { ...order });
         } catch (error) {
           this.sendError(ws, error instanceof Error ? error.message : 'Failed to place order');
         }
@@ -170,18 +170,21 @@ export class MT5Bridge {
       await terminal.subscribeToMarketData('EURUSD');
       
       // Listen for updates
-      terminal.on('onSymbolPriceUpdated', (price: MT5PriceUpdate) => {
-        this.sendResponse(ws, 'price_update', price);
+      terminal.on('onSymbolPriceUpdated', (data: MarketDataEvent) => {
+        const price = data as unknown as MT5PriceUpdate;
+        this.sendResponse(ws, 'price_update', { ...price });
       });
 
       // Listen for position updates
-      terminal.on('onPositionUpdated', (position: MT5Position) => {
-        this.sendResponse(ws, 'position_update', position);
+      terminal.on('onPositionUpdated', (data: MarketDataEvent) => {
+        const position = data as unknown as MT5Position;
+        this.sendResponse(ws, 'position_update', { ...position });
       });
 
       // Listen for order updates
-      terminal.on('onOrderUpdated', (order: MT5Order) => {
-        this.sendResponse(ws, 'order_update', order);
+      terminal.on('onOrderUpdated', (data: MarketDataEvent) => {
+        const order = data as unknown as MT5Order;
+        this.sendResponse(ws, 'order_update', { ...order });
       });
 
       // Listen for connection status
@@ -193,8 +196,12 @@ export class MT5Bridge {
         this.sendResponse(ws, 'status', { connected: false });
       });
 
-      terminal.on('error', (error: Error) => {
-        this.sendError(ws, error.message);
+      terminal.on('error', (data: MarketDataEvent) => {
+        const error = data as unknown as Error;
+        this.sendResponse(ws, 'error', { 
+          message: error.message,
+          name: error.name
+        });
       });
 
     } catch (error) {

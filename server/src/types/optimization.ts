@@ -1,5 +1,9 @@
+import { TimeFrame } from './market';
+
 export interface OptimizationConfig {
   strategyId: string;
+  symbol: string;
+  timeframe: string;
   parameters: {
     [key: string]: {
       min: number;
@@ -7,23 +11,21 @@ export interface OptimizationConfig {
       step: number;
     };
   };
-  timeframe: string;
-  startDate: string;
-  endDate: string;
-  symbol: string;
-  optimizationMetric: 'profit' | 'sharpeRatio' | 'drawdown';
 }
 
-export interface OptimizationResultNew {
-  optimizationId: string;
-  strategyId: string;
-  parameters: { [key: string]: number };
-  performance: {
-    profit: number;
+export interface OptimizationResult {
+  parameters: {
+    [key: string]: number;
+  };
+  metrics: {
+    profitFactor: number;
     sharpeRatio: number;
     maxDrawdown: number;
-    winRate: number;
-    tradeCount: number;
   };
-  timestamp: string;
+}
+
+export interface OptimizationMessage {
+  type: 'start_optimization' | 'stop_optimization' | 'get_optimization_status';
+  config?: OptimizationConfig;
+  optimizationId?: string;
 }

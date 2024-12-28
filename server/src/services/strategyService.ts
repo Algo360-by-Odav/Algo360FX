@@ -56,13 +56,17 @@ export interface StrategyParameters {
 }
 
 export interface Trade {
-  readonly entryTime: Date;
-  readonly exitTime: Date;
-  readonly entryPrice: number;
-  readonly exitPrice: number;
+  readonly id: string;
+  readonly symbol: string;
   readonly type: OrderType;
-  readonly profit: number;
+  readonly openTime: Date;
+  readonly closeTime: Date;
+  readonly openPrice: number;
+  readonly closePrice: number;
   readonly volume: number;
+  readonly profit: number;
+  readonly stopLoss: number;
+  readonly takeProfit: number;
 }
 
 export interface BacktestResults {
@@ -130,13 +134,17 @@ const strategySchema = new Schema<StrategyDocument>({
       maxDrawdown: { type: Number },
       sharpeRatio: { type: Number },
       trades: [{
-        entryTime: { type: Date, required: true },
-        exitTime: { type: Date, required: true },
-        entryPrice: { type: Number, required: true },
-        exitPrice: { type: Number, required: true },
+        id: { type: String, required: true },
+        symbol: { type: String, required: true },
         type: { type: String, enum: Object.values(OrderType), required: true },
+        openTime: { type: Date, required: true },
+        closeTime: { type: Date, required: true },
+        openPrice: { type: Number, required: true },
+        closePrice: { type: Number, required: true },
+        volume: { type: Number, required: true },
         profit: { type: Number, required: true },
-        volume: { type: Number, required: true }
+        stopLoss: { type: Number, required: true },
+        takeProfit: { type: Number, required: true }
       }]
     }
   },
@@ -155,6 +163,10 @@ export async function searchStrategies(query: string): Promise<ReadonlyArray<Sea
       { $text: { $search: query } },
       { score: { $meta: 'textScore' } }
     ).sort({ score: { $meta: 'textScore' } });
+
+    if (!strategies || !strategies.length) {
+      return [];
+    }
 
     return strategies.map((strategy: StrategyDocument) => ({
       id: strategy._id.toString(),
@@ -187,43 +199,80 @@ export async function getStrategyById(id: string): Promise<StrategyDocument | nu
   return Strategy.findById(id);
 }
 
-export async function runBacktest(id: string, startDate: Date, endDate: Date): Promise<StrategyDocument | null> {
-  const strategy = await Strategy.findById(id);
-  if (!strategy) return null;
-
-  try {
-    // Simulate backtest results
-    const results: BacktestResults = {
+export class StrategyService {
+  private async simulateBacktest(strategy: StrategyDocument): Promise<BacktestResults> {
+    const results: Partial<BacktestResults> = {
       totalTrades: Math.floor(Math.random() * 100) + 50,
-      winningTrades: 0,
-      losingTrades: 0,
-      winRate: 0,
-      profitFactor: 0,
-      netProfit: 0,
-      maxDrawdown: 0,
-      sharpeRatio: 0,
       trades: []
     };
 
-    // Calculate derived metrics
-    results.winningTrades = Math.floor(results.totalTrades * 0.6);
-    results.losingTrades = results.totalTrades - results.winningTrades;
-    results.winRate = results.winningTrades / results.totalTrades;
-    results.profitFactor = 1.5;
-    results.netProfit = 10000;
-    results.maxDrawdown = 2000;
-    results.sharpeRatio = 1.8;
+    // Calculate simulated results
+    if (!results || !results.totalTrades) {
+      return {
+        totalTrades: 0,
+        winningTrades: 0,
+        losingTrades: 0,
+        winRate: 0,
+        profitFactor: 0,
+        netProfit: 0,
+        maxDrawdown: 0,
+        sharpeRatio: 0,
+        trades: []
+      };
+    }
 
-    // Update strategy with backtest results
-    strategy.backtest = {
-      startDate,
-      endDate,
-      results
-    };
+    const winningTrades = Math.floor(results.totalTrades * 0.6);
+    const losingTrades = results.totalTrades - winningTrades;
+    const winRate = winningTrades / results.totalTrades;
+    const profitFactor = 1.5;
+    const netProfit = 10000;
+    const maxDrawdown = 2000;
+    const sharpeRatio = 1.8;
 
-    return strategy.save();
-  } catch (error) {
-    console.error('Error running backtest:', error);
-    return null;
+    // Generate simulated trades
+    const trades: Trade[] = [];
+    let currentTime = new Date();
+    for (let i = 0; i < results.totalTrades; i++) {
+      const isWinningTrade = i < winningTrades;
+      const trade: Trade = {
+        id: `trade-${i}`,
+        symbol: strategy.name,
+        type: Math.random() > 0.5 ? OrderType.Buy : OrderType.Sell,
+        openTime: currentTime,
+        closeTime: new Date(currentTime.getTime() + 3600000), // 1 hour later
+        openPrice: 1.1000 + Math.random() * 0.0100,
+        closePrice: 1.1000 + Math.random() * 0.0100,
+        volume: 0.1,
+        profit: isWinningTrade ? Math.random() * 100 : -Math.random() * 50,
+        stopLoss: 1.0950,
+        takeProfit: 1.1050
+      };
+      trades.push(trade);
+      currentTime = new Date(currentTime.getTime() + 3600000);
+    }
+
+    Object.assign(results, {
+      winningTrades,
+      losingTrades,
+      winRate,
+      profitFactor,
+      netProfit,
+      maxDrawdown,
+      sharpeRatio,
+      trades
+    });
+
+    return results as BacktestResults;
+  }
+
+  public async runBacktest(strategy: StrategyDocument): Promise<StrategyDocument> {
+    try {
+      const results = await this.simulateBacktest(strategy);
+      Object.assign(strategy, { backtest: { startDate: new Date(), endDate: new Date(), results } });
+      return strategy.save();
+    } catch (error) {
+      console.error('Error running backtest:', error);
+      throw new Error('Failed to run backtest');
+    }
   }
 }

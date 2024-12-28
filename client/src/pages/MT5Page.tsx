@@ -10,94 +10,54 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
+import { useWebSocketContext } from '../contexts/WebSocketContext';
 
 interface MT5State {
-  connected: boolean;
   accountInfo: any;
-  error: string | null;
-  loading: boolean;
 }
 
 const MT5Page: React.FC = () => {
   const [accountId, setAccountId] = useState('');
   const [state, setState] = useState<MT5State>({
-    connected: false,
     accountInfo: null,
-    error: null,
-    loading: false,
   });
-  const [ws, setWs] = useState<WebSocket | null>(null);
+
+  const {
+    connected,
+    connecting,
+    error,
+    send,
+    disconnect,
+    lastMessage,
+  } = useWebSocketContext();
 
   useEffect(() => {
-    return () => {
-      if (ws) {
-        ws.close();
+    if (lastMessage) {
+      if (lastMessage.type === 'accountInfo') {
+        setState(prev => ({
+          ...prev,
+          accountInfo: lastMessage.data,
+        }));
       }
-    };
-  }, [ws]);
+    }
+  }, [lastMessage]);
 
-  const connectToMT5 = () => {
+  const handleConnect = () => {
     if (!accountId) {
-      setState(prev => ({ ...prev, error: 'Please enter an account ID' }));
       return;
     }
 
-    setState(prev => ({ ...prev, loading: true, error: null }));
-    const socket = new WebSocket('ws://localhost:6778');
-
-    socket.onopen = () => {
-      console.log('Connected to MT5 bridge');
-      socket.send(JSON.stringify({
-        action: 'connect',
-        accountId: accountId
-      }));
-    };
-
-    socket.onmessage = (event) => {
-      const response = JSON.parse(event.data);
-      if (response.error) {
-        setState(prev => ({
-          ...prev,
-          error: response.error,
-          loading: false
-        }));
-      } else {
-        setState(prev => ({
-          ...prev,
-          connected: true,
-          error: null,
-          loading: false
-        }));
-        // Get account info after successful connection
-        socket.send(JSON.stringify({
-          action: 'getAccountInfo',
-          accountId: accountId
-        }));
-      }
-    };
-
-    socket.onerror = (error) => {
-      setState(prev => ({
-        ...prev,
-        error: 'Failed to connect to MT5',
-        loading: false
-      }));
-    };
-
-    setWs(socket);
+    send({
+      action: 'connect',
+      accountId: accountId
+    });
   };
 
-  const disconnectFromMT5 = () => {
-    if (ws) {
-      ws.close();
-      setWs(null);
-      setState({
-        connected: false,
-        accountInfo: null,
-        error: null,
-        loading: false
-      });
-    }
+  const handleDisconnect = () => {
+    disconnect();
+    setState({
+      accountInfo: null,
+    });
   };
 
   return (
@@ -115,24 +75,26 @@ const MT5Page: React.FC = () => {
                 label="MT5 Account ID"
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
-                disabled={state.connected}
+                disabled={connected}
+                error={!accountId && connected}
+                helperText={!accountId && connected ? 'Account ID is required' : ''}
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              {!state.connected ? (
+              {!connected ? (
                 <Button
                   variant="contained"
-                  onClick={connectToMT5}
-                  disabled={state.loading}
-                  startIcon={state.loading ? <CircularProgress size={20} /> : null}
+                  onClick={handleConnect}
+                  disabled={connecting || !accountId}
+                  startIcon={connecting ? <CircularProgress size={20} /> : null}
                 >
-                  Connect to MT5
+                  {connecting ? 'Connecting...' : 'Connect to MT5'}
                 </Button>
               ) : (
                 <Button
                   variant="outlined"
                   color="secondary"
-                  onClick={disconnectFromMT5}
+                  onClick={handleDisconnect}
                 >
                   Disconnect
                 </Button>
@@ -141,13 +103,13 @@ const MT5Page: React.FC = () => {
           </Grid>
         </Paper>
 
-        {state.error && (
+        {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
-            {state.error}
+            {error}
           </Alert>
         )}
 
-        {state.connected && (
+        {connected && (
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Account Information
