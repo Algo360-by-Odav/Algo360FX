@@ -1,24 +1,24 @@
 import express = require('express');
-const router = express.Router();
+const router: express.Router = express.Router();
 
 // User preferences
-router.get('/preferences', (req, res) => {
+router.get('/preferences', (req: express.Request, res: express.Response) => {
   // TODO: Implement user preferences retrieval
   res.json({ message: 'User preferences endpoint' });
 });
 
-router.post('/preferences', (req, res) => {
+router.post('/preferences', (req: express.Request, res: express.Response) => {
   // TODO: Implement user preferences update
   res.json({ message: 'User preferences updated' });
 });
 
 // Auth routes
-router.post('/register', (req, res) => {
+router.post('/register', (req: express.Request, res: express.Response) => {
   // TODO: Implement user registration
   res.json({ message: 'User registration endpoint' });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', (req: express.Request, res: express.Response) => {
   // TODO: Implement user login
   res.json({ message: 'User login endpoint' });
 });

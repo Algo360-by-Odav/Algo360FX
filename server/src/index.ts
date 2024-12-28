@@ -10,7 +10,7 @@ import positionRoutes from './routes/positionRoutes';
 
 dotenv.config();
 
-const app = express();
+const app: express.Application = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {

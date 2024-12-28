@@ -1,22 +1,22 @@
 import express = require('express');
-const router = express.Router();
+const router: express.Router = express.Router();
 
-router.get('/', (req, res) => {
+router.get('/', (req: express.Request, res: express.Response) => {
   // TODO: Implement positions retrieval
   res.json({ message: 'Positions data endpoint' });
 });
 
-router.post('/', (req, res) => {
+router.post('/', (req: express.Request, res: express.Response) => {
   // TODO: Implement position creation
   res.json({ message: 'Position created' });
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', (req: express.Request, res: express.Response) => {
   // TODO: Implement position update
   res.json({ message: 'Position updated' });
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', (req: express.Request, res: express.Response) => {
   // TODO: Implement position deletion
   res.json({ message: 'Position deleted' });
 });
