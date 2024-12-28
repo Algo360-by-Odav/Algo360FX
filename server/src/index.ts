@@ -1,8 +1,8 @@
-import express from 'express';
+import * as express from 'express';
 import { createServer } from 'http';
-import cors from 'cors';
+import * as cors from 'cors';
 import { Server } from 'socket.io';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 import userRoutes from './routes/userRoutes';
 import portfolioRoutes from './routes/portfolioRoutes';
 import strategyRoutes from './routes/strategyRoutes';
@@ -10,7 +10,7 @@ import positionRoutes from './routes/positionRoutes';
 
 dotenv.config();
 
-const app = express();
+const app = express.default();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -20,8 +20,8 @@ const io = new Server(httpServer, {
 });
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors.default());
+app.use(express.default.json());
 
 // Routes
 app.use('/user', userRoutes);

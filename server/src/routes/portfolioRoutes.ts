@@ -1,6 +1,6 @@
-import express, { Router } from 'express';
+import * as express from 'express';
 
-const router = Router();
+const router = express.Router();
 
 router.get('/', (req, res) => {
   // TODO: Implement portfolio retrieval
