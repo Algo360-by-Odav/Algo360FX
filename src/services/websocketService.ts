@@ -1,12 +1,99 @@
 import { io, Socket } from 'socket.io-client';
 import { config } from '../config/config';
 
-type WebSocketCallback = (data: any) => void;
-type ConnectionStatusCallback = (status: 'connected' | 'disconnected' | 'connecting') => void;
+type WebSocketEvent = 
+  | 'market_data'
+  | 'order_book'
+  | 'ticker'
+  | 'trade_update'
+  | 'position_update'
+  | 'portfolio_update'
+  | 'error'
+  | string;
+
+type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
+
+interface WebSocketConfig {
+  path: string;
+  reconnection: boolean;
+  reconnectionAttempts: number;
+  reconnectionDelay: number;
+  reconnectionDelayMax: number;
+  timeout: number;
+  transports: string[];
+  forceNew: boolean;
+  autoConnect: boolean;
+  secure: boolean;
+  rejectUnauthorized: boolean;
+}
+
+interface MarketData {
+  symbol: string;
+  price: number;
+  timestamp: number;
+  volume: number;
+}
+
+interface OrderBook {
+  symbol: string;
+  bids: Array<[number, number]>;
+  asks: Array<[number, number]>;
+  timestamp: number;
+}
+
+interface Ticker {
+  symbol: string;
+  bid: number;
+  ask: number;
+  last: number;
+  volume: number;
+  timestamp: number;
+}
+
+interface Trade {
+  id: string;
+  symbol: string;
+  side: 'buy' | 'sell';
+  price: number;
+  volume: number;
+  timestamp: number;
+}
+
+interface Position {
+  symbol: string;
+  side: 'long' | 'short';
+  volume: number;
+  entryPrice: number;
+  currentPrice: number;
+  unrealizedPnL: number;
+  timestamp: number;
+}
+
+interface Portfolio {
+  balance: number;
+  equity: number;
+  margin: number;
+  freeMargin: number;
+  marginLevel: number;
+  positions: Position[];
+  timestamp: number;
+}
+
+type WebSocketData = 
+  | MarketData
+  | OrderBook
+  | Ticker
+  | Trade
+  | Position
+  | Portfolio
+  | { error: string };
+
+type WebSocketCallback<T extends WebSocketData = WebSocketData> = (data: T) => void;
+type ConnectionStatusCallback = (status: ConnectionStatus) => void;
 
 class WebSocketService {
   private socket: Socket | null = null;
-  private subscribers: Map<string, WebSocketCallback[]> = new Map();
+  private subscribers: Map<WebSocketEvent, Set<WebSocketCallback>> = new Map();
   private statusSubscribers: Set<ConnectionStatusCallback> = new Set();
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 10;
@@ -21,7 +108,7 @@ class WebSocketService {
       'ws://localhost:5000';
   }
 
-  connect() {
+  connect(): void {
     if (this.socket?.connected) {
       return;
     }
@@ -46,7 +133,7 @@ class WebSocketService {
     this.notifyStatusChange('connecting');
 
     try {
-      this.socket = io(this.wsUrl, {
+      const config: WebSocketConfig = {
         path: '/ws',
         reconnection: true,
         reconnectionAttempts: 5,
@@ -58,7 +145,9 @@ class WebSocketService {
         autoConnect: false,
         secure: this.isProduction,
         rejectUnauthorized: false
-      });
+      };
+
+      this.socket = io(this.wsUrl, config);
 
       // Set up event handlers before connecting
       this.setupSocketHandlers();
@@ -72,7 +161,7 @@ class WebSocketService {
     }
   }
 
-  private setupSocketHandlers() {
+  private setupSocketHandlers(): void {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
@@ -91,27 +180,27 @@ class WebSocketService {
       this.notifyStatusChange('disconnected');
     });
 
-    this.socket.on('connect_error', (error) => {
+    this.socket.on('connect_error', (error: Error) => {
       console.error('Socket.IO connection error:', error);
       this.notifyStatusChange('disconnected');
       this.handleReconnect();
     });
 
-    this.socket.on('error', (error) => {
+    this.socket.on('error', (error: Error) => {
       console.error('Socket.IO error:', error);
       this.notifyStatusChange('disconnected');
       this.handleReconnect();
     });
 
     // Handle incoming messages
-    this.socket.onAny((eventName, data) => {
-      if (this.subscribers.has(eventName)) {
-        this.subscribers.get(eventName)?.forEach(callback => callback(data));
+    this.socket.onAny((eventName: string, data: WebSocketData) => {
+      if (this.subscribers.has(eventName as WebSocketEvent)) {
+        this.subscribers.get(eventName as WebSocketEvent)?.forEach(callback => callback(data));
       }
     });
   }
 
-  private handleReconnect() {
+  private handleReconnect(): void {
     this.reconnectAttempts++;
     console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
     
@@ -142,50 +231,43 @@ class WebSocketService {
     }, delay);
   }
 
-  subscribe(event: string, callback: WebSocketCallback) {
+  subscribe<T extends WebSocketData>(event: WebSocketEvent, callback: WebSocketCallback<T>): void {
     if (!this.subscribers.has(event)) {
-      this.subscribers.set(event, []);
+      this.subscribers.set(event, new Set());
       // Only emit subscribe if we're connected
       if (this.socket?.connected) {
         this.socket.emit('subscribe', event);
       }
     }
-    this.subscribers.get(event)?.push(callback);
+    this.subscribers.get(event)?.add(callback as WebSocketCallback);
   }
 
-  unsubscribe(event: string, callback: WebSocketCallback) {
+  unsubscribe<T extends WebSocketData>(event: WebSocketEvent, callback: WebSocketCallback<T>): void {
     const callbacks = this.subscribers.get(event);
     if (callbacks) {
-      const index = callbacks.indexOf(callback);
-      if (index !== -1) {
-        callbacks.splice(index, 1);
-      }
-      if (callbacks.length === 0) {
+      callbacks.delete(callback as WebSocketCallback);
+      if (callbacks.size === 0) {
         this.subscribers.delete(event);
-        this.socket?.emit('unsubscribe', event);
+        if (this.socket?.connected) {
+          this.socket.emit('unsubscribe', event);
+        }
       }
     }
   }
 
-  subscribeToConnectionStatus(callback: ConnectionStatusCallback) {
+  subscribeToConnectionStatus(callback: ConnectionStatusCallback): void {
     this.statusSubscribers.add(callback);
-    // Immediately notify of current status
-    if (this.socket) {
-      callback(this.socket.connected ? 'connected' : 'disconnected');
-    } else {
-      callback('disconnected');
-    }
   }
 
-  unsubscribeFromConnectionStatus(callback: ConnectionStatusCallback) {
+  unsubscribeFromConnectionStatus(callback: ConnectionStatusCallback): void {
     this.statusSubscribers.delete(callback);
   }
 
-  private notifyStatusChange(status: 'connected' | 'disconnected' | 'connecting') {
+  private notifyStatusChange(status: ConnectionStatus): void {
     this.statusSubscribers.forEach(callback => callback(status));
   }
 
-  disconnect() {
+  disconnect(): void {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
@@ -194,7 +276,6 @@ class WebSocketService {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    this.reconnectAttempts = 0;
     this.notifyStatusChange('disconnected');
   }
 
