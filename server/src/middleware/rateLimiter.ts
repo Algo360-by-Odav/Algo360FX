@@ -5,16 +5,22 @@ import { config } from '../config/config';
 const createLimiterOptions = (windowMs: number, max: number, message: string) => ({
     windowMs,
     max,
-    message,
+    message: JSON.stringify({ error: message }),
     standardHeaders: true,
     legacyHeaders: false,
+    handler: (req: any, res: any) => {
+        res.status(429).json({
+            error: message,
+            retryAfter: Math.ceil(windowMs / 1000),
+        });
+    },
 });
 
 // Development limits
 const DEV_LIMITS = {
-    general: 200,
-    auth: 20,
-    verification: 10
+    general: 1000,
+    auth: 100,
+    verification: 50
 };
 
 // Production limits
@@ -50,6 +56,6 @@ export const verificationLimiter = rateLimit(
     createLimiterOptions(
         60 * 60 * 1000, // 1 hour
         limits.verification,
-        'Too many verification code requests from this IP, please try again after an hour.'
+        'Too many verification code requests from this IP, please try again after 1 hour.'
     )
 );
