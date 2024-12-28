@@ -24,10 +24,16 @@ const httpServer = createServer(app);
 console.log('HTTP server created');
 
 // CORS configuration
-app.use(cors({
-  origin: config.CORS_ORIGIN,
-  credentials: true
-}));
+const corsOptions = {
+  origin: [config.CORS_ORIGIN, 'https://algo360fx-client.onrender.com'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 600 // Increase preflight cache time to 10 minutes
+};
+
+app.use(cors(corsOptions));
 
 // Apply general rate limiter to all routes
 app.use(generalLimiter);
@@ -104,17 +110,12 @@ app.use('/', marketRouter);
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
 const io = new Server(httpServer, {
-  path: config.WS_PATH,
-  cors: {
-    origin: config.CORS_ORIGIN,
-    methods: ['GET', 'POST'],
-    credentials: true
-  },
-  transports: ['websocket'],
-  pingTimeout: 10000,
-  pingInterval: 5000,
-  maxHttpBufferSize: 1e6, // 1 MB
-  connectTimeout: 10000
+  cors: corsOptions,
+  path: '/socket.io/',
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 console.log('Socket.IO server initialized');
 
@@ -147,8 +148,8 @@ connectDatabase()
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log('WebSocket server endpoints:');
-      console.log(`- Trading: ws://localhost:${PORT}${config.WS_PATH}`);
-      console.log(`- Optimization: ws://localhost:${PORT}${config.WS_PATH}`);
+      console.log(`- Trading: ws://localhost:${PORT}/socket.io/`);
+      console.log(`- Optimization: ws://localhost:${PORT}/socket.io/`);
     });
   })
   .catch((error) => {
