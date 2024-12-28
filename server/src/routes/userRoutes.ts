@@ -1,6 +1,6 @@
-import * as express from 'express';
+import { Router } from 'express';
 
-const router = express.Router();
+const router = Router();
 
 // User preferences
 router.get('/preferences', (req, res) => {
