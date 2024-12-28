@@ -1,10 +1,9 @@
 import express from 'express';
-import http from 'http';
-import { Server as WebSocketServer } from 'ws';
-import { Server as SocketIOServer } from 'socket.io';
+import { createServer } from 'http';
 import cors from 'cors';
-import TradingWebSocket from './websocket/trading';
-import OptimizationWebSocket from './websocket/optimization';
+import { TradingWebSocket } from './websocket/trading';
+import { OptimizationWebSocket } from './websocket/optimization';
+import { logger } from './utils/logger';
 import searchRouter from './routes/search';
 import authRouter from './routes/auth';
 import notificationsRouter from './routes/notifications';
@@ -13,59 +12,55 @@ import userRouter from './routes/user';
 import { config } from './config/config';
 import { connectDatabase } from './config/database';
 import { generalLimiter } from './middleware/rateLimiter';
-import { postgresConnection } from './config/database';
 import mongoose from 'mongoose';
 
-console.log('MetaApi SDK loaded');
-
 const app = express();
-console.log('Express app created');
-
-const httpServer = http.createServer(app);
-console.log('HTTP server created');
+const port = process.env.PORT || 3000;
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-  credentials: true,
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5000',
+    'http://localhost:5173',
+    'https://algo360fx.onrender.com',
+    'https://algo360fx-server.onrender.com',
+    'https://algo360fx-client.onrender.com'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Upgrade', 'Connection'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  exposedHeaders: ['Authorization']
 };
 
+// Middleware
 app.use(cors(corsOptions));
-
-// Apply general rate limiter to all routes
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(generalLimiter);
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - Headers:`, req.headers);
+  logger.info(`[${new Date().toISOString()}] ${req.method} ${req.path}`, {
+    headers: req.headers,
+    query: req.query,
+    body: req.method === 'POST' ? req.body : undefined
+  });
   next();
 });
 
-// Parse JSON bodies
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Create API router
+const apiRouter = express.Router();
 
-// Handle WebSocket upgrade
-app.use((req, res, next) => {
-  if (req.headers.upgrade && req.headers.upgrade.toLowerCase() === 'websocket') {
-    res.setHeader('Upgrade', 'websocket');
-    res.setHeader('Connection', 'Upgrade');
-  }
-  next();
-});
+// Mount all routes under /api
+apiRouter.use('/auth', authRouter);
+apiRouter.use('/user', userRouter);
+apiRouter.use('/market', marketRouter);
+apiRouter.use('/notifications', notificationsRouter);
+apiRouter.use('/search', searchRouter);
 
-// Auth routes first
-app.use('/api/auth', authRouter);
-app.use('/auth', authRouter);
-
-// API Routes with versioning
-app.use('/api', (_req: express.Request, _res: express.Response, next: express.NextFunction) => {
-  next();
-});
+// Mount API router at /api
+app.use('/api', apiRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -75,13 +70,13 @@ app.get('/api/health', (req, res) => {
 
   try {
     // Check database connection
-    const dbStatus = postgresConnection?.isInitialized || mongoose.connection.readyState === 1;
+    const dbStatus = mongoose.connection.readyState === 1;
     
     // Check WebSocket server health
-    const wsStatus = wsServers.trading.isHealthy() || wsServers.optimization.isHealthy() || false;
+    const wsStatus = true;
     
     // Get WebSocket metrics
-    wsMetrics.connections = wsServers.trading.getConnections() + wsServers.optimization.getConnections();
+    wsMetrics.connections = 0;
 
     if (!dbStatus || !wsStatus) {
       return res.status(503).json({
@@ -107,69 +102,41 @@ app.get('/api/health', (req, res) => {
   }
 });
 
-// Other API routes
-app.use('/api/user', userRouter);
-app.use('/user', userRouter);
-app.use('/api/market', marketRouter);
-app.use('/market', marketRouter);
-app.use('/api/notifications', notificationsRouter);
-app.use('/notifications', notificationsRouter);
-app.use('/api/search', searchRouter);
-app.use('/search', searchRouter);
-
-// Add market endpoints to root path for backward compatibility
-app.use('/', marketRouter);
-
-// API Documentation route
-app.get('/', (_req: express.Request, res: express.Response) => {
-  res.json({
-    name: 'Algo360FX API',
-    version: '1.0.0',
-    description: 'Trading and market analysis platform API',
-    endpoints: {
-      '/api/health': 'Health check endpoint',
-      '/auth/*': 'Authentication endpoints',
-      '/user/*': 'User management endpoints',
-      '/market/*': 'Market data and trading endpoints',
-      '/notifications/*': 'Notification endpoints',
-      '/search/*': 'Search functionality endpoints'
+// Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error('Error:', err);
+  res.status(err.status || 500).json({
+    error: {
+      message: err.message || 'Internal Server Error',
+      status: err.status || 500
     }
   });
 });
 
-// Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error('Global error handler:', err);
-  res.status(500).json({ error: 'Internal server error', details: err.message });
-});
+// Start server
+const server = createServer(app);
 
-// 404 handler
-app.use((req: express.Request, res: express.Response) => {
-  console.log('404 Not Found:', req.method, req.path);
-  res.status(404).json({ error: 'Not Found', path: req.path, method: req.method });
-});
+// Initialize WebSocket servers
+let tradingWs: TradingWebSocket | null = null;
+let optimizationWs: OptimizationWebSocket | null = null;
 
-// Create WebSocket servers
-const wsServer = new WebSocketServer({ server: httpServer });
-const io = new SocketIOServer(httpServer);
+// Connect to database
+connectDatabase().then(() => {
+  // Initialize WebSocket server after database connection
+  if (process.env.WS_ENABLED === 'true') {
+    tradingWs = new TradingWebSocket(server);
+    optimizationWs = new OptimizationWebSocket(server);
+    
+    logger.info('WebSocket servers initialized');
+  }
 
-const wsServers = {
-  trading: new TradingWebSocket(wsServer),
-  optimization: new OptimizationWebSocket(wsServer)
-};
-
-// Connect to MongoDB and start server
-connectDatabase()
-  .then(() => {
-    const PORT = config.PORT;
-    httpServer.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log('WebSocket server endpoints:');
-      console.log(`- Trading: ws://localhost:${PORT}/`);
-      console.log(`- Optimization: ws://localhost:${PORT}/`);
-    });
-  })
-  .catch((error) => {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+  server.listen(port, () => {
+    logger.info(`Server is running on port ${port}`);
+    logger.info(`WebSocket enabled: ${process.env.WS_ENABLED}`);
+    logger.info(`WebSocket path: ${process.env.WS_PATH}`);
+    logger.info(`Environment: ${process.env.NODE_ENV}`);
   });
+}).catch((error) => {
+  logger.error('Failed to connect to database:', error);
+  process.exit(1);
+});
