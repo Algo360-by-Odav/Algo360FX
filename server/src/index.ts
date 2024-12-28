@@ -38,8 +38,15 @@ app.use(cors(corsOptions));
 // Apply general rate limiter to all routes
 app.use(generalLimiter);
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
 // Parse JSON bodies
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // API Documentation route
 app.get('/', (_req: express.Request, res: express.Response) => {

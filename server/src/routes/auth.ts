@@ -105,7 +105,11 @@ router.post('/register',
   body('lastName').notEmpty().withMessage('Last name is required'),
   body('verificationCode').notEmpty().withMessage('Verification code is required'),
   async (req: Request, res: Response) => {
-    console.log('Registration request body:', req.body);
+    console.log('Registration request received:', {
+      path: req.path,
+      method: req.method,
+      body: { ...req.body, password: '[REDACTED]' }
+    });
     
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -149,62 +153,31 @@ router.post('/register',
         lastName,
       });
 
-      // Save user to database
-      try {
-        await user.save();
-        console.log('User saved successfully:', email);
-      } catch (saveError: any) {
-        console.error('Error saving user:', {
-          error: saveError.message,
-          code: saveError.code,
-          keyPattern: saveError.keyPattern,
-          keyValue: saveError.keyValue
-        });
-        throw saveError;
-      }
-
-      // Clear verification code
-      verificationCodes.delete(email);
+      await user.save();
+      console.log('User registered successfully:', email);
 
       // Generate JWT token
       const token = jwt.sign(
-        { 
-          id: user._id.toString(),
-          _id: user._id.toString(),
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName
-        },
+        { id: user._id, email: user.email },
         config.JWT_SECRET,
         { expiresIn: '24h' }
       );
 
-      return res.json({
+      // Remove verification code
+      verificationCodes.delete(email);
+
+      return res.status(201).json({
         success: true,
         token,
         user: {
           id: user._id,
           email: user.email,
           firstName: user.firstName,
-          lastName: user.lastName,
-        },
+          lastName: user.lastName
+        }
       });
-    } catch (error: any) {
-      console.error('Registration error:', {
-        message: error.message,
-        code: error.code,
-        name: error.name,
-        stack: error.stack
-      });
-      
-      if (error instanceof mongoose.Error.ValidationError) {
-        return res.status(400).json({ error: error.message });
-      }
-      
-      if (error.code === 11000) {  // Duplicate key error
-        return res.status(400).json({ error: 'User already exists' });
-      }
-      
+    } catch (error) {
+      console.error('Registration error:', error);
       return res.status(500).json({ error: 'Failed to register user' });
     }
   }
