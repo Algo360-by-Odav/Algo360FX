@@ -10,7 +10,8 @@
       "es2015.collection",
       "es2015.iterable",
       "es2015.symbol",
-      "es2015.symbol.wellknown"
+      "es2015.symbol.wellknown",
+      "es2018.promise"
     ],
     "skipLibCheck": true,
     "sourceMap": true,
@@ -34,6 +35,7 @@
     "paths": {
       "*": ["node_modules/*", "src/types/*"]
     },
+    "types": ["node"],
     "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "exclude": ["node_modules"],
