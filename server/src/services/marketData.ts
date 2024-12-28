@@ -1,14 +1,82 @@
 import axios from 'axios';
 import { config } from '../config/config';
 
+interface MarketDataResponse {
+  price: number;
+  volume: number;
+  timestamp: string;
+}
+
+interface MarketSentimentResponse {
+  sentiment: string;
+  socialSentiment: string;
+  newsSentiment: string;
+  technicalSentiment: string;
+  institutionalSentiment: string;
+}
+
+interface SentimentResult {
+  overall: string;
+  social: string;
+  news: string;
+  technical: string;
+  institutional: string;
+}
+
+interface NewsArticle {
+  title: string;
+  description: string;
+  url: string;
+  source: {
+    name: string;
+  };
+  publishedAt: string;
+}
+
+interface NewsApiResponse {
+  articles: NewsArticle[];
+}
+
+interface EconomicCalendarEvent {
+  date: string;
+  time: string;
+  currency: string;
+  impact: 'low' | 'medium' | 'high';
+  event: string;
+  actual?: number;
+  forecast?: number;
+  previous?: number;
+}
+
+interface CorrelationData {
+  symbol: string;
+  correlations: Array<{
+    symbol: string;
+    correlation: number;
+    timeframe: string;
+  }>;
+  timeframe: string;
+  sampleSize: number;
+}
+
+interface VolatilityAnalysis {
+  current: number;
+  historical: Array<{
+    timestamp: string;
+    value: number;
+  }>;
+  forecast: number;
+  percentile: number;
+}
+
 export class MarketData {
   private newsApiKey = config.env.NEWS_API_KEY;
   private marketApiKey = config.env.MARKET_API_KEY;
   private marketApiUrl = config.env.MARKET_API;
 
-  public async getData(symbol: string, timeframe: string) {
+  public async getData(symbol: string, timeframe: string): Promise<MarketDataResponse> {
     try {
-      const response = await axios.get(`${this.marketApiUrl}/data`, {
+      const response = await axios.get<MarketDataResponse>(`${this.marketApiUrl}/data`, {
         params: {
           symbol,
           timeframe,
@@ -27,10 +95,9 @@ export class MarketData {
     }
   }
 
-  public async getSentiment(symbol: string) {
+  public async getSentiment(symbol: string): Promise<SentimentResult> {
     try {
-      // Replace with your actual market sentiment API
-      const response = await axios.get(`${this.marketApiUrl}/sentiment`, {
+      const response = await axios.get<MarketSentimentResponse>(`${this.marketApiUrl}/sentiment`, {
         params: { 
           symbol,
           apiKey: this.marketApiKey
@@ -56,10 +123,9 @@ export class MarketData {
     }
   }
 
-  public async getRelevantNews(symbol: string) {
+  public async getRelevantNews(symbol: string): Promise<Pick<NewsArticle, 'title' | 'description' | 'url' | 'source' | 'publishedAt'>[]> {
     try {
-      // Using NewsAPI for market news
-      const response = await axios.get('https://newsapi.org/v2/everything', {
+      const response = await axios.get<NewsApiResponse>('https://newsapi.org/v2/everything', {
         params: {
           q: symbol,
           language: 'en',
@@ -69,11 +135,11 @@ export class MarketData {
         }
       });
 
-      return response.data.articles.map((article: any) => ({
+      return response.data.articles.map(article => ({
         title: article.title,
         description: article.description,
         url: article.url,
-        source: article.source.name,
+        source: article.source,
         publishedAt: article.publishedAt,
       }));
     } catch (error) {
@@ -82,10 +148,9 @@ export class MarketData {
     }
   }
 
-  public async getMarketData(symbol: string, timeframe: string) {
+  public async getMarketData(symbol: string, timeframe: string): Promise<MarketDataResponse> {
     try {
-      // Replace with your actual market data provider
-      const response = await axios.get(`${this.marketApiUrl}/data`, {
+      const response = await axios.get<MarketDataResponse>(`${this.marketApiUrl}/data`, {
         params: {
           symbol,
           timeframe,
@@ -100,9 +165,8 @@ export class MarketData {
     }
   }
 
-  public async getEconomicCalendar() {
+  public async getEconomicCalendar(): Promise<EconomicCalendarEvent[]> {
     try {
-      // Replace with your economic calendar API
       const response = await axios.get(`${this.marketApiUrl}/calendar`, {
         params: {
           apiKey: this.marketApiKey
@@ -116,9 +180,8 @@ export class MarketData {
     }
   }
 
-  public async getMarketCorrelations(symbol: string) {
+  public async getMarketCorrelations(symbol: string): Promise<CorrelationData> {
     try {
-      // Replace with your correlation data API
       const response = await axios.get(`${this.marketApiUrl}/correlations`, {
         params: {
           symbol,
@@ -133,9 +196,8 @@ export class MarketData {
     }
   }
 
-  public async getVolatilityAnalysis(symbol: string) {
+  public async getVolatilityAnalysis(symbol: string): Promise<VolatilityAnalysis> {
     try {
-      // Replace with your volatility analysis API
       const response = await axios.get(`${this.marketApiUrl}/volatility`, {
         params: {
           symbol,
