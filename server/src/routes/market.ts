@@ -5,8 +5,73 @@ import { Position } from '../models/Position';
 import { Portfolio } from '../models/Portfolio';
 import { Strategy } from '../models/Strategy';
 import { UserPayload } from '../types/auth';
+import { postgresConnection } from '../config/database';
 
 const router = express.Router();
+
+// Get all positions
+router.get('/positions', auth, async (req: express.Request, res: express.Response) => {
+  try {
+    const userPayload = req.user as UserPayload | undefined;
+    if (!userPayload?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const positionsRepository = postgresConnection.getRepository(Position);
+    const positions = await positionsRepository.find({
+      where: { userId: userPayload.id }
+    });
+
+    return res.json(positions);
+  } catch (error) {
+    console.error('Error fetching positions:', error);
+    return res.status(500).json({ error: 'Failed to fetch positions' });
+  }
+});
+
+// Get portfolio
+router.get('/portfolio', auth, async (req: express.Request, res: express.Response) => {
+  try {
+    const userPayload = req.user as UserPayload | undefined;
+    if (!userPayload?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const portfolioRepository = postgresConnection.getRepository(Portfolio);
+    const portfolio = await portfolioRepository.findOne({
+      where: { userId: userPayload.id }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: 'Portfolio not found' });
+    }
+
+    return res.json(portfolio);
+  } catch (error) {
+    console.error('Error fetching portfolio:', error);
+    return res.status(500).json({ error: 'Failed to fetch portfolio' });
+  }
+});
+
+// Get all strategies
+router.get('/strategies', auth, async (req: express.Request, res: express.Response) => {
+  try {
+    const userPayload = req.user as UserPayload | undefined;
+    if (!userPayload?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const strategyRepository = postgresConnection.getRepository(Strategy);
+    const strategies = await strategyRepository.find({
+      where: { userId: userPayload.id }
+    });
+
+    return res.json(strategies);
+  } catch (error) {
+    console.error('Error fetching strategies:', error);
+    return res.status(500).json({ error: 'Failed to fetch strategies' });
+  }
+});
 
 // Get market data for a symbol
 router.get('/:symbol', auth, async (req: express.Request, res: express.Response) => {
@@ -38,87 +103,6 @@ router.post('/order', auth, async (req: express.Request, res: express.Response) 
   } catch (error) {
     console.error('Error placing market order:', error);
     return res.status(500).json({ error: 'Failed to place market order' });
-  }
-});
-
-// Get all positions
-router.get('/positions', auth, async (req: express.Request, res: express.Response) => {
-  try {
-    const userPayload = req.user as UserPayload | undefined;
-    if (!userPayload?.id) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-
-    const positions = await Position.find({ userId: userPayload.id });
-    return res.json(positions);
-  } catch (error) {
-    console.error('Error fetching positions:', error);
-    return res.status(500).json({ error: 'Failed to fetch positions' });
-  }
-});
-
-// Get portfolio
-router.get('/portfolio', auth, async (req: express.Request, res: express.Response) => {
-  try {
-    const userPayload = req.user as UserPayload | undefined;
-    if (!userPayload?.id) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-
-    const portfolio = await Portfolio.findOne({ userId: userPayload.id });
-    if (!portfolio) {
-      // Create default portfolio if none exists
-      const newPortfolio = await Portfolio.create({
-        userId: userPayload.id,
-        balance: 10000,
-        equity: 10000,
-        margin: 0,
-        freeMargin: 10000,
-        marginLevel: 0,
-        positions: []
-      });
-      return res.json(newPortfolio);
-    }
-
-    return res.json(portfolio);
-  } catch (error) {
-    console.error('Error fetching portfolio:', error);
-    return res.status(500).json({ error: 'Failed to fetch portfolio' });
-  }
-});
-
-// Get all strategies
-router.get('/strategies', auth, async (req: express.Request, res: express.Response) => {
-  try {
-    const userPayload = req.user as UserPayload | undefined;
-    if (!userPayload?.id) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-
-    const strategies = await Strategy.find({ userId: userPayload.id });
-    return res.json(strategies);
-  } catch (error) {
-    console.error('Error fetching strategies:', error);
-    return res.status(500).json({ error: 'Failed to fetch strategies' });
-  }
-});
-
-// Create a new strategy
-router.post('/strategies', auth, async (req: express.Request, res: express.Response) => {
-  try {
-    const userPayload = req.user as UserPayload | undefined;
-    if (!userPayload?.id) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-
-    const strategy = await Strategy.create({
-      ...req.body,
-      userId: userPayload.id
-    });
-    return res.json(strategy);
-  } catch (error) {
-    console.error('Error creating strategy:', error);
-    return res.status(500).json({ error: 'Failed to create strategy' });
   }
 });
 

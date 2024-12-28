@@ -90,11 +90,15 @@ app.use('/api/health', async (_req: express.Request, res: express.Response) => {
 app.use('/api/auth', authRouter);
 app.use('/auth', authRouter);
 app.use('/api/user', userRouter);
+app.use('/user', userRouter);
 app.use('/api/market', marketRouter);
+app.use('/market', marketRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/notifications', notificationsRouter);
 app.use('/api/search', searchRouter);
+app.use('/search', searchRouter);
 
-// Add market endpoints to root path
+// Add market endpoints to root path for backward compatibility
 app.use('/', marketRouter);
 
 // Initialize Socket.IO server
