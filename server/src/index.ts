@@ -1,16 +1,16 @@
-import express from 'express';
+import express, { Application } from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
-import userRoutes from './routes/userRoutes';
-import portfolioRoutes from './routes/portfolioRoutes';
-import strategyRoutes from './routes/strategyRoutes';
-import positionRoutes from './routes/positionRoutes';
+import userRoutes from './routes/userRoutes.js';
+import portfolioRoutes from './routes/portfolioRoutes.js';
+import strategyRoutes from './routes/strategyRoutes.js';
+import positionRoutes from './routes/positionRoutes.js';
 
 dotenv.config();
 
-const app = express();
+const app: Application = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
