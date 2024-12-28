@@ -7,32 +7,74 @@ import { config } from 'dotenv';
 config();
 
 interface SMAValues {
-  sma20: number;
-  sma50: number;
-  sma200: number;
+  readonly sma20: number;
+  readonly sma50: number;
+  readonly sma200: number;
 }
 
 interface IndicatorValues {
-  sma?: SMAValues;
-  rsi?: number;
-  macd?: MACDOutput;
-  bb?: BollingerBandsOutput;
+  readonly sma?: SMAValues;
+  readonly rsi?: number;
+  readonly macd?: MACDOutput;
+  readonly bb?: BollingerBandsOutput;
 }
 
 type TrendType = 'strong_uptrend' | 'strong_downtrend' | 'uptrend' | 'downtrend' | 'sideways';
 
 interface KeyLevels {
-  support: number[];
-  resistance: number[];
+  readonly support: ReadonlyArray<number>;
+  readonly resistance: ReadonlyArray<number>;
 }
 
 interface TechnicalAnalysisResult {
-  indicators: IndicatorValues;
-  trend: TrendType;
-  levels: KeyLevels;
+  readonly indicators: IndicatorValues;
+  readonly trend: TrendType;
+  readonly levels: KeyLevels;
+}
+
+type IndicatorType = 'sma' | 'rsi' | 'macd' | 'bb';
+
+interface IndicatorConfig {
+  readonly sma: {
+    readonly periods: ReadonlyArray<number>;
+  };
+  readonly rsi: {
+    readonly period: number;
+  };
+  readonly macd: {
+    readonly fastPeriod: number;
+    readonly slowPeriod: number;
+    readonly signalPeriod: number;
+    readonly SimpleMAOscillator: boolean;
+    readonly SimpleMASignal: boolean;
+  };
+  readonly bb: {
+    readonly period: number;
+    readonly stdDev: number;
+  };
 }
 
 export class TechnicalAnalysis {
+  private readonly config: IndicatorConfig = {
+    sma: {
+      periods: [20, 50, 200]
+    },
+    rsi: {
+      period: 14
+    },
+    macd: {
+      fastPeriod: 12,
+      slowPeriod: 26,
+      signalPeriod: 9,
+      SimpleMAOscillator: false,
+      SimpleMASignal: false
+    },
+    bb: {
+      period: 20,
+      stdDev: 2
+    }
+  };
+
   private async getHistoricalData(symbol: string, timeframe: string): Promise<MarketData[]> {
     const response: AxiosResponse<MarketData[]> = await axios.get(`${process.env.MARKET_DATA_API}/historical`, {
       params: { symbol, timeframe }
@@ -43,7 +85,7 @@ export class TechnicalAnalysis {
   public async analyze(
     symbol: string,
     timeframe: string,
-    requestedIndicators: ('sma' | 'rsi' | 'macd' | 'bb')[] = []
+    requestedIndicators: ReadonlyArray<IndicatorType> = []
   ): Promise<TechnicalAnalysisResult> {
     const historicalData = await this.getHistoricalData(symbol, timeframe);
     const analysis: TechnicalAnalysisResult = {
@@ -65,17 +107,17 @@ export class TechnicalAnalysis {
   }
 
   private calculateIndicators(
-    data: MarketData[],
-    requestedIndicators: ('sma' | 'rsi' | 'macd' | 'bb')[]
+    data: ReadonlyArray<MarketData>,
+    requestedIndicators: ReadonlyArray<IndicatorType>
   ): IndicatorValues {
     const closes = data.map(d => d.close);
     const indicators: IndicatorValues = {};
 
     // Calculate SMA if requested or no specific indicators requested
     if (requestedIndicators.includes('sma') || requestedIndicators.length === 0) {
-      const sma20 = this.calculateSMA(closes, 20);
-      const sma50 = this.calculateSMA(closes, 50);
-      const sma200 = this.calculateSMA(closes, 200);
+      const sma20 = this.calculateSMA(closes, this.config.sma.periods[0]);
+      const sma50 = this.calculateSMA(closes, this.config.sma.periods[1]);
+      const sma200 = this.calculateSMA(closes, this.config.sma.periods[2]);
 
       indicators.sma = {
         sma20: sma20[sma20.length - 1] || 0,
@@ -86,7 +128,7 @@ export class TechnicalAnalysis {
 
     // Calculate RSI if requested or no specific indicators requested
     if (requestedIndicators.includes('rsi') || requestedIndicators.length === 0) {
-      const rsi = this.calculateRSI(closes);
+      const rsi = this.calculateRSI(closes, this.config.rsi.period);
       indicators.rsi = rsi[rsi.length - 1] || 50; // Default to neutral if undefined
     }
 
@@ -113,40 +155,40 @@ export class TechnicalAnalysis {
     return indicators;
   }
 
-  private calculateSMA(data: number[], period: number): number[] {
+  private calculateSMA(data: ReadonlyArray<number>, period: number): ReadonlyArray<number> {
     return SMA.calculate({
-      values: data,
+      values: [...data],
       period
     });
   }
 
-  private calculateRSI(data: number[], period: number = 14): number[] {
+  private calculateRSI(data: ReadonlyArray<number>, period: number = this.config.rsi.period): ReadonlyArray<number> {
     return RSI.calculate({
-      values: data,
+      values: [...data],
       period
     });
   }
 
-  private calculateMACD(data: number[]): MACDOutput[] {
+  private calculateMACD(data: ReadonlyArray<number>): ReadonlyArray<MACDOutput> {
     return MACD.calculate({
-      values: data,
-      fastPeriod: 12,
-      slowPeriod: 26,
-      signalPeriod: 9,
-      SimpleMAOscillator: false,
-      SimpleMASignal: false
+      values: [...data],
+      ...this.config.macd
     });
   }
 
-  private calculateBollingerBands(data: number[], period: number = 20, stdDev: number = 2): BollingerBandsOutput[] {
+  private calculateBollingerBands(
+    data: ReadonlyArray<number>,
+    period: number = this.config.bb.period,
+    stdDev: number = this.config.bb.stdDev
+  ): ReadonlyArray<BollingerBandsOutput> {
     return BollingerBands.calculate({
-      values: data,
+      values: [...data],
       period,
       stdDev
     });
   }
 
-  private analyzeTrend(data: MarketData[], indicators: IndicatorValues): TrendType {
+  private analyzeTrend(data: ReadonlyArray<MarketData>, indicators: IndicatorValues): TrendType {
     const lastClose = data[data.length - 1].close;
     const sma20 = indicators.sma?.sma20 || 0;
     const sma50 = indicators.sma?.sma50 || 0;
@@ -165,7 +207,7 @@ export class TechnicalAnalysis {
     }
   }
 
-  private findKeyLevels(data: MarketData[]): KeyLevels {
+  private findKeyLevels(data: ReadonlyArray<MarketData>): KeyLevels {
     const highs = data.map(d => d.high);
     const lows = data.map(d => d.low);
     
