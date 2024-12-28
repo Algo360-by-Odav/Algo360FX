@@ -1,25 +1,83 @@
-import MetaApi, { MetatraderAccount, RpcConnection } from 'metaapi.cloud-sdk';
+import MetaApi, { 
+  MetatraderAccount, 
+  RpcConnection, 
+  MarketDataSubscription, 
+  MarketDataUnsubscription,
+  SynchronizationListener,
+  ConnectionHealthMonitor,
+  MarketDataError,
+  MarketTradeError,
+  TerminalState,
+  MetatraderAccountInformation,
+  MetatraderSymbolSpecification,
+  MetatraderPosition,
+  MetatraderOrder,
+  MetatraderSymbolPrice,
+  MetatraderCandle,
+  MetatraderTick,
+  MetatraderBook
+} from 'metaapi.cloud-sdk';
 import { config } from '../config/config';
 
-interface SymbolPrice {
-  symbol: string;
-  bid: number;
-  ask: number;
-  profitTickValue: number;
-  lossTickValue: number;
-  accountCurrencyExchangeRate: number;
-  time: Date;
+// Enums for better type safety
+export enum OrderType {
+  Buy = 'buy',
+  Sell = 'sell'
 }
 
-interface OrderResult {
-  orderId: string;
-  success: boolean;
-  message?: string;
+export enum OrderTimeInForce {
+  GTC = 'GTC',
+  IOC = 'IOC',
+  FOK = 'FOK'
 }
 
+export enum OrderStatus {
+  Pending = 'PENDING',
+  Executed = 'EXECUTED',
+  Rejected = 'REJECTED',
+  Cancelled = 'CANCELLED'
+}
+
+// Interfaces with readonly properties for better immutability
+export interface SymbolPrice {
+  readonly symbol: string;
+  readonly bid: number;
+  readonly ask: number;
+  readonly profitTickValue: number;
+  readonly lossTickValue: number;
+  readonly accountCurrencyExchangeRate: number;
+  readonly time: Date;
+}
+
+export interface OrderOptions {
+  readonly stopLoss?: number;
+  readonly takeProfit?: number;
+  readonly timeInForce?: OrderTimeInForce;
+  readonly comment?: string;
+  readonly clientId?: string;
+}
+
+export interface OrderResult {
+  readonly orderId: string;
+  readonly status: OrderStatus;
+  readonly success: boolean;
+  readonly message?: string;
+  readonly filledVolume?: number;
+  readonly remainingVolume?: number;
+  readonly averagePrice?: number;
+}
+
+export interface ConnectionOptions {
+  readonly retryCount?: number;
+  readonly timeoutInSeconds?: number;
+  readonly synchronizationTimeoutInSeconds?: number;
+}
+
+// Singleton instance with proper type
 let metaApi: MetaApi | null = null;
 
-export async function initializeMetaApi(): Promise<MetaApi> {
+// Initialize MetaApi with proper error handling and validation
+export async function initializeMetaApi(options?: ConnectionOptions): Promise<MetaApi> {
   if (!metaApi) {
     if (!config.META_API_TOKEN) {
       throw new Error('MetaAPI token not configured');
@@ -29,9 +87,10 @@ export async function initializeMetaApi(): Promise<MetaApi> {
   return metaApi;
 }
 
-export async function getMetaApiConnection(): Promise<RpcConnection> {
+// Get MetaApi connection with proper error handling and options
+export async function getMetaApiConnection(options: ConnectionOptions = {}): Promise<RpcConnection> {
   if (!metaApi) {
-    await initializeMetaApi();
+    await initializeMetaApi(options);
   }
 
   try {
@@ -47,18 +106,24 @@ export async function getMetaApiConnection(): Promise<RpcConnection> {
     const connection = account.getRPCConnection();
     await connection.connect();
     
-    if (!await connection.waitSynchronized(60000)) {
-      throw new Error('Failed to synchronize with MT5');
+    const timeoutMs = (options.synchronizationTimeoutInSeconds || 60) * 1000;
+    if (!await connection.waitSynchronized(timeoutMs)) {
+      throw new Error(`Failed to synchronize with MT5 within ${timeoutMs}ms`);
     }
 
     return connection;
   } catch (error) {
     console.error('MetaAPI connection error:', error);
-    throw error;
+    throw error instanceof Error ? error : new Error('Unknown connection error occurred');
   }
 }
 
+// Get market data with proper error handling and validation
 export async function getMarketData(symbol: string): Promise<SymbolPrice> {
+  if (!symbol || typeof symbol !== 'string') {
+    throw new Error('Invalid symbol provided');
+  }
+
   const connection = await getMetaApiConnection();
   try {
     const price = await connection.getSymbolPrice(symbol);
@@ -73,32 +138,52 @@ export async function getMarketData(symbol: string): Promise<SymbolPrice> {
     };
   } catch (error) {
     console.error('Error getting market data:', error);
-    throw error;
+    throw error instanceof Error ? error : new Error('Unknown error getting market data');
   }
 }
 
+// Place market order with proper error handling and validation
 export async function placeMarketOrder(
   symbol: string,
-  type: 'buy' | 'sell',
+  type: OrderType,
   volume: number,
-  stopLoss?: number,
-  takeProfit?: number
+  options?: OrderOptions
 ): Promise<OrderResult> {
+  // Input validation
+  if (!symbol || typeof symbol !== 'string') {
+    throw new Error('Invalid symbol provided');
+  }
+  if (volume <= 0) {
+    throw new Error('Volume must be greater than 0');
+  }
+
   const connection = await getMetaApiConnection();
   try {
-    const result = await connection.createMarketBuyOrder(symbol, volume, {
-      stopLoss,
-      takeProfit,
+    const orderFn = type === OrderType.Buy ? 
+      connection.createMarketBuyOrder.bind(connection) : 
+      connection.createMarketSellOrder.bind(connection);
+
+    const result = await orderFn(symbol, volume, {
+      stopLoss: options?.stopLoss,
+      takeProfit: options?.takeProfit,
+      comment: options?.comment,
+      clientId: options?.clientId,
     });
 
     return {
       orderId: result.orderId,
-      success: true
+      status: OrderStatus.Executed,
+      success: true,
+      filledVolume: volume,
+      averagePrice: type === OrderType.Buy ? 
+        (await connection.getSymbolPrice(symbol)).ask : 
+        (await connection.getSymbolPrice(symbol)).bid
     };
   } catch (error) {
     console.error('Error placing market order:', error);
     return {
       orderId: '',
+      status: OrderStatus.Rejected,
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error occurred'
     };
