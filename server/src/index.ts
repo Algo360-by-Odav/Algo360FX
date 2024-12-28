@@ -40,7 +40,7 @@ app.use(generalLimiter);
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - Headers:`, req.headers);
   next();
 });
 
@@ -114,6 +114,18 @@ app.use('/search', searchRouter);
 // Add market endpoints to root path for backward compatibility
 app.use('/', marketRouter);
 
+// Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Global error handler:', err);
+  res.status(500).json({ error: 'Internal server error', details: err.message });
+});
+
+// 404 handler
+app.use((req: express.Request, res: express.Response) => {
+  console.log('404 Not Found:', req.method, req.path);
+  res.status(404).json({ error: 'Not Found', path: req.path, method: req.method });
+});
+
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
 const io = new Server(httpServer, {
@@ -140,13 +152,6 @@ console.log('Initializing Optimization WebSocket server...');
 wsServers.optimization = new OptimizationWebSocketServer(io);
 wsServers.optimization.initialize();
 console.log('Optimization WebSocket server initialized');
-
-// Error handling middleware
-app.use((err: Error, _req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
-  next(err);
-});
 
 // Connect to MongoDB and start server
 connectDatabase()
