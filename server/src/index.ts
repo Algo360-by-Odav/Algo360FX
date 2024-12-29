@@ -116,37 +116,27 @@ console.log('Connecting to MongoDB...');
 mongoose.set('strictQuery', true);
 mongoose.set('bufferCommands', false); // Disable buffering
 
-const connectWithRetry = async (retries = 5, interval = 5000) => {
-  try {
-    await mongoose.connect(config.databaseUrl, {
-      serverSelectionTimeoutMS: 15000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 15000,
-      maxPoolSize: 50,
-      minPoolSize: 10,
-      retryWrites: true,
-      retryReads: true,
-      w: 'majority',
-      wtimeoutMS: 10000,
-    });
-    console.log('Connected to MongoDB successfully');
-    
-    // Start server only after successful DB connection
-    const port = config.port || 5000;
-    httpServer.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
-    });
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    if (retries > 0) {
-      console.log(`Retrying connection in ${interval/1000} seconds... (${retries} attempts remaining)`);
-      setTimeout(() => connectWithRetry(retries - 1, interval), interval);
-    } else {
-      console.error('Failed to connect to MongoDB after multiple attempts');
-      process.exit(1);
+async function connectWithRetry(retries = 5, interval = 5000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`MongoDB connection attempt ${i + 1} of ${retries}`);
+      await mongoose.connect(config.mongoUri || config.databaseUrl, {
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+        maxPoolSize: 10,
+      });
+      console.log('MongoDB connected successfully');
+      return;
+    } catch (error) {
+      console.error(`MongoDB connection attempt ${i + 1} failed:`, error.message);
+      if (i === retries - 1) {
+        console.error('All MongoDB connection attempts failed');
+        process.exit(1);
+      }
+      await new Promise(resolve => setTimeout(resolve, interval));
     }
   }
-};
+}
 
 // Monitor MongoDB connection
 mongoose.connection.on('connected', () => {
@@ -173,4 +163,10 @@ process.on('SIGINT', async () => {
 });
 
 // Start connection process
-connectWithRetry();
+connectWithRetry().then(() => {
+  // Start server only after successful DB connection
+  const port = config.port || 5000;
+  httpServer.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+});
