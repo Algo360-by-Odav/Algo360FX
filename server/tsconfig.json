@@ -14,9 +14,15 @@
     "declaration": true,
     "allowJs": true,
     "noImplicitAny": false,
+    "removeComments": true,
+    "sourceMap": false,
+    "baseUrl": ".",
+    "paths": {
+      "*": ["node_modules/*"]
+    },
     "typeRoots": ["./node_modules/@types", "./src/types"],
     "types": ["node", "express", "jest"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }
