@@ -1,11 +1,10 @@
 import { Router } from 'express';
 import { getMetaApiConnection } from '../services/metaapi';
 import { asyncHandler } from '../middleware/asyncHandler';
-import { auth } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/metaapi', auth, asyncHandler(async (req, res) => {
+router.get('/metaapi', asyncHandler(async (req, res) => {
   try {
     console.log('Testing MetaApi connection...');
     const connection = await getMetaApiConnection();
