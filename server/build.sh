@@ -1,12 +1,19 @@
 #!/bin/bash
 set -e
+
 echo "Installing dependencies..."
-npm ci --production=false
-echo "Cleaning dist directory..."
-rm -rf dist
+npm install --production=false
+
+echo "Installing TypeScript globally..."
+npm install -g typescript
+
 echo "Building TypeScript..."
-npm run build
-echo "Copying configuration files..."
-cp package.json dist/
-cp package-lock.json dist/
+tsc -p tsconfig.json
+
+echo "Copying package files..."
+cp package*.json dist/
+
+echo "Installing production dependencies in dist..."
+cd dist && npm install --production
+
 echo "Build completed successfully!"
