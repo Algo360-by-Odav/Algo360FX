@@ -15,10 +15,13 @@ const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    email: '',
+    verificationCode: '',
     password: '',
     confirmPassword: '',
   });
   const [error, setError] = useState('');
+  const [isRequestingCode, setIsRequestingCode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +41,8 @@ const RegisterPage: React.FC = () => {
         body: JSON.stringify({
           firstName: formData.firstName,
           lastName: formData.lastName,
+          email: formData.email,
+          verificationCode: formData.verificationCode,
           password: formData.password,
         }),
       });
@@ -63,6 +68,38 @@ const RegisterPage: React.FC = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const requestVerificationCode = async () => {
+    if (!formData.email) {
+      setError('Please enter your email first');
+      return;
+    }
+
+    setIsRequestingCode(true);
+    try {
+      const response = await fetch('https://algo360fx.onrender.com/api/auth/verify/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send verification code');
+      }
+
+      alert('Verification code has been sent to your email');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send verification code');
+    } finally {
+      setIsRequestingCode(false);
+    }
   };
 
   return (
@@ -117,6 +154,37 @@ const RegisterPage: React.FC = () => {
               value={formData.lastName}
               onChange={handleChange}
             />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Email Address"
+              name="email"
+              autoComplete="email"
+              value={formData.email}
+              onChange={handleChange}
+            />
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', width: '100%' }}>
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="verificationCode"
+                label="Verification Code"
+                name="verificationCode"
+                value={formData.verificationCode}
+                onChange={handleChange}
+              />
+              <Button
+                variant="contained"
+                onClick={requestVerificationCode}
+                disabled={isRequestingCode || !formData.email}
+                sx={{ mt: 2, minWidth: '120px', height: '56px' }}
+              >
+                {isRequestingCode ? 'Sending...' : 'Get Code'}
+              </Button>
+            </Box>
             <TextField
               margin="normal"
               required

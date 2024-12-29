@@ -4,16 +4,21 @@ import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
+// Test endpoint for MetaApi connection
 router.get('/metaapi', asyncHandler(async (req, res) => {
   try {
     console.log('Testing MetaApi connection...');
     const connection = await getMetaApiConnection();
     
     // Test basic account information
+    console.log('Fetching account information...');
     const accountInfo = await connection.getAccountInformation();
+    console.log('Account information fetched successfully');
     
     // Test terminal state
+    console.log('Fetching terminal state...');
     const terminalState = await connection.getTerminalState();
+    console.log('Terminal state fetched successfully');
     
     res.json({
       status: 'connected',
@@ -38,7 +43,7 @@ router.get('/metaapi', asyncHandler(async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: error instanceof Error ? error.message : 'Unknown error',
-      error: error
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }));

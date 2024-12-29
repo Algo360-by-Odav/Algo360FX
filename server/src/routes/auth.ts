@@ -88,25 +88,28 @@ router.post('/verify/code',
 router.post('/register', 
   validateRequest(registerSchema),
   asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { email, password, verificationCode } = req.body;
+    const { email, password, verificationCode, firstName, lastName } = req.body;
+    console.log('Registration attempt:', { email, firstName, lastName, verificationCode });
 
     try {
       // Check if verification code is valid
       const storedVerification = verificationCodes.get(email);
       if (!storedVerification || storedVerification.code !== verificationCode) {
-        res.status(400).json({ error: 'Invalid verification code' });
+        console.log('Invalid verification code:', { stored: storedVerification?.code, received: verificationCode });
+        return res.status(400).json({ error: 'Invalid verification code' });
       }
 
       if (storedVerification.expires < new Date()) {
+        console.log('Verification code expired:', { expires: storedVerification.expires, now: new Date() });
         verificationCodes.delete(email);
-        res.status(400).json({ error: 'Verification code has expired' });
+        return res.status(400).json({ error: 'Verification code has expired' });
       }
 
       // Check if user already exists
       const existingUser = await User.findOne({ email }).exec();
-
       if (existingUser) {
-        res.status(400).json({ error: 'User already exists' });
+        console.log('User already exists:', email);
+        return res.status(400).json({ error: 'User already exists' });
       }
 
       // Hash password
@@ -117,12 +120,15 @@ router.post('/register',
       const user = new User({
         email,
         password: hashedPassword,
+        firstName,
+        lastName,
         emailVerified: true,
         createdAt: new Date(),
         updatedAt: new Date()
       });
 
       await user.save();
+      console.log('User saved successfully:', user._id);
 
       // Remove verification code after successful registration
       verificationCodes.delete(email);
@@ -134,12 +140,14 @@ router.post('/register',
         { expiresIn: '24h' }
       );
 
-      res.status(201).json({
+      return res.status(201).json({
         message: 'User registered successfully',
         token,
         user: {
           id: user._id,
           email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
           emailVerified: user.emailVerified
         }
       });
@@ -148,24 +156,11 @@ router.post('/register',
       
       // Handle specific error cases
       if (error instanceof mongoose.Error.ValidationError) {
-        res.status(400).json({ error: 'Invalid user data', details: error.errors });
-      }
-      
-      if (error.message === 'Database operation timed out') {
-        res.status(503).json({ 
-          error: 'Service temporarily unavailable',
-          message: 'Database operation timed out. Please try again.'
-        });
+        return res.status(400).json({ error: 'Invalid user data', details: error.errors });
       }
 
-      if (error.code === 11000) { // Duplicate key error
-        res.status(400).json({ error: 'User already exists' });
-      }
-
-      res.status(500).json({ 
-        error: 'Registration failed',
-        message: 'An unexpected error occurred during registration. Please try again.'
-      });
+      // Handle other errors
+      return res.status(500).json({ error: 'Failed to register user' });
     }
   })
 );
