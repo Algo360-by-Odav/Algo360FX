@@ -1,9 +1,10 @@
-import axios from 'axios';
 import { MarketDataService } from './marketData.service';
 import { TechnicalAnalysisService } from './technicalAnalysis.service';
 import { FundamentalAnalysisService } from './fundamentalAnalysis.service';
 import { RiskManagementService } from './riskManagement.service';
-import { PredictionService } from './prediction.service';
+import { OpenAIService } from './ai/openai.service';
+import { MarketPredictionService } from './ai/marketPrediction.service';
+import { logger } from '../utils/logger';
 
 interface AIResponse {
   message: string;
@@ -41,36 +42,47 @@ export class AIAssistantService {
   private technicalAnalysisService: TechnicalAnalysisService;
   private fundamentalAnalysisService: FundamentalAnalysisService;
   private riskManagementService: RiskManagementService;
-  private predictionService: PredictionService;
+  private openAIService: OpenAIService;
+  private marketPredictionService: MarketPredictionService;
 
   constructor() {
     this.marketDataService = new MarketDataService();
     this.technicalAnalysisService = new TechnicalAnalysisService();
     this.fundamentalAnalysisService = new FundamentalAnalysisService();
     this.riskManagementService = new RiskManagementService();
-    this.predictionService = new PredictionService();
+    this.openAIService = new OpenAIService();
+    this.marketPredictionService = new MarketPredictionService();
   }
 
   async processChat(message: string, context: ChatContext): Promise<AIResponse> {
     try {
-      // Analyze intent
-      const intent = await this.analyzeIntent(message);
-      
-      // Process based on intent
-      switch (intent) {
+      // Get market data for context
+      const marketData = await this.marketDataService.getMarketData(
+        context.selectedMarkets,
+        context.timeframe
+      );
+
+      // Get AI analysis of the message and market data
+      const aiAnalysis = await this.openAIService.analyzeMarket(
+        marketData,
+        await this.getRelevantNews(context.selectedMarkets)
+      );
+
+      // Process based on AI analysis
+      switch (aiAnalysis.intent) {
         case 'market_analysis':
-          return await this.handleMarketAnalysis(message, context);
-        case 'trading_signal':
-          return await this.handleTradingSignal(message, context);
+          return await this.handleMarketAnalysis(message, context, aiAnalysis);
         case 'price_prediction':
           return await this.handlePricePrediction(message, context);
+        case 'trading_signal':
+          return await this.handleTradingSignal(message, context, aiAnalysis);
         case 'risk_assessment':
           return await this.handleRiskAssessment(message, context);
         default:
-          return await this.handleGeneralQuery(message, context);
+          return await this.handleGeneralQuery(message, context, aiAnalysis);
       }
     } catch (error) {
-      console.error('Error in AI Assistant:', error);
+      logger.error('Error in AI Assistant:', error);
       return {
         message: 'I apologize, but I encountered an error processing your request. Please try again.',
         type: 'general',
@@ -79,26 +91,7 @@ export class AIAssistantService {
     }
   }
 
-  private async analyzeIntent(message: string): Promise<string> {
-    const lowerMessage = message.toLowerCase();
-    
-    if (lowerMessage.includes('predict') || lowerMessage.includes('forecast')) {
-      return 'price_prediction';
-    }
-    if (lowerMessage.includes('analysis') || lowerMessage.includes('analyze')) {
-      return 'market_analysis';
-    }
-    if (lowerMessage.includes('signal') || lowerMessage.includes('opportunity')) {
-      return 'trading_signal';
-    }
-    if (lowerMessage.includes('risk') || lowerMessage.includes('safety')) {
-      return 'risk_assessment';
-    }
-    
-    return 'general';
-  }
-
-  private async handleMarketAnalysis(message: string, context: ChatContext): Promise<AIResponse> {
+  private async handleMarketAnalysis(message: string, context: ChatContext, aiAnalysis: any): Promise<AIResponse> {
     const { selectedMarkets, timeframe } = context;
     
     // Get technical analysis
@@ -112,8 +105,11 @@ export class AIAssistantService {
       selectedMarkets
     );
 
-    // Combine analyses
-    const combinedAnalysis = this.combineAnalyses(technicalAnalysis, fundamentalAnalysis);
+    // Combine analyses with AI insights
+    const combinedAnalysis = {
+      ...this.combineAnalyses(technicalAnalysis, fundamentalAnalysis),
+      aiInsights: aiAnalysis
+    };
 
     return {
       message: this.formatAnalysisResponse(combinedAnalysis),
@@ -124,39 +120,13 @@ export class AIAssistantService {
         symbol: selectedMarkets[0],
         timeframe,
         indicators: combinedAnalysis.indicators,
-        sentiment: combinedAnalysis.sentiment,
+        sentiment: aiAnalysis.sentiment,
         analysis: {
           technicalScore: combinedAnalysis.technicalScore,
           fundamentalScore: combinedAnalysis.fundamentalScore,
-          marketSentiment: combinedAnalysis.marketSentiment,
+          marketSentiment: aiAnalysis.marketSentiment,
           riskLevel: combinedAnalysis.riskLevel
         }
-      }
-    };
-  }
-
-  private async handleTradingSignal(message: string, context: ChatContext): Promise<AIResponse> {
-    const { selectedMarkets, timeframe } = context;
-    
-    // Get trading signals
-    const signals = await this.technicalAnalysisService.generateSignals(
-      selectedMarkets,
-      timeframe
-    );
-
-    // Analyze signal strength
-    const signalAnalysis = await this.analyzeSignalStrength(signals);
-
-    return {
-      message: this.formatSignalResponse(signalAnalysis),
-      type: 'signal',
-      confidence: signalAnalysis.confidence,
-      charts: signalAnalysis.charts,
-      metadata: {
-        symbol: selectedMarkets[0],
-        timeframe,
-        sentiment: signalAnalysis.sentiment,
-        indicators: signalAnalysis.indicators
       }
     };
   }
@@ -164,8 +134,8 @@ export class AIAssistantService {
   private async handlePricePrediction(message: string, context: ChatContext): Promise<AIResponse> {
     const { selectedMarkets, timeframe } = context;
     
-    // Get price prediction
-    const prediction = await this.predictionService.predictPrice(
+    // Get AI prediction
+    const prediction = await this.marketPredictionService.generateMarketPrediction(
       selectedMarkets[0],
       timeframe
     );
@@ -179,10 +149,46 @@ export class AIAssistantService {
         symbol: selectedMarkets[0],
         timeframe,
         prediction: {
-          price: prediction.price,
+          price: prediction.prediction.priceTarget,
           timeframe: prediction.timeframe,
-          probability: prediction.probability
+          probability: prediction.prediction.probability
         }
+      }
+    };
+  }
+
+  private async handleTradingSignal(message: string, context: ChatContext, aiAnalysis: any): Promise<AIResponse> {
+    const { selectedMarkets, timeframe } = context;
+    
+    // Get trading signals
+    const signals = await this.technicalAnalysisService.generateSignals(
+      selectedMarkets,
+      timeframe
+    );
+
+    // Get AI strategy recommendation
+    const strategy = await this.marketPredictionService.generateStrategyRecommendation(
+      selectedMarkets[0],
+      'moderate'  // You can make this dynamic based on user preferences
+    );
+
+    // Combine signals with AI strategy
+    const enhancedSignal = {
+      ...signals,
+      strategy: strategy.strategy,
+      riskManagement: strategy.riskManagement
+    };
+
+    return {
+      message: this.formatSignalResponse(enhancedSignal),
+      type: 'signal',
+      confidence: Math.min(signals.confidence, strategy.confidence),
+      charts: signals.charts,
+      metadata: {
+        symbol: selectedMarkets[0],
+        timeframe,
+        sentiment: aiAnalysis.sentiment,
+        indicators: signals.indicators
       }
     };
   }
@@ -195,10 +201,23 @@ export class AIAssistantService {
       selectedMarkets[0]
     );
 
+    // Get AI strategy with risk focus
+    const strategy = await this.marketPredictionService.generateStrategyRecommendation(
+      selectedMarkets[0],
+      'conservative'
+    );
+
+    // Combine risk analysis with AI insights
+    const enhancedRiskAnalysis = {
+      ...riskAnalysis,
+      strategy: strategy.strategy,
+      riskManagement: strategy.riskManagement
+    };
+
     return {
-      message: this.formatRiskResponse(riskAnalysis),
+      message: this.formatRiskResponse(enhancedRiskAnalysis),
       type: 'analysis',
-      confidence: riskAnalysis.confidence,
+      confidence: Math.min(riskAnalysis.confidence, strategy.confidence),
       metadata: {
         symbol: selectedMarkets[0],
         analysis: {
@@ -209,20 +228,26 @@ export class AIAssistantService {
     };
   }
 
-  private async handleGeneralQuery(message: string, context: ChatContext): Promise<AIResponse> {
-    // Handle general market-related questions
-    const response = await this.generateGeneralResponse(message, context);
-    
+  private async handleGeneralQuery(message: string, context: ChatContext, aiAnalysis: any): Promise<AIResponse> {
     return {
-      message: response.message,
+      message: aiAnalysis.analysis,
       type: 'general',
-      confidence: response.confidence,
-      metadata: response.metadata
+      confidence: aiAnalysis.confidence,
+      metadata: {
+        sentiment: aiAnalysis.sentiment,
+        analysis: {
+          marketSentiment: aiAnalysis.marketSentiment
+        }
+      }
     };
   }
 
+  private async getRelevantNews(symbols: string[]) {
+    // Implement news fetching logic
+    return [];
+  }
+
   private combineAnalyses(technical: any, fundamental: any) {
-    // Implement logic to combine technical and fundamental analyses
     return {
       ...technical,
       ...fundamental,
@@ -231,7 +256,7 @@ export class AIAssistantService {
   }
 
   private formatAnalysisResponse(analysis: any): string {
-    return `Based on my analysis of ${analysis.symbol}:
+    return `Based on my comprehensive analysis of ${analysis.symbol}:
 
 Technical Analysis:
 • Overall Score: ${analysis.technicalScore}/100
@@ -243,10 +268,37 @@ Fundamental Analysis:
 • Risk Level: ${analysis.riskLevel}
 • Key Factors: ${analysis.keyFactors.join(', ')}
 
+AI Insights:
+${analysis.aiInsights.analysis}
+
 Recommendation:
 ${analysis.recommendation}
 
 Confidence Level: ${(analysis.confidence * 100).toFixed(1)}%`;
+  }
+
+  private formatPredictionResponse(prediction: any): string {
+    return `Price Prediction for ${prediction.symbol}:
+
+Forecast:
+• Direction: ${prediction.prediction.direction}
+• Target Price: ${prediction.prediction.priceTarget}
+• Timeframe: ${prediction.timeframe}
+• Probability: ${prediction.prediction.probability}%
+
+Technical Analysis:
+• Trend Strength: ${prediction.technicalAnalysis.trendStrength.value} (${prediction.technicalAnalysis.trendStrength.direction})
+• Volatility: ${prediction.technicalAnalysis.volatility.value}%
+
+Key Levels:
+• Support: ${prediction.technicalAnalysis.keyLevels.support.join(', ')}
+• Resistance: ${prediction.technicalAnalysis.keyLevels.resistance.join(', ')}
+
+Reasoning:
+${prediction.reasoning.map((reason: string) => `• ${reason}`).join('\n')}
+
+Note: This prediction is based on technical analysis, market conditions, and AI insights.
+Always practice proper risk management.`;
   }
 
   private formatSignalResponse(signal: any): string {
@@ -261,26 +313,25 @@ Entry Points:
 • Stop Loss: ${signal.stopLoss}
 • Take Profit: ${signal.takeProfit}
 
+Strategy Recommendation:
+• Type: ${signal.strategy.type}
+• Timeframe: ${signal.strategy.timeframe}
+
+Entry Conditions:
+${signal.strategy.entryConditions.map((condition: string) => `• ${condition}`).join('\n')}
+
+Exit Conditions:
+${signal.strategy.exitConditions.map((condition: string) => `• ${condition}`).join('\n')}
+
+Risk Management:
+• Position Size: ${signal.riskManagement.positionSize}
+• Max Risk per Trade: ${signal.riskManagement.maxRiskPerTrade}
+• Risk/Reward Ratio: ${signal.riskManagement.riskRewardRatio}
+
 Supporting Indicators:
 ${signal.indicators.map((ind: any) => `• ${ind.name}: ${ind.value}`).join('\n')}
 
 Confidence Level: ${(signal.confidence * 100).toFixed(1)}%`;
-  }
-
-  private formatPredictionResponse(prediction: any): string {
-    return `Price Prediction for ${prediction.symbol}:
-
-Forecast:
-• Direction: ${prediction.direction}
-• Target Price: ${prediction.price}
-• Timeframe: ${prediction.timeframe}
-• Probability: ${prediction.probability}%
-
-Key Factors:
-${prediction.factors.map((factor: string) => `• ${factor}`).join('\n')}
-
-Note: This prediction is based on historical data and current market conditions.
-Always practice proper risk management.`;
   }
 
   private formatRiskResponse(risk: any): string {
@@ -292,26 +343,17 @@ Market Volatility: ${risk.volatility}
 Key Risk Factors:
 ${risk.factors.map((factor: string) => `• ${factor}`).join('\n')}
 
-Recommended Risk Management:
-• Position Size: ${risk.recommendedSize}
+Risk Management Strategy:
+• Position Size: ${risk.strategy.riskManagement.positionSize}
+• Stop Loss Strategy: ${risk.strategy.stopLoss}
+• Risk/Reward Ratio: ${risk.riskManagement.riskRewardRatio}
+
+Recommended Approach:
+${risk.strategy.entryConditions.map((condition: string) => `• ${condition}`).join('\n')}
+
+Protective Measures:
 • Stop Loss: ${risk.recommendedStopLoss}
-• Risk/Reward Ratio: ${risk.riskRewardRatio}`;
-  }
-
-  private async generateGeneralResponse(message: string, context: ChatContext): Promise<any> {
-    // Implement general response logic
-    return {
-      message: "I understand you're asking about the markets. Could you please be more specific about what you'd like to know? I can help with:\n\n• Market analysis\n• Trading signals\n• Price predictions\n• Risk assessment",
-      confidence: 0.7,
-      metadata: {}
-    };
-  }
-
-  private async analyzeSignalStrength(signals: any): Promise<any> {
-    // Implement signal strength analysis
-    return {
-      ...signals,
-      confidence: 0.85
-    };
+• Position Sizing: ${risk.recommendedSize}
+• Risk/Reward: ${risk.riskRewardRatio}`;
   }
 }

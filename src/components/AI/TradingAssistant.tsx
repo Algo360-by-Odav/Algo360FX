@@ -18,6 +18,8 @@ import {
   Fab,
   Drawer,
   useTheme,
+  Menu,
+  MenuItem,
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -29,16 +31,21 @@ import {
   TrendingUp as SignalIcon,
   Analytics as AnalyticsIcon,
   Timeline as MarketIcon,
+  MoreVert as MoreIcon,
+  FilterList as FilterIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { Line } from 'react-chartjs-2';
 import axios from 'axios';
+import { observer } from 'mobx-react-lite';
+import { useRootStore } from '@/hooks/useRootStore';
 
 interface Message {
   id: string;
   text: string;
   sender: 'user' | 'ai';
   timestamp: Date;
-  type?: 'analysis' | 'signal' | 'market' | 'general';
+  type?: 'analysis' | 'signal' | 'market' | 'general' | 'prediction';
   confidence?: number;
   charts?: any[];
   metadata?: {
@@ -46,116 +53,83 @@ interface Message {
     timeframe?: string;
     indicators?: string[];
     sentiment?: 'bullish' | 'bearish' | 'neutral';
+    prediction?: {
+      price?: number;
+      timeframe?: string;
+      probability?: number;
+    };
+    analysis?: {
+      technicalScore?: number;
+      fundamentalScore?: number;
+      marketSentiment?: string;
+      riskLevel?: 'low' | 'medium' | 'high';
+    };
   };
 }
 
-const TradingAssistant: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
+interface QuickAction {
+  label: string;
+  query: string;
+  icon: React.ReactNode;
+}
+
+const TradingAssistant: React.FC = observer(() => {
+  const theme = useTheme();
+  const { authStore, marketStore } = useRootStore();
+  const [isOpen, setIsOpen] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const [quickActions] = useState<QuickAction[]>([
+    { 
+      label: 'Market Analysis',
+      query: 'Analyze current market conditions and major trends',
+      icon: <AnalyticsIcon />
+    },
     {
-      id: '1',
-      text: 'Hello! I am Algo, your AI trading companion. I can assist you with:\n• Market Analysis\n• Trading Signals\n• Risk Management\n• Strategy Building\n• Performance Optimization\n\nHow can I help you today?',
-      sender: 'ai',
-      timestamp: new Date(),
-      type: 'general',
+      label: 'Trading Signals',
+      query: 'Show me the top trading opportunities right now',
+      icon: <SignalIcon />
+    },
+    {
+      label: 'Price Prediction',
+      query: 'Predict the price movement for major currency pairs',
+      icon: <ChartIcon />
+    },
+    {
+      label: 'Risk Analysis',
+      query: 'Analyze market risks and potential hedging strategies',
+      icon: <PsychologyIcon />
     },
   ]);
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef<null | HTMLDivElement>(null);
-  const theme = useTheme();
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-  };
-
-  const processUserInput = async (userInput: string) => {
-    try {
-      // Detect intent and extract entities
-      const intent = detectIntent(userInput);
-      const entities = extractEntities(userInput);
-      
-      let response;
-      switch (intent) {
-        case 'market_analysis':
-          response = await axios.post('/api/ai/analyze', {
-            symbol: entities.symbol,
-            timeframe: entities.timeframe,
-            indicators: entities.indicators,
-          });
-          break;
-        case 'trading_signal':
-          response = await axios.post('/api/ai/signal', {
-            symbol: entities.symbol,
-            timeframe: entities.timeframe,
-            strategy: entities.strategy,
-          });
-          break;
-        case 'risk_assessment':
-          response = await axios.post('/api/ai/risk', {
-            position: entities.position,
-          });
-          break;
-        default:
-          // Handle general queries with default analysis
-          response = await axios.post('/api/ai/analyze', {
-            query: userInput,
-          });
-      }
-
-      return formatAIResponse(response.data);
-    } catch (error) {
-      console.error('Error processing request:', error);
-      return {
-        text: 'I apologize, but I encountered an error processing your request. Please try again or rephrase your question.',
-        type: 'general',
-        confidence: 0,
+    // Add welcome message when component mounts
+    if (messages.length === 0) {
+      const welcomeMessage: Message = {
+        id: 'welcome',
+        text: `Hello ${authStore.user?.name || 'trader'}! I'm your AI Trading Assistant. I can help you with:
+        • Market analysis and predictions
+        • Trading signals and opportunities
+        • Risk assessment and management
+        • Technical and fundamental analysis
+        • Trading strategies and optimization
+        
+        What would you like to know about today?`,
+        sender: 'ai',
+        timestamp: new Date(),
+        type: 'general'
       };
+      setMessages([welcomeMessage]);
     }
-  };
+  }, [messages.length, authStore.user?.name]);
 
-  const detectIntent = (input: string): string => {
-    const lowerInput = input.toLowerCase();
-    if (lowerInput.includes('analysis') || lowerInput.includes('analyze')) return 'market_analysis';
-    if (lowerInput.includes('signal') || lowerInput.includes('trade')) return 'trading_signal';
-    if (lowerInput.includes('risk') || lowerInput.includes('position')) return 'risk_assessment';
-    return 'general';
-  };
-
-  const extractEntities = (input: string): any => {
-    // Implement entity extraction logic here
-    // This is a placeholder implementation
-    return {
-      symbol: 'EURUSD',
-      timeframe: '1H',
-      indicators: ['MACD', 'RSI'],
-      strategy: 'trend_following',
-      position: {
-        type: 'long',
-        entry: 1.1000,
-        stopLoss: 1.0950,
-        takeProfit: 1.1100,
-        size: 1.0,
-      },
-    };
-  };
-
-  const formatAIResponse = (data: any): Partial<Message> => {
-    return {
-      text: data.analysis || data.signal || data.assessment,
-      type: data.type || 'general',
-      confidence: data.confidence || 0.8,
-      charts: data.charts,
-      metadata: data.metadata,
-    };
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleSend = async () => {
@@ -170,36 +144,49 @@ const TradingAssistant: React.FC = () => {
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setIsTyping(true);
+    setIsLoading(true);
 
     try {
-      const aiResponse = await processUserInput(input);
-      
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: aiResponse.text || 'I apologize, but I could not process that request.',
+      // Call your AI backend service
+      const response = await axios.post('/api/ai/chat', {
+        message: input,
+        context: {
+          previousMessages: messages.slice(-5),
+          user: authStore.user,
+          selectedMarkets: marketStore.selectedMarkets,
+          timeframe: marketStore.timeframe,
+        }
+      });
+
+      const aiResponse: Message = {
+        id: Date.now().toString(),
+        text: response.data.message,
         sender: 'ai',
         timestamp: new Date(),
-        type: aiResponse.type,
-        confidence: aiResponse.confidence,
-        charts: aiResponse.charts,
-        metadata: aiResponse.metadata,
+        type: response.data.type,
+        confidence: response.data.confidence,
+        charts: response.data.charts,
+        metadata: response.data.metadata,
       };
 
-      setMessages(prev => [...prev, aiMessage]);
+      setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
-      console.error('Error processing message:', error);
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'I encountered an error processing your request. Please try again.',
+        id: Date.now().toString(),
+        text: 'Sorry, I encountered an error. Please try again.',
         sender: 'ai',
         timestamp: new Date(),
-        type: 'general',
+        type: 'general'
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
-      setIsTyping(false);
+      setIsLoading(false);
     }
+  };
+
+  const handleQuickAction = (query: string) => {
+    setInput(query);
+    handleSend();
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -209,62 +196,97 @@ const TradingAssistant: React.FC = () => {
     }
   };
 
-  const renderMessageContent = (message: Message) => {
+  const renderMessage = (message: Message) => {
+    const isAI = message.sender === 'ai';
     return (
-      <Box>
-        <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>
-          {message.text}
-        </Typography>
-        {message.charts && message.charts.map((chart, index) => (
-          <Box key={index} mt={2} mb={2} height={200}>
-            <Line data={chart.data} options={chart.options} />
+      <ListItem
+        key={message.id}
+        sx={{
+          flexDirection: 'column',
+          alignItems: isAI ? 'flex-start' : 'flex-end',
+          padding: 2,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            maxWidth: '80%',
+            gap: 1,
+          }}
+        >
+          <ListItemAvatar sx={{ minWidth: 40 }}>
+            <Avatar
+              sx={{
+                bgcolor: isAI ? 'primary.main' : 'secondary.main',
+                width: 32,
+                height: 32,
+              }}
+            >
+              {isAI ? <AIIcon /> : <PersonIcon />}
+            </Avatar>
+          </ListItemAvatar>
+          <Box>
+            <Paper
+              elevation={1}
+              sx={{
+                p: 2,
+                backgroundColor: isAI ? 'background.paper' : 'primary.main',
+                borderRadius: 2,
+                color: isAI ? 'text.primary' : 'primary.contrastText',
+              }}
+            >
+              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                {message.text}
+              </Typography>
+              {message.metadata && (
+                <Box sx={{ mt: 2 }}>
+                  {message.metadata.symbol && (
+                    <Chip
+                      label={message.metadata.symbol}
+                      size="small"
+                      color="primary"
+                      sx={{ mr: 1, mb: 1 }}
+                    />
+                  )}
+                  {message.metadata.sentiment && (
+                    <Chip
+                      label={message.metadata.sentiment}
+                      size="small"
+                      color={
+                        message.metadata.sentiment === 'bullish'
+                          ? 'success'
+                          : message.metadata.sentiment === 'bearish'
+                          ? 'error'
+                          : 'warning'
+                      }
+                      sx={{ mr: 1, mb: 1 }}
+                    />
+                  )}
+                  {message.metadata.prediction && (
+                    <Box sx={{ mt: 1 }}>
+                      <Typography variant="caption" display="block">
+                        Prediction: {message.metadata.prediction.price} ({message.metadata.prediction.timeframe})
+                      </Typography>
+                      <Typography variant="caption" display="block">
+                        Confidence: {message.metadata.prediction.probability}%
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+              {message.charts && message.charts.length > 0 && (
+                <Box sx={{ mt: 2, width: '100%', height: 200 }}>
+                  <Line data={message.charts[0]} options={{ responsive: true }} />
+                </Box>
+              )}
+            </Paper>
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+              {new Date(message.timestamp).toLocaleTimeString()}
+            </Typography>
           </Box>
-        ))}
-        {message.metadata && (
-          <Box mt={1}>
-            {message.metadata.symbol && (
-              <Chip
-                label={message.metadata.symbol}
-                size="small"
-                color="primary"
-                style={{ marginRight: 8 }}
-              />
-            )}
-            {message.metadata.timeframe && (
-              <Chip
-                label={message.metadata.timeframe}
-                size="small"
-                color="secondary"
-                style={{ marginRight: 8 }}
-              />
-            )}
-            {message.metadata.sentiment && (
-              <Chip
-                label={message.metadata.sentiment}
-                size="small"
-                color={
-                  message.metadata.sentiment === 'bullish'
-                    ? 'success'
-                    : message.metadata.sentiment === 'bearish'
-                    ? 'error'
-                    : 'default'
-                }
-              />
-            )}
-          </Box>
-        )}
-        {message.confidence && (
-          <Box mt={1}>
-            <Tooltip title="AI Confidence Score">
-              <Chip
-                label={`${(message.confidence * 100).toFixed(0)}% confidence`}
-                size="small"
-                color="info"
-              />
-            </Tooltip>
-          </Box>
-        )}
-      </Box>
+        </Box>
+      </ListItem>
     );
   };
 
@@ -273,36 +295,38 @@ const TradingAssistant: React.FC = () => {
       <Fab
         color="primary"
         aria-label="AI Assistant"
-        onClick={() => setIsOpen(true)}
+        onClick={() => setIsOpen(!isOpen)}
         sx={{
           position: 'fixed',
           bottom: 16,
           right: 16,
-          zIndex: theme.zIndex.drawer + 2,
+          zIndex: 1000,
         }}
       >
-        <AIIcon />
+        {isOpen ? <CloseIcon /> : <AIIcon />}
       </Fab>
-
       <Drawer
         anchor="right"
         open={isOpen}
         onClose={() => setIsOpen(false)}
+        variant="persistent"
         sx={{
           '& .MuiDrawer-paper': {
-            width: '400px',
-            maxWidth: '100%',
+            width: { xs: '100%', sm: 400 },
+            height: '100%',
+            top: 64,
           },
         }}
       >
         <Box
           sx={{
+            height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            height: '100%',
-            bgcolor: 'background.paper',
+            bgcolor: 'background.default',
           }}
         >
+          {/* Header */}
           <Box
             sx={{
               p: 2,
@@ -313,65 +337,62 @@ const TradingAssistant: React.FC = () => {
               justifyContent: 'space-between',
             }}
           >
-            <Box display="flex" alignItems="center">
-              <AIIcon color="primary" sx={{ mr: 1 }} />
-              <Typography variant="h6">Algo AI Assistant</Typography>
+            <Typography variant="h6" component="div">
+              AI Trading Assistant
+            </Typography>
+            <Box>
+              <Tooltip title="Refresh">
+                <IconButton onClick={() => setMessages([])}>
+                  <RefreshIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Filter">
+                <IconButton onClick={(e) => setAnchorEl(e.currentTarget)}>
+                  <FilterIcon />
+                </IconButton>
+              </Tooltip>
             </Box>
-            <IconButton onClick={() => setIsOpen(false)}>
-              <CloseIcon />
-            </IconButton>
           </Box>
 
+          {/* Quick Actions */}
+          <Box
+            sx={{
+              p: 1,
+              borderBottom: 1,
+              borderColor: 'divider',
+              display: 'flex',
+              gap: 1,
+              overflowX: 'auto',
+            }}
+          >
+            {quickActions.map((action) => (
+              <Button
+                key={action.label}
+                size="small"
+                variant="outlined"
+                startIcon={action.icon}
+                onClick={() => handleQuickAction(action.query)}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                {action.label}
+              </Button>
+            ))}
+          </Box>
+
+          {/* Messages */}
           <List
             sx={{
               flex: 1,
               overflow: 'auto',
-              padding: 2,
-              bgcolor: theme.palette.grey[50],
+              bgcolor: 'background.default',
+              p: 0,
             }}
           >
-            {messages.map((message) => (
-              <ListItem
-                key={message.id}
-                sx={{
-                  flexDirection: message.sender === 'user' ? 'row-reverse' : 'row',
-                  alignItems: 'flex-start',
-                  mb: 2,
-                }}
-              >
-                <ListItemAvatar>
-                  <Avatar
-                    sx={{
-                      bgcolor: message.sender === 'user' ? 'primary.main' : 'secondary.main',
-                    }}
-                  >
-                    {message.sender === 'user' ? <PersonIcon /> : <AIIcon />}
-                  </Avatar>
-                </ListItemAvatar>
-                <Paper
-                  elevation={1}
-                  sx={{
-                    p: 2,
-                    maxWidth: '70%',
-                    bgcolor: message.sender === 'user' ? 'primary.light' : 'background.paper',
-                    color: message.sender === 'user' ? 'primary.contrastText' : 'text.primary',
-                  }}
-                >
-                  {renderMessageContent(message)}
-                </Paper>
-              </ListItem>
-            ))}
-            {isTyping && (
-              <Box display="flex" alignItems="center" ml={2}>
-                <CircularProgress size={20} />
-                <Typography variant="body2" color="textSecondary" ml={1}>
-                  Algo is typing...
-                </Typography>
-              </Box>
-            )}
+            {messages.map(renderMessage)}
             <div ref={messagesEndRef} />
           </List>
 
+          {/* Input */}
           <Box
             sx={{
               p: 2,
@@ -385,18 +406,18 @@ const TradingAssistant: React.FC = () => {
               multiline
               maxRows={4}
               value={input}
-              onChange={handleInputChange}
+              onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask me anything about trading..."
-              variant="outlined"
+              placeholder="Ask about markets, trading strategies, or analysis..."
+              disabled={isLoading}
               InputProps={{
                 endAdornment: (
                   <IconButton
                     color="primary"
                     onClick={handleSend}
-                    disabled={!input.trim() || isTyping}
+                    disabled={!input.trim() || isLoading}
                   >
-                    <SendIcon />
+                    {isLoading ? <CircularProgress size={24} /> : <SendIcon />}
                   </IconButton>
                 ),
               }}
@@ -404,8 +425,28 @@ const TradingAssistant: React.FC = () => {
           </Box>
         </Box>
       </Drawer>
+
+      {/* Filter Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+      >
+        <MenuItem onClick={() => { setSelectedType(null); setAnchorEl(null); }}>
+          All Messages
+        </MenuItem>
+        <MenuItem onClick={() => { setSelectedType('analysis'); setAnchorEl(null); }}>
+          Analysis Only
+        </MenuItem>
+        <MenuItem onClick={() => { setSelectedType('signal'); setAnchorEl(null); }}>
+          Signals Only
+        </MenuItem>
+        <MenuItem onClick={() => { setSelectedType('prediction'); setAnchorEl(null); }}>
+          Predictions Only
+        </MenuItem>
+      </Menu>
     </>
   );
-};
+});
 
 export default TradingAssistant;
