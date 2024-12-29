@@ -13,6 +13,7 @@ import {
   useMediaQuery,
   useTheme as useMuiTheme,
   Stack,
+  Paper,
 } from '@mui/material';
 import { observer } from 'mobx-react-lite';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
@@ -24,6 +25,7 @@ import {
   GitHub,
   LightMode,
   DarkMode,
+  TrendingUp,
 } from '@mui/icons-material';
 import { useTheme } from '@/contexts/ThemeContext';
 import '../../styles/auth.css';
@@ -77,17 +79,33 @@ const LoginForm = observer(() => {
   };
 
   return (
-    <Container 
-      maxWidth={false} 
-      disableGutters 
-      className={`auth-container ${isDarkMode ? 'dark' : 'light'}`}
+    <Box
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
         minHeight: '100vh',
-        backgroundColor: isDarkMode ? '#121212' : '#f5f5f5',
+        display: 'flex',
+        position: 'relative',
+        backgroundColor: isDarkMode ? '#0a0a0a' : '#f8fafc',
+        overflow: 'hidden',
       }}
     >
+      {/* Background Pattern */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          opacity: 0.4,
+          backgroundImage: isDarkMode
+            ? 'radial-gradient(circle at 25px 25px, rgba(255, 255, 255, 0.2) 2%, transparent 0%), radial-gradient(circle at 75px 75px, rgba(255, 255, 255, 0.2) 2%, transparent 0%)'
+            : 'radial-gradient(circle at 25px 25px, rgba(0, 0, 0, 0.1) 2%, transparent 0%), radial-gradient(circle at 75px 75px, rgba(0, 0, 0, 0.1) 2%, transparent 0%)',
+          backgroundSize: '100px 100px',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Theme Toggle */}
       <IconButton
         onClick={toggleTheme}
         sx={{
@@ -96,6 +114,7 @@ const LoginForm = observer(() => {
           right: { xs: 16, sm: 24 },
           color: isDarkMode ? '#fff' : '#000',
           backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+          zIndex: 2,
           '&:hover': {
             backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
           },
@@ -104,46 +123,76 @@ const LoginForm = observer(() => {
         {isDarkMode ? <LightMode /> : <DarkMode />}
       </IconButton>
 
+      {/* Left Section - Login Form */}
       <Container
         maxWidth="sm"
         sx={{
-          flex: 1,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          px: { xs: 2, sm: 3 },
-          py: { xs: 4, sm: 6 },
+          p: { xs: 2, sm: 3 },
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <Box
           sx={{
-            backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff',
-            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            mb: 6,
+          }}
+        >
+          <TrendingUp 
+            sx={{ 
+              fontSize: 40,
+              color: isDarkMode ? '#60a5fa' : '#2563eb',
+            }} 
+          />
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              background: isDarkMode 
+                ? 'linear-gradient(45deg, #60a5fa, #3b82f6)' 
+                : 'linear-gradient(45deg, #2563eb, #1d4ed8)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            Algo360FX
+          </Typography>
+        </Box>
+
+        <Paper
+          elevation={isDarkMode ? 0 : 2}
+          sx={{
             p: { xs: 3, sm: 4 },
-            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+            borderRadius: 3,
+            backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : '#fff',
+            border: isDarkMode ? '1px solid rgba(255,255,255,0.1)' : 'none',
           }}
         >
           <Stack spacing={3}>
-            <Box textAlign="center">
+            <Box>
               <Typography
-                variant={isMobile ? "h5" : "h4"}
-                component="h1"
+                variant="h5"
                 gutterBottom
                 sx={{
-                  color: isDarkMode ? '#fff' : '#1a1a1a',
                   fontWeight: 600,
+                  color: isDarkMode ? '#fff' : '#1a1a1a',
                 }}
               >
-                Welcome Back
+                Welcome back
               </Typography>
               <Typography
                 variant="body2"
                 sx={{
-                  color: isDarkMode ? '#a0aec0' : '#4a5568',
-                  mb: 3,
+                  color: isDarkMode ? '#94a3b8' : '#64748b',
                 }}
               >
-                Log in to access your trading dashboard
+                Enter your credentials to access your account
               </Typography>
             </Box>
 
@@ -151,10 +200,8 @@ const LoginForm = observer(() => {
               <Alert 
                 severity="error" 
                 sx={{ 
-                  borderRadius: 1,
-                  '& .MuiAlert-message': {
-                    width: '100%',
-                  }
+                  borderRadius: 2,
+                  '& .MuiAlert-message': { width: '100%' }
                 }}
               >
                 {error}
@@ -162,7 +209,7 @@ const LoginForm = observer(() => {
             )}
 
             <form onSubmit={handleSubmit}>
-              <Stack spacing={2.5}>
+              <Stack spacing={3}>
                 <TextField
                   fullWidth
                   label="Email"
@@ -176,7 +223,7 @@ const LoginForm = observer(() => {
                   size={isMobile ? "small" : "medium"}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : '#f8fafc',
                       '& fieldset': {
                         borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
                       },
@@ -185,7 +232,7 @@ const LoginForm = observer(() => {
                       },
                     },
                     '& .MuiInputLabel-root': {
-                      color: isDarkMode ? '#a0aec0' : '#4a5568',
+                      color: isDarkMode ? '#94a3b8' : '#64748b',
                     },
                     '& .MuiInputBase-input': {
                       color: isDarkMode ? '#fff' : '#000',
@@ -211,7 +258,7 @@ const LoginForm = observer(() => {
                           onClick={() => setShowPassword(!showPassword)}
                           edge="end"
                           size={isMobile ? "small" : "medium"}
-                          sx={{ color: isDarkMode ? '#a0aec0' : '#4a5568' }}
+                          sx={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}
                         >
                           {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
@@ -220,7 +267,7 @@ const LoginForm = observer(() => {
                   }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : '#f8fafc',
                       '& fieldset': {
                         borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
                       },
@@ -229,7 +276,7 @@ const LoginForm = observer(() => {
                       },
                     },
                     '& .MuiInputLabel-root': {
-                      color: isDarkMode ? '#a0aec0' : '#4a5568',
+                      color: isDarkMode ? '#94a3b8' : '#64748b',
                     },
                     '& .MuiInputBase-input': {
                       color: isDarkMode ? '#fff' : '#000',
@@ -237,34 +284,40 @@ const LoginForm = observer(() => {
                   }}
                 />
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 1,
+                }}>
                   <Link
                     component={RouterLink}
                     to="/auth/forgot-password"
                     sx={{
-                      color: isDarkMode ? '#63b3ed' : '#2b6cb0',
+                      color: isDarkMode ? '#60a5fa' : '#2563eb',
                       textDecoration: 'none',
-                      fontSize: isMobile ? '0.875rem' : '1rem',
+                      fontSize: '0.875rem',
                       '&:hover': {
                         textDecoration: 'underline',
                       },
                     }}
                   >
-                    Forgot Password?
+                    Forgot password?
                   </Link>
                   <Link
                     component={RouterLink}
                     to="/auth/register"
                     sx={{
-                      color: isDarkMode ? '#63b3ed' : '#2b6cb0',
+                      color: isDarkMode ? '#60a5fa' : '#2563eb',
                       textDecoration: 'none',
-                      fontSize: isMobile ? '0.875rem' : '1rem',
+                      fontSize: '0.875rem',
                       '&:hover': {
                         textDecoration: 'underline',
                       },
                     }}
                   >
-                    Create Account
+                    Create an account
                   </Link>
                 </Box>
 
@@ -275,22 +328,22 @@ const LoginForm = observer(() => {
                   disabled={loading}
                   size={isMobile ? "medium" : "large"}
                   sx={{
-                    mt: 1,
-                    py: isMobile ? 1 : 1.5,
+                    py: 1.5,
                     backgroundColor: '#2563eb',
-                    '&:hover': {
-                      backgroundColor: '#1d4ed8',
-                    },
+                    background: 'linear-gradient(45deg, #2563eb, #1d4ed8)',
                     textTransform: 'none',
-                    fontSize: isMobile ? '0.9rem' : '1rem',
+                    fontSize: '0.9375rem',
+                    fontWeight: 500,
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #1d4ed8, #1e40af)',
+                    },
                   }}
                 >
-                  {loading ? 'Signing in...' : 'Sign In'}
+                  {loading ? 'Signing in...' : 'Sign in'}
                 </Button>
 
                 <Divider sx={{ 
-                  my: 2, 
-                  borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                  my: 1,
                   '&::before, &::after': {
                     borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
                   }
@@ -298,56 +351,44 @@ const LoginForm = observer(() => {
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: isDarkMode ? '#a0aec0' : '#4a5568',
+                      color: isDarkMode ? '#94a3b8' : '#64748b',
                       px: 1,
-                      fontSize: isMobile ? '0.875rem' : '1rem',
                     }}
                   >
-                    OR
+                    or continue with
                   </Typography>
                 </Divider>
 
                 <Stack 
-                  direction={isMobile ? "column" : "row"} 
+                  direction="row" 
                   spacing={2}
+                  sx={{
+                    '& .MuiButton-root': {
+                      flex: 1,
+                      py: 1.5,
+                      color: isDarkMode ? '#fff' : '#000',
+                      borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : '#f8fafc',
+                      '&:hover': {
+                        backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f1f5f9',
+                        borderColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                      },
+                    },
+                  }}
                 >
                   <Button
-                    fullWidth
                     variant="outlined"
                     onClick={() => handleSocialLogin('google')}
                     startIcon={<Google />}
                     disabled={loading}
-                    size={isMobile ? "medium" : "large"}
-                    sx={{
-                      borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                      color: isDarkMode ? '#fff' : '#000',
-                      '&:hover': {
-                        borderColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-                        backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                      },
-                      textTransform: 'none',
-                      fontSize: isMobile ? '0.9rem' : '1rem',
-                    }}
                   >
                     Google
                   </Button>
                   <Button
-                    fullWidth
                     variant="outlined"
                     onClick={() => handleSocialLogin('github')}
                     startIcon={<GitHub />}
                     disabled={loading}
-                    size={isMobile ? "medium" : "large"}
-                    sx={{
-                      borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                      color: isDarkMode ? '#fff' : '#000',
-                      '&:hover': {
-                        borderColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-                        backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                      },
-                      textTransform: 'none',
-                      fontSize: isMobile ? '0.9rem' : '1rem',
-                    }}
                   >
                     GitHub
                   </Button>
@@ -355,9 +396,79 @@ const LoginForm = observer(() => {
               </Stack>
             </form>
           </Stack>
-        </Box>
+        </Paper>
       </Container>
-    </Container>
+
+      {/* Right Section - Feature Highlights (Hidden on Mobile) */}
+      {!isMobile && (
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            p: 6,
+            background: isDarkMode
+              ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(29, 78, 216, 0.1))'
+              : 'linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(29, 78, 216, 0.05))',
+            borderLeft: isDarkMode
+              ? '1px solid rgba(255,255,255,0.1)'
+              : '1px solid rgba(0,0,0,0.1)',
+            position: 'relative',
+          }}
+        >
+          <Stack spacing={4} maxWidth="400px">
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                color: isDarkMode ? '#fff' : '#1a1a1a',
+                textAlign: 'center',
+                mb: 2,
+              }}
+            >
+              Advanced Trading Platform
+            </Typography>
+            {[
+              {
+                title: 'Real-time Analytics',
+                description: 'Get instant insights with our advanced analytics tools',
+              },
+              {
+                title: 'AI-Powered Trading',
+                description: 'Let our AI assist you in making informed trading decisions',
+              },
+              {
+                title: 'Secure Platform',
+                description: 'Your security is our top priority with enterprise-grade protection',
+              },
+            ].map((feature, index) => (
+              <Box key={index} textAlign="center">
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{
+                    color: isDarkMode ? '#60a5fa' : '#2563eb',
+                    fontWeight: 600,
+                  }}
+                >
+                  {feature.title}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: isDarkMode ? '#94a3b8' : '#64748b',
+                  }}
+                >
+                  {feature.description}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      )}
+    </Box>
   );
 });
 
