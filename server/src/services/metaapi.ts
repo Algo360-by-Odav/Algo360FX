@@ -12,6 +12,11 @@ if (!config.mt5AccountId) {
   throw new Error('MT5_ACCOUNT_ID is required');
 }
 
+console.log('Initializing MetaApi with token:', config.metaApiToken.substring(0, 5) + '...');
+console.log('Using MT5 Account ID:', config.mt5AccountId);
+console.log('Retry attempts:', config.metaApiRetryAttempts);
+console.log('Retry delay:', config.metaApiRetryDelay);
+
 const api = new MetaApi(config.metaApiToken);
 
 // Cache for MetaAPI connections
@@ -34,14 +39,17 @@ export async function getMetaApiConnection() {
       let retryCount = 0;
       while (!account && retryCount < config.metaApiRetryAttempts) {
         try {
+          console.log(`Attempt ${retryCount + 1} to get MT5 account...`);
           account = await api.metatraderAccountApi.getAccount(config.mt5AccountId);
           if (!account) {
             throw new Error('MT5 account not found');
           }
+          console.log('MT5 account found successfully');
         } catch (error) {
           console.error(`Attempt ${retryCount + 1} failed:`, error);
           retryCount++;
           if (retryCount < config.metaApiRetryAttempts) {
+            console.log(`Waiting ${config.metaApiRetryDelay}ms before next attempt...`);
             await new Promise(resolve => setTimeout(resolve, config.metaApiRetryDelay));
           } else {
             throw error;
@@ -56,13 +64,16 @@ export async function getMetaApiConnection() {
       retryCount = 0;
       while (!deployedAccount && retryCount < config.metaApiRetryAttempts) {
         try {
+          console.log(`Attempt ${retryCount + 1} to deploy account...`);
           deployedAccount = await account.deploy();
           console.log('Account deployed, waiting for connection...');
           await deployedAccount.waitConnected();
+          console.log('Account successfully connected to broker');
         } catch (error) {
           console.error(`Deploy attempt ${retryCount + 1} failed:`, error);
           retryCount++;
           if (retryCount < config.metaApiRetryAttempts) {
+            console.log(`Waiting ${config.metaApiRetryDelay}ms before next attempt...`);
             await new Promise(resolve => setTimeout(resolve, config.metaApiRetryDelay));
           } else {
             throw error;
@@ -70,12 +81,13 @@ export async function getMetaApiConnection() {
         }
       }
 
-      console.log('Account connected to broker');
-
       // Get connection instance
       try {
+        console.log('Getting streaming connection...');
         cachedConnection = await deployedAccount.getStreamingConnection();
+        console.log('Connecting to streaming API...');
         await cachedConnection.connect();
+        console.log('Waiting for synchronization...');
         await cachedConnection.waitSynchronized();
         console.log('MetaAPI connection established and synchronized');
       } catch (error) {
