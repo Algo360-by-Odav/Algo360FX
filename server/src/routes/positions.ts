@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { auth } from '../middleware/auth';
 import { AuthRequest } from '../types/express';
@@ -6,11 +6,11 @@ import { AuthRequest } from '../types/express';
 const router = Router();
 
 // Get all positions
-router.get('/', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     // For now, return mock positions data
     // In a real app, you would fetch this from your trading platform/database
-    return res.json({
+    res.json({
       positions: [
         {
           id: '1',
@@ -44,15 +44,15 @@ router.get('/', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: errorMessage });
   }
 }));
 
 // Get position history
-router.get('/history', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/history', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     // For now, return mock history data
-    return res.json({
+    res.json({
       history: [
         {
           id: '3',
@@ -73,7 +73,7 @@ router.get('/history', auth, asyncHandler(async (req: AuthRequest, res: Response
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: errorMessage });
   }
 }));
 

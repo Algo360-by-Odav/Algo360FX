@@ -27,12 +27,12 @@ services:
         sync: false
       - key: MT5_ACCOUNT_ID
         sync: false
-      - key: MARKET_API_KEY
-        sync: false
       - key: META_API_RETRY_ATTEMPTS
         value: "3"
       - key: META_API_RETRY_DELAY
         value: "1000"
+      - key: MARKET_API_KEY
+        sync: false
 
   - type: web
     name: algo360fx-client

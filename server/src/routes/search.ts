@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { validateRequest } from '../middleware/validateRequest';
 import { searchSchema } from '../schemas/search.schema';
 import { searchAnalytics } from '../services/analyticsService';
@@ -11,7 +11,7 @@ import { asyncHandler } from '../middleware/asyncHandler';
 const router = Router();
 
 // Search across all resources
-router.post('/', validateRequest(searchSchema), asyncHandler(async (req: Request, res: Response): Promise<void> => {
+router.post('/', validateRequest(searchSchema), asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { query, type } = req.body;
   let results: SearchResult[] = [];
 

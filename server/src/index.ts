@@ -13,6 +13,8 @@ import userRouter from './routes/user';
 import portfolioRouter from './routes/portfolio';
 import positionsRouter from './routes/positions';
 import strategiesRouter from './routes/strategies';
+import healthRouter from './routes/health';
+import testRouter from './routes/test';
 import { config } from './config/config';
 import { standardLimiter, authLimiter, aiLimiter } from './middleware/rateLimiter';
 
@@ -32,7 +34,13 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: '*',  // Allow all origins for now
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -45,26 +53,28 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
 const io = new Server(httpServer, {
-  path: '/ws',
   cors: {
-    origin: '*',  // Allow all origins for WebSocket
-    methods: ['GET', 'POST'],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
   },
-  transports: ['websocket', 'polling']
+  path: '/ws'
 });
 console.log('Socket.IO server initialized');
 
-// Initialize and start WebSocket servers
-console.log('Initializing Trading WebSocket server...');
-const tradingWS = new TradingWebSocketServer(io);
-tradingWS.initialize();
+// Initialize WebSocket servers
+const tradingWsServer = new TradingWebSocketServer(io);
+const optimizationWsServer = new OptimizationWebSocketServer(io);
+
+// Store WebSocket servers globally for health checks
+global.tradingWsServer = tradingWsServer;
+global.optimizationWsServer = optimizationWsServer;
+global.mongoose = mongoose;
+
+tradingWsServer.initialize();
 console.log('Trading WebSocket server initialized');
 
-console.log('Initializing Optimization WebSocket server...');
-const optimizationWS = new OptimizationWebSocketServer(io);
-optimizationWS.initialize();
+optimizationWsServer.initialize();
 console.log('Optimization WebSocket server initialized');
 
 // Basic request logging middleware
@@ -86,6 +96,8 @@ app.use('/api/user', userRouter);
 app.use('/api/portfolio', portfolioRouter);
 app.use('/api/positions', positionsRouter);
 app.use('/api/strategies', strategiesRouter);
+app.use('/api/test', testRouter);
+app.use('/api/health', healthRouter);
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {

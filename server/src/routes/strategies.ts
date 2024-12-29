@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { auth } from '../middleware/auth';
 import { AuthRequest } from '../types/express';
@@ -6,11 +6,10 @@ import { AuthRequest } from '../types/express';
 const router = Router();
 
 // Get all strategies
-router.get('/', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     // For now, return mock strategies data
-    // In a real app, you would fetch this from your database
-    return res.json({
+    res.json({
       strategies: [
         {
           id: '1',
@@ -58,17 +57,15 @@ router.get('/', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: errorMessage });
   }
 }));
 
 // Get strategy by ID
-router.get('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    // Mock data for a single strategy
-    // In a real app, you would fetch this from your database
-    return res.json({
+    res.json({
       id,
       name: 'Trend Following EMA',
       description: 'Uses exponential moving averages to identify and follow trends',
@@ -101,60 +98,29 @@ router.get('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response) =>
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: errorMessage });
   }
 }));
 
 // Update strategy
-router.put('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    const updatedStrategy = req.body;
-    // In a real app, you would update this in your database
-    return res.json({
-      id,
-      ...updatedStrategy,
-      lastModified: new Date().toISOString()
-    });
+    res.json({ message: `Strategy ${id} updated successfully` });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return res.status(500).json({ error: errorMessage });
-  }
-}));
-
-// Create new strategy
-router.post('/', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
-  try {
-    const newStrategy = req.body;
-    // In a real app, you would save this to your database
-    return res.status(201).json({
-      id: Math.random().toString(36).substr(2, 9),
-      ...newStrategy,
-      status: 'inactive',
-      performance: {
-        winRate: 0,
-        profitFactor: 0,
-        totalTrades: 0,
-        averageProfit: 0,
-        sharpeRatio: 0
-      },
-      lastModified: new Date().toISOString()
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: errorMessage });
   }
 }));
 
 // Delete strategy
-router.delete('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    // In a real app, you would delete this from your database
-    return res.json({ message: `Strategy ${id} deleted successfully` });
+    res.json({ message: `Strategy ${id} deleted successfully` });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: errorMessage });
   }
 }));
 

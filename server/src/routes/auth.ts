@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import { User } from '../models/User';
 import bcrypt from 'bcrypt';
@@ -22,11 +22,10 @@ const mockSendEmail = async (to: string, code: string): Promise<void> => {
 // Send verification code
 router.post('/verify/send', 
   body('email').isEmail(),
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ errors: errors.array() });
-      return;
     }
 
     const { email } = req.body;
@@ -51,12 +50,11 @@ router.post('/verify/code',
     body('email').isEmail(),
     body('code').isLength({ min: 6, max: 6 }),
   ],
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log('Validation errors:', errors.array());
       res.status(400).json({ errors: errors.array() });
-      return;
     }
 
     const { email, code } = req.body;
@@ -69,20 +67,17 @@ router.post('/verify/code',
     if (!storedData) {
       console.log('No verification code found for email:', email);
       res.status(400).json({ error: 'No verification code found' });
-      return;
     }
 
     if (new Date() > storedData.expires) {
       console.log('Code expired. Current time:', new Date(), 'Expiry:', storedData.expires);
       verificationCodes.delete(email);
       res.status(400).json({ error: 'Verification code expired' });
-      return;
     }
 
     if (storedData.code !== code) {
       console.log('Code mismatch. Received:', code, 'Stored:', storedData.code);
       res.status(400).json({ error: 'Invalid verification code' });
-      return;
     }
 
     res.json({ success: true, message: 'Code verified successfully' });
@@ -92,7 +87,7 @@ router.post('/verify/code',
 // Register new user
 router.post('/register', 
   validateRequest(registerSchema),
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { email, password, verificationCode } = req.body;
 
     try {
@@ -100,47 +95,34 @@ router.post('/register',
       const storedVerification = verificationCodes.get(email);
       if (!storedVerification || storedVerification.code !== verificationCode) {
         res.status(400).json({ error: 'Invalid verification code' });
-        return;
       }
 
       if (storedVerification.expires < new Date()) {
         verificationCodes.delete(email);
         res.status(400).json({ error: 'Verification code has expired' });
-        return;
       }
 
-      // Check if user already exists with timeout handling
-      const existingUser = await Promise.race([
-        User.findOne({ email }).maxTimeMS(5000),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Database operation timed out')), 5000)
-        )
-      ]);
+      // Check if user already exists
+      const existingUser = await User.findOne({ email }).exec();
 
       if (existingUser) {
         res.status(400).json({ error: 'User already exists' });
-        return;
       }
 
       // Hash password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
-      // Create new user with timeout handling
+      // Create new user
       const user = new User({
         email,
         password: hashedPassword,
-        verifiedEmail: true,
+        emailVerified: true,
         createdAt: new Date(),
         updatedAt: new Date()
       });
 
-      await Promise.race([
-        user.save().maxTimeMS(5000),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Database operation timed out')), 5000)
-        )
-      ]);
+      await user.save();
 
       // Remove verification code after successful registration
       verificationCodes.delete(email);
@@ -158,7 +140,7 @@ router.post('/register',
         user: {
           id: user._id,
           email: user.email,
-          verifiedEmail: user.verifiedEmail
+          emailVerified: user.emailVerified
         }
       });
     } catch (error) {
@@ -167,7 +149,6 @@ router.post('/register',
       // Handle specific error cases
       if (error instanceof mongoose.Error.ValidationError) {
         res.status(400).json({ error: 'Invalid user data', details: error.errors });
-        return;
       }
       
       if (error.message === 'Database operation timed out') {
@@ -175,12 +156,10 @@ router.post('/register',
           error: 'Service temporarily unavailable',
           message: 'Database operation timed out. Please try again.'
         });
-        return;
       }
 
       if (error.code === 11000) { // Duplicate key error
         res.status(400).json({ error: 'User already exists' });
-        return;
       }
 
       res.status(500).json({ 
@@ -194,19 +173,17 @@ router.post('/register',
 // Login
 router.post('/login',
   validateRequest(loginSchema),
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { email, password } = req.body;
     
     const user = await User.findOne({ email });
     if (!user) {
       res.status(401).json({ error: 'Invalid credentials' });
-      return;
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       res.status(401).json({ error: 'Invalid credentials' });
-      return;
     }
 
     const token = jwt.sign(
@@ -228,21 +205,21 @@ router.post('/login',
 );
 
 // Get user profile
-router.get('/profile', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+router.get('/profile', asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      res.status(401).json({ error: 'No token provided' });
     }
 
     const decoded = jwt.verify(token, config.jwtSecret) as { id: string; email: string };
     const user = await User.findById(decoded.id);
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
     }
 
-    return res.json({
+    res.json({
       id: user._id,
       email: user.email,
       firstName: user.firstName,
@@ -250,7 +227,7 @@ router.get('/profile', asyncHandler(async (req: Request, res: Response): Promise
     });
   } catch (error) {
     console.error('Profile error:', error);
-    return res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ error: 'Invalid token' });
   }
 }));
 
