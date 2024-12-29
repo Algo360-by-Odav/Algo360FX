@@ -22,7 +22,9 @@ console.log('HTTP server created');
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://algo360fx-frontend.onrender.com'
+  'https://algo360fx-client.onrender.com',
+  'https://algo360fx-frontend.onrender.com',
+  'https://algo360fx.onrender.com'
 ];
 
 app.use(cors({
@@ -34,7 +36,9 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Initialize Socket.IO server
@@ -44,7 +48,8 @@ const io = new Server(httpServer, {
   cors: {
     origin: allowedOrigins,
     methods: ['GET', 'POST'],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
   },
   transports: ['websocket', 'polling']
 });
