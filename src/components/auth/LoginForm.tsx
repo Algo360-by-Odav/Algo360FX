@@ -4,402 +4,360 @@ import {
   TextField,
   Button,
   Typography,
-  FormControlLabel,
-  Checkbox,
   Link,
-  CircularProgress,
   Alert,
   Divider,
   IconButton,
-  Paper,
   InputAdornment,
+  Container,
+  useMediaQuery,
+  useTheme as useMuiTheme,
+  Stack,
 } from '@mui/material';
 import { observer } from 'mobx-react-lite';
-import { useNavigate, Link as RouterLink, useLocation } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useRootStore } from '../../hooks/useRootStore';
-import GoogleIcon from '@mui/icons-material/Google';
-import AppleIcon from '@mui/icons-material/Apple';
-import GitHubIcon from '@mui/icons-material/GitHub';
-import LinkedInIcon from '@mui/icons-material/LinkedIn';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import EmailIcon from '@mui/icons-material/Email';
-import LockIcon from '@mui/icons-material/Lock';
+import {
+  Visibility,
+  VisibilityOff,
+  Google,
+  GitHub,
+  LightMode,
+  DarkMode,
+} from '@mui/icons-material';
+import { useTheme } from '@/contexts/ThemeContext';
+import '../../styles/auth.css';
 
-const LoginForm: React.FC = observer(() => {
+const LoginForm = observer(() => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { authStore } = useRootStore();
-  const [showPassword, setShowPassword] = useState(false);
-  
+  const { isDarkMode, toggleTheme } = useTheme();
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    rememberMe: false,
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const [errors, setErrors] = useState({
-    email: '',
-    password: '',
-  });
-
-  const validateForm = () => {
-    let isValid = true;
-    const newErrors = { email: '', password: '' };
-
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-      isValid = false;
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-      isValid = false;
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    setLoading(true);
+    setError('');
 
     try {
-      await authStore.login({
-        email: formData.email,
-        password: formData.password,
-        rememberMe: formData.rememberMe,
-      });
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from);
-    } catch (error) {
-      // Error handling is managed by the store
+      await authStore.login(formData.email, formData.password);
+      navigate('/app/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred during login');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'rememberMe' ? checked : value,
-    }));
-  };
-
-  const handleSocialLogin = (provider: string) => {
-    // Implement social login logic here
-    console.log(`Logging in with ${provider}`);
+  const handleSocialLogin = async (provider: 'google' | 'github') => {
+    try {
+      setLoading(true);
+      await authStore.socialLogin(provider);
+      navigate('/app/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred during social login');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Box
+    <Container 
+      maxWidth={false} 
+      disableGutters 
+      className={`auth-container ${isDarkMode ? 'dark' : 'light'}`}
       sx={{
-        minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: `linear-gradient(135deg, rgba(13, 15, 35, 0.4), rgba(13, 15, 35, 0.7)), url('/assets/images/trading-background.jpg')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
-        padding: 3,
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backdropFilter: 'blur(3px)',
-          pointerEvents: 'none',
-        },
+        flexDirection: 'column',
+        minHeight: '100vh',
+        backgroundColor: isDarkMode ? '#121212' : '#f5f5f5',
       }}
     >
-      <Paper
-        elevation={24}
+      <IconButton
+        onClick={toggleTheme}
         sx={{
-          position: 'relative',
-          p: 4,
-          maxWidth: 450,
-          width: '100%',
-          backdropFilter: 'blur(20px)',
-          background: 'rgba(13, 15, 35, 0.65)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
-          boxShadow: `
-            0 4px 30px rgba(0, 0, 0, 0.1),
-            inset 0 0 60px rgba(255, 255, 255, 0.05)
-          `,
-          transition: 'box-shadow 0.3s ease-in-out',
+          position: 'absolute',
+          top: { xs: 16, sm: 24 },
+          right: { xs: 16, sm: 24 },
+          color: isDarkMode ? '#fff' : '#000',
+          backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
           '&:hover': {
-            boxShadow: `
-              0 6px 40px rgba(0, 0, 0, 0.15),
-              inset 0 0 80px rgba(255, 255, 255, 0.07)
-            `
-          },
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            borderRadius: '16px',
-            padding: '1px',
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))',
-            mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-            maskComposite: 'exclude',
-            pointerEvents: 'none',
+            backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
           },
         }}
       >
+        {isDarkMode ? <LightMode /> : <DarkMode />}
+      </IconButton>
+
+      <Container
+        maxWidth="sm"
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          px: { xs: 2, sm: 3 },
+          py: { xs: 4, sm: 6 },
+        }}
+      >
         <Box
-          component="form"
-          onSubmit={handleSubmit}
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2.5,
+            backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff',
+            borderRadius: 2,
+            p: { xs: 3, sm: 4 },
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
           }}
         >
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            align="center" 
-            sx={{ 
-              mb: 3,
-              color: 'white',
-              fontWeight: 600,
-              textShadow: '0 2px 15px rgba(255,255,255,0.3)',
-              background: 'linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '0.5px',
-            }}
-          >
-            Login to Algo360FX
-          </Typography>
-
-          {authStore.error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {authStore.error}
-            </Alert>
-          )}
-
-          <TextField
-            fullWidth
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            error={!!errors.email}
-            helperText={errors.email}
-            disabled={authStore.isLoading}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <EmailIcon sx={{ color: 'action.active' }} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                color: 'white',
-                '& fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.23)',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.4)',
-                },
-              },
-              '& .MuiInputLabel-root': {
-                color: 'rgba(255, 255, 255, 0.7)',
-              },
-            }}
-          />
-
-          <TextField
-            fullWidth
-            label="Password"
-            name="password"
-            type={showPassword ? 'text' : 'password'}
-            value={formData.password}
-            onChange={handleChange}
-            error={!!errors.password}
-            helperText={errors.password}
-            disabled={authStore.isLoading}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <LockIcon sx={{ color: 'action.active' }} />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => setShowPassword(!showPassword)}
-                    edge="end"
-                    sx={{ color: 'action.active' }}
-                  >
-                    {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                color: 'white',
-                '& fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.23)',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.4)',
-                },
-              },
-              '& .MuiInputLabel-root': {
-                color: 'rgba(255, 255, 255, 0.7)',
-              },
-            }}
-          />
-
-          <FormControlLabel
-            control={
-              <Checkbox
-                name="rememberMe"
-                checked={formData.rememberMe}
-                onChange={handleChange}
-                disabled={authStore.isLoading}
+          <Stack spacing={3}>
+            <Box textAlign="center">
+              <Typography
+                variant={isMobile ? "h5" : "h4"}
+                component="h1"
+                gutterBottom
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  '&.Mui-checked': {
-                    color: 'primary.main',
-                  },
-                }}
-              />
-            }
-            label={
-              <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                Remember me
-              </Typography>
-            }
-          />
-
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            disabled={authStore.isLoading}
-            sx={{
-              py: 1.5,
-              textTransform: 'none',
-              fontSize: '1.1rem',
-              fontWeight: 500,
-              background: 'linear-gradient(135deg, #9333ea 0%, #4f46e5 100%)',
-              transition: 'all 0.3s ease',
-              boxShadow: '0 4px 15px rgba(79, 70, 229, 0.4)',
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 6px 20px rgba(79, 70, 229, 0.6)',
-                background: 'linear-gradient(135deg, #4338CA, #4F46E5)',
-              },
-            }}
-          >
-            {authStore.isLoading ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              'Sign In'
-            )}
-          </Button>
-
-          <Box sx={{ position: 'relative', my: 2 }}>
-            <Divider sx={{ 
-              '&.MuiDivider-root': {
-                borderColor: 'rgba(255, 255, 255, 0.08)',
-                '&::before, &::after': {
-                  borderColor: 'rgba(255, 255, 255, 0.08)',
-                },
-              }
-            }}>
-              <Typography sx={{ 
-                color: 'rgba(255, 255, 255, 0.7)', 
-                px: 1,
-                textShadow: '0 2px 10px rgba(255,255,255,0.1)',
-              }}>
-                Or continue with
-              </Typography>
-            </Divider>
-          </Box>
-
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-            {[
-              { icon: <GoogleIcon />, name: 'Google', color: '#DB4437', hoverColor: '#C23321' },
-              { icon: <AppleIcon />, name: 'Apple', color: '#000000', hoverColor: '#333333' },
-              { icon: <GitHubIcon />, name: 'GitHub', color: '#333333', hoverColor: '#24292E' },
-              { icon: <LinkedInIcon />, name: 'LinkedIn', color: '#0077B5', hoverColor: '#005885' },
-            ].map((provider) => (
-              <IconButton
-                key={provider.name}
-                onClick={() => handleSocialLogin(provider.name)}
-                sx={{
-                  color: 'white',
-                  backgroundColor: `${provider.color}15`,
-                  backdropFilter: 'blur(5px)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    backgroundColor: `${provider.hoverColor}25`,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 5px 15px ${provider.color}20`,
-                  },
+                  color: isDarkMode ? '#fff' : '#1a1a1a',
+                  fontWeight: 600,
                 }}
               >
-                {provider.icon}
-              </IconButton>
-            ))}
-          </Box>
+                Welcome Back
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: isDarkMode ? '#a0aec0' : '#4a5568',
+                  mb: 3,
+                }}
+              >
+                Log in to access your trading dashboard
+              </Typography>
+            </Box>
 
-          <Box sx={{ 
-            mt: 2, 
-            display: 'flex', 
-            justifyContent: 'space-between',
-            '& a': {
-              color: 'rgba(255,255,255,0.8)',
-              textDecoration: 'none',
-              transition: 'all 0.3s ease',
-              textShadow: '0 2px 10px rgba(255,255,255,0.1)',
-              '&:hover': {
-                color: 'white',
-                textShadow: '0 2px 15px rgba(255,255,255,0.2)',
-              },
-            }
-          }}>
-            <Link
-              component={RouterLink}
-              to="/auth/forgot-password"
-              variant="body2"
-              sx={{ color: 'rgba(255,255,255,0.8)' }}
-            >
-              Forgot password?
-            </Link>
-            <Link
-              component={RouterLink}
-              to="/auth/register"
-              variant="body2"
-              sx={{ color: 'rgba(255,255,255,0.8)' }}
-            >
-              Don't have an account? Sign up
-            </Link>
-          </Box>
+            {error && (
+              <Alert 
+                severity="error" 
+                sx={{ 
+                  borderRadius: 1,
+                  '& .MuiAlert-message': {
+                    width: '100%',
+                  }
+                }}
+              >
+                {error}
+              </Alert>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <Stack spacing={2.5}>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  variant="outlined"
+                  required
+                  disabled={loading}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? '#a0aec0' : '#4a5568',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#fff' : '#000',
+                    },
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleChange}
+                  variant="outlined"
+                  required
+                  disabled={loading}
+                  size={isMobile ? "small" : "medium"}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          size={isMobile ? "small" : "medium"}
+                          sx={{ color: isDarkMode ? '#a0aec0' : '#4a5568' }}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? '#a0aec0' : '#4a5568',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#fff' : '#000',
+                    },
+                  }}
+                />
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Link
+                    component={RouterLink}
+                    to="/auth/forgot-password"
+                    sx={{
+                      color: isDarkMode ? '#63b3ed' : '#2b6cb0',
+                      textDecoration: 'none',
+                      fontSize: isMobile ? '0.875rem' : '1rem',
+                      '&:hover': {
+                        textDecoration: 'underline',
+                      },
+                    }}
+                  >
+                    Forgot Password?
+                  </Link>
+                  <Link
+                    component={RouterLink}
+                    to="/auth/register"
+                    sx={{
+                      color: isDarkMode ? '#63b3ed' : '#2b6cb0',
+                      textDecoration: 'none',
+                      fontSize: isMobile ? '0.875rem' : '1rem',
+                      '&:hover': {
+                        textDecoration: 'underline',
+                      },
+                    }}
+                  >
+                    Create Account
+                  </Link>
+                </Box>
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  disabled={loading}
+                  size={isMobile ? "medium" : "large"}
+                  sx={{
+                    mt: 1,
+                    py: isMobile ? 1 : 1.5,
+                    backgroundColor: '#2563eb',
+                    '&:hover': {
+                      backgroundColor: '#1d4ed8',
+                    },
+                    textTransform: 'none',
+                    fontSize: isMobile ? '0.9rem' : '1rem',
+                  }}
+                >
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </Button>
+
+                <Divider sx={{ 
+                  my: 2, 
+                  borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                  '&::before, &::after': {
+                    borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                  }
+                }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: isDarkMode ? '#a0aec0' : '#4a5568',
+                      px: 1,
+                      fontSize: isMobile ? '0.875rem' : '1rem',
+                    }}
+                  >
+                    OR
+                  </Typography>
+                </Divider>
+
+                <Stack 
+                  direction={isMobile ? "column" : "row"} 
+                  spacing={2}
+                >
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => handleSocialLogin('google')}
+                    startIcon={<Google />}
+                    disabled={loading}
+                    size={isMobile ? "medium" : "large"}
+                    sx={{
+                      borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      color: isDarkMode ? '#fff' : '#000',
+                      '&:hover': {
+                        borderColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                        backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      },
+                      textTransform: 'none',
+                      fontSize: isMobile ? '0.9rem' : '1rem',
+                    }}
+                  >
+                    Google
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => handleSocialLogin('github')}
+                    startIcon={<GitHub />}
+                    disabled={loading}
+                    size={isMobile ? "medium" : "large"}
+                    sx={{
+                      borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      color: isDarkMode ? '#fff' : '#000',
+                      '&:hover': {
+                        borderColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                        backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      },
+                      textTransform: 'none',
+                      fontSize: isMobile ? '0.9rem' : '1rem',
+                    }}
+                  >
+                    GitHub
+                  </Button>
+                </Stack>
+              </Stack>
+            </form>
+          </Stack>
         </Box>
-      </Paper>
-    </Box>
+      </Container>
+    </Container>
   );
 });
 
