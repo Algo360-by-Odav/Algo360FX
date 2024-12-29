@@ -12,6 +12,7 @@ import {
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -26,6 +27,11 @@ const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (step === 1) {
+      await requestVerificationCode();
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -94,7 +100,7 @@ const RegisterPage: React.FC = () => {
         throw new Error(data.error || 'Failed to send verification code');
       }
 
-      alert('Verification code has been sent to your email');
+      setStep(2);
     } catch (err: any) {
       setError(err.message || 'Failed to send verification code');
     } finally {
@@ -131,96 +137,104 @@ const RegisterPage: React.FC = () => {
                 {error}
               </Typography>
             )}
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="firstName"
-              label="First Name"
-              name="firstName"
-              autoComplete="given-name"
-              autoFocus
-              value={formData.firstName}
-              onChange={handleChange}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="lastName"
-              label="Last Name"
-              name="lastName"
-              autoComplete="family-name"
-              value={formData.lastName}
-              onChange={handleChange}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              value={formData.email}
-              onChange={handleChange}
-            />
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', width: '100%' }}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="verificationCode"
-                label="Verification Code"
-                name="verificationCode"
-                value={formData.verificationCode}
-                onChange={handleChange}
-              />
-              <Button
-                variant="contained"
-                onClick={requestVerificationCode}
-                disabled={isRequestingCode || !formData.email}
-                sx={{ mt: 2, minWidth: '120px', height: '56px' }}
-              >
-                {isRequestingCode ? 'Sending...' : 'Get Code'}
-              </Button>
-            </Box>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              id="password"
-              autoComplete="new-password"
-              value={formData.password}
-              onChange={handleChange}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="confirmPassword"
-              label="Confirm Password"
-              type="password"
-              id="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-            >
-              Create Account
-            </Button>
-            <Box sx={{ textAlign: 'center' }}>
-              <Link component={RouterLink} to="/auth/login" variant="body2">
-                Already have an account? Sign in
-              </Link>
-            </Box>
+            
+            {step === 1 ? (
+              <>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="email"
+                  label="Email Address"
+                  name="email"
+                  autoComplete="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  autoFocus
+                />
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  sx={{ mt: 3, mb: 2 }}
+                  disabled={isRequestingCode}
+                >
+                  {isRequestingCode ? 'Sending...' : 'Send Verification Code'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="verificationCode"
+                  label="Verification Code"
+                  name="verificationCode"
+                  value={formData.verificationCode}
+                  onChange={handleChange}
+                  autoFocus
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="firstName"
+                  label="First Name"
+                  name="firstName"
+                  autoComplete="given-name"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="lastName"
+                  label="Last Name"
+                  name="lastName"
+                  autoComplete="family-name"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type="password"
+                  id="password"
+                  autoComplete="new-password"
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="confirmPassword"
+                  label="Confirm Password"
+                  type="password"
+                  id="confirmPassword"
+                  autoComplete="new-password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                />
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  sx={{ mt: 3, mb: 2 }}
+                >
+                  Create Account
+                </Button>
+              </>
+            )}
+            
+            <Link component={RouterLink} to="/auth/login" variant="body2">
+              Already have an account? Sign in
+            </Link>
           </Box>
         </Paper>
       </Box>
