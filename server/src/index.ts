@@ -85,7 +85,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, next: express
 
 // Connect to MongoDB
 console.log('Connecting to MongoDB...');
-mongoose.connect(config.mongoUri)
+mongoose.connect(config.databaseUrl)
   .then(() => {
     console.log('Connected to MongoDB');
     

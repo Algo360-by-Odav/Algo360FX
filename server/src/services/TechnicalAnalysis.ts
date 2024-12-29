@@ -1,4 +1,4 @@
-import { technicalIndicators } from 'technicalindicators';
+import * as technicalIndicators from 'technicalindicators';
 import axios from 'axios';
 
 export class TechnicalAnalysis {
