@@ -6,10 +6,10 @@ services:
     plan: starter
     buildCommand: |
       cd server
-      npm ci --production=false
-      npx tsc --project tsconfig.json
-      cp package*.json dist/
-      cd dist && npm ci --production
+      npm ci
+      npm run build
+      cd dist
+      npm ci --production
     startCommand: cd server/dist && NODE_ENV=production node index.js
     healthCheckPath: /api/health
     envVars:

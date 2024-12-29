@@ -7,9 +7,10 @@
     "start": "node dist/index.js",
     "dev": "set PORT=5000 && nodemon src/index.ts",
     "clean": "rimraf dist",
-    "build": "npm run clean && tsc",
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "postbuild": "cp package*.json dist/",
     "start:prod": "NODE_ENV=production node dist/index.js",
-    "postinstall": "npm run build",
     "test": "jest"
   },
   "dependencies": {
@@ -50,5 +51,8 @@
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.x"
   }
 }
