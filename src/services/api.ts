@@ -3,7 +3,7 @@ import { config } from '../config/config';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: config.apiUrl,
+  baseURL: `${config.apiUrl}/api`,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -100,7 +100,7 @@ export const apiService = {
 
   async getProfile() {
     try {
-      const response = await api.get('/auth/profile');
+      const response = await api.get('/auth/me');
       return response.data;
     } catch (error) {
       throw error;
@@ -110,7 +110,7 @@ export const apiService = {
   // Settings
   async getSettings() {
     try {
-      const response = await api.get('/settings');
+      const response = await api.get('/user/settings');
       return response.data;
     } catch (error) {
       throw error;
@@ -119,7 +119,7 @@ export const apiService = {
 
   async updateSettings(settings: any) {
     try {
-      const response = await api.put('/settings', settings);
+      const response = await api.put('/user/settings', settings);
       return response.data;
     } catch (error) {
       throw error;
@@ -129,7 +129,7 @@ export const apiService = {
   // Trading
   async getOrders() {
     try {
-      const response = await api.get('/trading/orders');
+      const response = await api.get('/market/orders');
       return response.data;
     } catch (error) {
       throw error;
@@ -138,7 +138,7 @@ export const apiService = {
 
   async getPositions() {
     try {
-      const response = await api.get('/trading/positions');
+      const response = await api.get('/market/positions');
       return response.data;
     } catch (error) {
       throw error;
@@ -147,7 +147,7 @@ export const apiService = {
 
   async getTradeHistory() {
     try {
-      const response = await api.get('/trading/history');
+      const response = await api.get('/market/history');
       return response.data;
     } catch (error) {
       throw error;
@@ -166,7 +166,7 @@ export const apiService = {
 
   async getChartData(symbol: string, timeframe: string) {
     try {
-      const response = await api.get('/market/charts', { params: { symbol, timeframe } });
+      const response = await api.get('/market/chart', { params: { symbol, timeframe } });
       return response.data;
     } catch (error) {
       throw error;
