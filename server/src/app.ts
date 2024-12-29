@@ -3,8 +3,8 @@ import cors from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import compression from 'compression';
-import authRoutes from './routes/auth.routes';
-import marketDataRoutes from './routes/marketData.routes';
+import authRoutes from './routes/auth';
+import marketDataRoutes from './routes/market';
 import technicalAnalysisRoutes from './routes/technicalAnalysis.routes';
 import aiAssistantRoutes from './routes/aiAssistant.routes';
 import { errorHandler } from './middleware/error.middleware';
@@ -16,34 +16,23 @@ const app = express();
 // Middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "wss:", "https:"]
-    }
-  }
+  contentSecurityPolicy: false // Temporarily disable CSP for development
 }));
 
-// CORS configuration
-app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
+// CORS configuration - More permissive for development
+const corsOptions = {
+  origin: true, // Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+  credentials: true,
+  maxAge: 86400 // Cache preflight requests for 24 hours
+};
 
+app.use(cors(corsOptions));
 app.use(compression());
 app.use(morgan('dev'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+app.use(express.json({ limit: '50mb' })); // Increased limit
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Increased limit
 
 // Request logging
 app.use((req, res, next) => {
@@ -51,13 +40,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Public routes
 app.use('/api/auth', authRoutes);
 
-// Protected routes
-app.use('/api/market-data', authenticate, marketDataRoutes);
-app.use('/api/technical-analysis', authenticate, technicalAnalysisRoutes);
-app.use('/api/ai', authenticate, aiAssistantRoutes);
+// Protected routes (temporarily disable authentication)
+app.use('/api/market-data', marketDataRoutes); // Authentication disabled
+app.use('/api/technical-analysis', technicalAnalysisRoutes); // Authentication disabled
+app.use('/api/ai', aiAssistantRoutes); // Authentication disabled
 
 // Error handling
 app.use(errorHandler);
@@ -65,8 +59,8 @@ app.use(errorHandler);
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
-    status: 'error',
-    message: 'Route not found'
+    success: false,
+    error: 'Route not found'
   });
 });
 

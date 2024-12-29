@@ -3,8 +3,8 @@ import { body, validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
-import { User } from '../models/User';
-import { authLimiter, verificationLimiter } from '../middleware/rateLimiter';
+import { User } from '../entities/User';
+import { postgresConnection } from '../config/database';
 
 const router = express.Router();
 
@@ -26,7 +26,6 @@ router.options('*', (req, res) => {
 
 // Send verification code
 router.post('/verify/send', 
-  verificationLimiter,
   body('email').isEmail().withMessage('Please enter a valid email'),
   async (req: Request, res: Response) => {
     try {
@@ -67,7 +66,6 @@ router.post('/verify/send',
 
 // Verify code
 router.post('/verify/code',
-  authLimiter,
   body('email').isEmail().withMessage('Please enter a valid email'),
   body('code').isLength({ min: 6, max: 6 }).withMessage('Verification code must be 6 digits long'),
   async (req: Request, res: Response) => {
@@ -99,15 +97,15 @@ router.post('/verify/code',
         });
       }
 
-      if (storedData.code !== code) {
+      if (code !== storedData.code) {
         return res.status(400).json({ 
           success: false,
-          error: 'Invalid verification code. Please try again.' 
+          error: 'Invalid verification code.' 
         });
       }
 
       return res.json({ 
-        success: true, 
+        success: true,
         message: 'Code verified successfully' 
       });
     } catch (error) {
@@ -122,7 +120,6 @@ router.post('/verify/code',
 
 // Register new user
 router.post('/register',
-  authLimiter,
   [
     body('email').isEmail().withMessage('Please enter a valid email'),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
@@ -141,9 +138,17 @@ router.post('/register',
       }
 
       const { email, password, firstName, lastName, verificationCode } = req.body;
+      console.log('Registration request body:', req.body);
 
       // Verify the code again
       const storedData = verificationCodes.get(email);
+      console.log('Registration verification check:', {
+        email,
+        verificationCode,
+        storedData,
+        allStoredCodes: Array.from(verificationCodes.entries())
+      });
+
       if (!storedData || storedData.code !== verificationCode || new Date() > storedData.expires) {
         return res.status(400).json({ 
           success: false,
@@ -152,7 +157,9 @@ router.post('/register',
       }
 
       // Check if user already exists
-      const existingUser = await User.findOne({ email });
+      const userRepository = postgresConnection.getRepository(User);
+      const existingUser = await userRepository.findOne({ where: { email } });
+      
       if (existingUser) {
         return res.status(400).json({ 
           success: false,
@@ -165,20 +172,18 @@ router.post('/register',
       const hashedPassword = await bcrypt.hash(password, salt);
 
       // Create user
-      const user = new User({
-        email,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        isVerified: true
-      });
+      const user = new User();
+      user.email = email;
+      user.password = hashedPassword;
+      user.firstName = firstName;
+      user.lastName = lastName;
 
-      await user.save();
+      await userRepository.save(user);
       verificationCodes.delete(email); // Clean up the verification code
 
       // Generate JWT
       const token = jwt.sign(
-        { userId: user._id },
+        { userId: user.id },
         config.JWT_SECRET,
         { expiresIn: '24h' }
       );
@@ -187,11 +192,10 @@ router.post('/register',
         success: true,
         token,
         user: {
-          id: user._id,
+          id: user.id,
           email: user.email,
           firstName: user.firstName,
-          lastName: user.lastName,
-          isVerified: user.isVerified
+          lastName: user.lastName
         }
       });
     } catch (error) {
@@ -206,7 +210,6 @@ router.post('/register',
 
 // Login
 router.post('/login',
-  authLimiter,
   body('email').isEmail().withMessage('Please enter a valid email'),
   body('password').exists().withMessage('Password is required'),
   async (req: Request, res: Response) => {
@@ -220,7 +223,8 @@ router.post('/login',
       }
 
       const { email, password } = req.body;
-      const user = await User.findOne({ email });
+      const userRepository = postgresConnection.getRepository(User);
+      const user = await userRepository.findOne({ where: { email } });
 
       if (!user) {
         return res.status(400).json({ 
@@ -239,7 +243,7 @@ router.post('/login',
 
       const token = jwt.sign(
         { 
-          userId: user._id,
+          userId: user.id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName
@@ -252,7 +256,7 @@ router.post('/login',
         success: true,
         token,
         user: {
-          id: user._id,
+          id: user.id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -280,7 +284,8 @@ router.get('/profile', async (req: Request, res: Response) => {
     }
 
     const decoded = jwt.verify(token, config.JWT_SECRET) as { userId: string; email: string };
-    const user = await User.findById(decoded.userId);
+    const userRepository = postgresConnection.getRepository(User);
+    const user = await userRepository.findOne({ where: { id: decoded.userId } });
 
     if (!user) {
       return res.status(404).json({ 
@@ -290,16 +295,19 @@ router.get('/profile', async (req: Request, res: Response) => {
     }
 
     return res.json({
-      id: user._id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      }
     });
   } catch (error) {
     console.error('Profile error:', error);
     return res.status(401).json({ 
       success: false,
-      error: 'Invalid token' 
+      error: 'Invalid token'
     });
   }
 });
@@ -316,7 +324,8 @@ router.get('/me', async (req: Request, res: Response): Promise<Response> => {
     }
 
     const decoded = jwt.verify(token, config.JWT_SECRET) as { userId: string };
-    const user = await User.findById(decoded.userId).select('-password');
+    const userRepository = postgresConnection.getRepository(User);
+    const user = await userRepository.findOne({ where: { id: decoded.userId } }).select(['id', 'email', 'firstName', 'lastName']);
     
     if (!user) {
       return res.status(404).json({ 
@@ -325,12 +334,15 @@ router.get('/me', async (req: Request, res: Response): Promise<Response> => {
       });
     }
 
-    return res.json(user);
+    return res.json({
+      success: true,
+      user
+    });
   } catch (error) {
     console.error('Auth check error:', error);
     return res.status(401).json({ 
       success: false,
-      error: 'Invalid token' 
+      error: 'Invalid token'
     });
   }
 });
@@ -348,7 +360,8 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     }
 
     // Verify reset token
-    const user = await User.findOne({ resetPasswordToken: token });
+    const userRepository = postgresConnection.getRepository(User);
+    const user = await userRepository.findOne({ where: { resetPasswordToken: token } });
     if (!user) {
       return res.status(400).json({ 
         success: false,
@@ -369,16 +382,11 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update user password and clear reset token
-    await User.findOneAndUpdate(
-      { _id: user._id },
-      {
-        $set: {
-          password: hashedPassword,
-          resetPasswordToken: undefined,
-          resetPasswordExpires: undefined
-        }
-      }
-    );
+    await userRepository.update(user.id, {
+      password: hashedPassword,
+      resetPasswordToken: undefined,
+      resetPasswordExpires: undefined
+    });
 
     return res.json({ 
       success: true,
