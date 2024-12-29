@@ -11,9 +11,9 @@ const baselinePrices = {
 };
 function generateMarketData(symbol) {
     const basePrice = baselinePrices[symbol] || 1.0000;
-    const volatility = basePrice * 0.0002;
+    const volatility = basePrice * 0.0002; // 0.02% volatility
     const bid = basePrice + (Math.random() - 0.5) * volatility;
-    const spread = basePrice * 0.0001;
+    const spread = basePrice * 0.0001; // 0.01% spread
     const ask = bid + spread;
     return {
         symbol,
@@ -33,6 +33,7 @@ function generateOrderBook(symbol) {
     const asks = [];
     let totalBidSize = 0;
     let totalAskSize = 0;
+    // Generate bids
     for (let i = 0; i < levels; i++) {
         const price = marketData.bid - (i * 0.0001);
         const size = Math.floor(Math.random() * 1000000);
@@ -41,9 +42,10 @@ function generateOrderBook(symbol) {
             price: Number(price.toFixed(5)),
             size,
             total: totalBidSize,
-            percentage: 0,
+            percentage: 0, // Will be calculated after all entries are generated
         });
     }
+    // Generate asks
     for (let i = 0; i < levels; i++) {
         const price = marketData.ask + (i * 0.0001);
         const size = Math.floor(Math.random() * 1000000);
@@ -52,9 +54,10 @@ function generateOrderBook(symbol) {
             price: Number(price.toFixed(5)),
             size,
             total: totalAskSize,
-            percentage: 0,
+            percentage: 0, // Will be calculated after all entries are generated
         });
     }
+    // Calculate percentages
     bids.forEach(bid => {
         bid.percentage = (bid.total / totalBidSize) * 100;
     });
@@ -68,4 +71,3 @@ function generateOrderBook(symbol) {
         timestamp: new Date().toISOString(),
     };
 }
-//# sourceMappingURL=marketDataGenerator.js.map

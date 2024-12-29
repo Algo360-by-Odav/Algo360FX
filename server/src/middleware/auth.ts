@@ -1,41 +1,30 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
+import { User } from '../models/User';
 
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-  };
+export interface AuthRequest extends Request {
+  user?: any;
 }
 
-export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  // Always skip authentication in development mode
-  if (config.env === 'development') {
-    req.user = {
-      id: 'dev-user',
-      email: 'dev@example.com'
-    };
-    return next();
-  }
-
+export const auth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<Response | void> => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
-      throw new Error();
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const decoded = jwt.verify(token, config.jwtSecret) as {
-      id: string;
-      email: string;
-    };
+    const decoded = jwt.verify(token, config.jwtSecret) as { userId: string };
+    const user = await User.findById(decoded.userId);
 
-    req.user = decoded;
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Please authenticate' });
+    return res.status(401).json({ error: 'Invalid token' });
   }
 };
-
-export default authenticateToken;

@@ -5,6 +5,7 @@ const mongoose_1 = require("mongoose");
 const documentationSchema = new mongoose_1.Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
+    // Add other fields as needed
 });
 const Documentation = (0, mongoose_1.model)('Documentation', documentationSchema);
 async function searchDocumentation(query) {
@@ -23,4 +24,3 @@ async function searchDocumentation(query) {
         return [];
     }
 }
-//# sourceMappingURL=documentationService.js.map

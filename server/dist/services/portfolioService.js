@@ -40,4 +40,3 @@ async function deletePortfolio(id) {
     const result = await Portfolio.findByIdAndDelete(id);
     return result !== null;
 }
-//# sourceMappingURL=portfolioService.js.map

@@ -48,34 +48,42 @@ class MT5Bridge {
         this.wss = new ws_1.WebSocketServer({ port: WS_PORT });
     }
     async start() {
-        console.log(`MT5 Bridge starting on port ${WS_PORT}`);
-        this.wss.on('connection', (ws) => {
-            const connectionId = Math.random().toString(36).substring(7);
-            this.connections.set(connectionId, { ws });
-            console.log(`New connection established: ${connectionId}`);
-            ws.on('message', async (message) => {
-                try {
-                    const data = JSON.parse(message.toString());
-                    await this.handleMessage(connectionId, data);
-                }
-                catch (error) {
-                    console.error('Error handling message:', error);
-                    ws.send(JSON.stringify({
-                        type: 'error',
-                        data: 'Failed to process message'
-                    }));
-                }
+        try {
+            console.log(`MT5 Bridge starting on port ${WS_PORT}`);
+            this.wss.on('connection', (ws) => {
+                const connectionId = Math.random().toString(36).substring(7);
+                this.connections.set(connectionId, { ws });
+                console.log(`New connection established: ${connectionId}`);
+                ws.on('message', async (message) => {
+                    try {
+                        const data = JSON.parse(message.toString());
+                        await this.handleMessage(connectionId, data);
+                    }
+                    catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : 'Failed to process message';
+                        console.error('Error handling message:', error);
+                        ws.send(JSON.stringify({
+                            type: 'error',
+                            data: errorMessage
+                        }));
+                    }
+                });
+                ws.on('close', () => {
+                    const connection = this.connections.get(connectionId);
+                    if (connection?.terminal) {
+                        connection.terminal.disconnect();
+                    }
+                    this.connections.delete(connectionId);
+                    console.log(`Connection closed: ${connectionId}`);
+                });
             });
-            ws.on('close', () => {
-                const connection = this.connections.get(connectionId);
-                if (connection === null || connection === void 0 ? void 0 : connection.terminal) {
-                    connection.terminal.disconnect();
-                }
-                this.connections.delete(connectionId);
-                console.log(`Connection closed: ${connectionId}`);
-            });
-        });
-        console.log(`MT5 Bridge Server running on port ${WS_PORT}`);
+            console.log(`MT5 Bridge Server running on port ${WS_PORT}`);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to start MT5 Bridge';
+            console.error('Error starting MT5 Bridge:', error);
+            throw new Error(errorMessage);
+        }
     }
     async handleMessage(connectionId, message) {
         const connection = this.connections.get(connectionId);
@@ -96,9 +104,10 @@ class MT5Bridge {
                     }));
                 }
                 catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : 'Failed to connect to MT5';
                     ws.send(JSON.stringify({
                         type: 'error',
-                        data: { message: error.message }
+                        data: errorMessage
                     }));
                 }
                 break;
@@ -115,9 +124,10 @@ class MT5Bridge {
                     }));
                 }
                 catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : 'Failed to place order';
                     ws.send(JSON.stringify({
                         type: 'error',
-                        data: { message: error.message }
+                        data: errorMessage
                     }));
                 }
                 break;
@@ -134,19 +144,23 @@ class MT5Bridge {
             return;
         const { ws, terminal } = connection;
         try {
+            // Subscribe to price updates
             terminal.subscribeToMarketData('EURUSD');
+            // Listen for updates
             terminal.on('onSymbolPriceUpdated', (price) => {
                 ws.send(JSON.stringify({
                     type: 'price_update',
                     data: price
                 }));
             });
+            // Listen for position updates
             terminal.on('onPositionUpdated', (position) => {
                 ws.send(JSON.stringify({
                     type: 'position_update',
                     data: position
                 }));
             });
+            // Listen for order updates
             terminal.on('onOrderUpdated', (order) => {
                 ws.send(JSON.stringify({
                     type: 'order_update',
@@ -155,26 +169,36 @@ class MT5Bridge {
             });
         }
         catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to start updates';
             console.error('Failed to start updates:', error);
             ws.send(JSON.stringify({
                 type: 'error',
-                data: 'Failed to start updates'
+                data: errorMessage
             }));
         }
     }
     stop() {
-        this.connections.forEach(connection => {
-            if (connection.terminal) {
-                connection.terminal.disconnect();
-            }
-            if (connection.ws.readyState === ws_1.default.OPEN) {
-                connection.ws.close();
-            }
-        });
-        this.connections.clear();
-        this.wss.close();
+        try {
+            // Close all connections
+            this.connections.forEach(connection => {
+                if (connection.terminal) {
+                    connection.terminal.disconnect();
+                }
+                if (connection.ws.readyState === ws_1.default.OPEN) {
+                    connection.ws.close();
+                }
+            });
+            // Clear connections
+            this.connections.clear();
+            // Close WebSocket server
+            this.wss.close();
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to stop MT5 Bridge';
+            console.error('Error stopping MT5 Bridge:', error);
+            throw new Error(errorMessage);
+        }
     }
 }
 exports.MT5Bridge = MT5Bridge;
 exports.default = MT5Bridge;
-//# sourceMappingURL=mt5bridge.js.map

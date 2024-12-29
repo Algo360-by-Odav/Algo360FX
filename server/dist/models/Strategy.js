@@ -65,6 +65,7 @@ const strategySchema = new mongoose_1.Schema({
 }, {
     timestamps: true
 });
+// Create text index for search
 strategySchema.index({
     name: 'text',
     description: 'text',
@@ -73,4 +74,3 @@ strategySchema.index({
 });
 const Strategy = mongoose_1.default.model('Strategy', strategySchema);
 exports.default = Strategy;
-//# sourceMappingURL=Strategy.js.map

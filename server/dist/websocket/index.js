@@ -7,9 +7,18 @@ class TradingWebSocketServer {
         this.clients = new Map();
         this.marketData = new Map();
         this.wss = new ws_1.WebSocketServer({ server });
+        this.heartbeatInterval = setInterval(() => {
+            this.clients.forEach((client, id) => {
+                if (client.ws.readyState === ws_1.WebSocket.OPEN) {
+                    this.sendMessage(client.ws, 'heartbeat', { timestamp: new Date().toISOString() });
+                }
+                else {
+                    this.clients.delete(id);
+                }
+            });
+        }, 30000); // Send heartbeat every 30 seconds
         this.setupWebSocket();
         this.initializeMarketData();
-        this.startHeartbeat();
     }
     setupWebSocket() {
         this.wss.on('connection', (ws) => {
@@ -21,6 +30,7 @@ class TradingWebSocketServer {
             };
             this.clients.set(clientId, client);
             console.log(`Client connected: ${clientId}`);
+            // Send initial market data
             this.sendMessage(ws, 'connect', { status: 'connected', clientId });
             ws.on('message', (message) => {
                 try {
@@ -42,6 +52,7 @@ class TradingWebSocketServer {
         });
     }
     initializeMarketData() {
+        // Initialize with some default market data
         const symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD'];
         symbols.forEach(symbol => {
             this.marketData.set(symbol, {
@@ -51,6 +62,7 @@ class TradingWebSocketServer {
                 timestamp: new Date().toISOString()
             });
         });
+        // Start updating market data periodically
         setInterval(() => {
             this.updateMarketData();
         }, 1000);
@@ -67,6 +79,7 @@ class TradingWebSocketServer {
                 timestamp: new Date().toISOString()
             };
             this.marketData.set(symbol, updatedData);
+            // Send updates to subscribed clients
             this.clients.forEach(client => {
                 if (client.subscriptions.has(symbol)) {
                     this.sendMessage(client.ws, 'market_data', updatedData);
@@ -106,6 +119,7 @@ class TradingWebSocketServer {
         client.subscriptions.delete(symbol);
     }
     handlePlaceOrder(client, order) {
+        // Simulate order processing
         const orderId = (0, uuid_1.v4)();
         const processedOrder = {
             ...order,
@@ -113,18 +127,20 @@ class TradingWebSocketServer {
             status: 'PENDING',
             timestamp: new Date().toISOString()
         };
+        // Send order confirmation
         this.sendMessage(client.ws, 'order_update', processedOrder);
+        // Simulate order execution after a short delay
         setTimeout(() => {
-            var _a;
             const executedOrder = {
                 ...processedOrder,
                 status: 'FILLED',
-                filledPrice: ((_a = this.marketData.get(order.symbol)) === null || _a === void 0 ? void 0 : _a.bid) || 0,
+                filledPrice: this.marketData.get(order.symbol)?.bid || 0,
             };
             this.sendMessage(client.ws, 'order_update', executedOrder);
         }, 500);
     }
     handleCancelOrder(client, { orderId }) {
+        // Simulate order cancellation
         this.sendMessage(client.ws, 'order_update', {
             id: orderId,
             status: 'CANCELLED',
@@ -142,18 +158,6 @@ class TradingWebSocketServer {
     randomPrice(min, max) {
         return Number((Math.random() * (max - min) + min).toFixed(5));
     }
-    startHeartbeat() {
-        this.heartbeatInterval = setInterval(() => {
-            this.clients.forEach((client, id) => {
-                if (client.ws.readyState === ws_1.WebSocket.OPEN) {
-                    this.sendMessage(client.ws, 'heartbeat', { timestamp: new Date().toISOString() });
-                }
-                else {
-                    this.clients.delete(id);
-                }
-            });
-        }, 30000);
-    }
     handleError(error) {
         console.error('WebSocket error:', error);
         this.clients.forEach((client) => {
@@ -168,4 +172,3 @@ class TradingWebSocketServer {
     }
 }
 exports.default = TradingWebSocketServer;
-//# sourceMappingURL=index.js.map

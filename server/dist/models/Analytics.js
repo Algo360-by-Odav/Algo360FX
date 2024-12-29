@@ -77,6 +77,7 @@ const AnalyticsSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Create text indexes for search
 AnalyticsSchema.index({
     name: 'text',
     description: 'text',
@@ -84,4 +85,3 @@ AnalyticsSchema.index({
 });
 exports.Analytics = mongoose_1.default.model('Analytics', AnalyticsSchema);
 exports.default = exports.Analytics;
-//# sourceMappingURL=Analytics.js.map

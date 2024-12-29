@@ -19,10 +19,21 @@ interface RiskMetrics {
   probabilityOfSuccess: number;
 }
 
+interface RiskAnalysis {
+  riskRewardRatio: number;
+  potentialLoss: number;
+  potentialProfit: number;
+  riskPercentage: number;
+  stopLossPips: number;
+  takeProfitPips: number;
+  recommendation: string;
+}
+
 export class RiskManagement {
   private accountBalance: number = 10000; // Default value, should be fetched from user's account
   private maxRiskPerTrade: number = 0.02; // 2% risk per trade
   private maxDrawdown: number = 0.06; // 6% maximum drawdown
+  private maxRiskPercentage = 2; // Maximum risk per trade as percentage of account balance
 
   public async analyzePosition(position: Position): Promise<RiskMetrics> {
     const stopLossDistance = Math.abs(position.entry - position.stopLoss);
@@ -147,5 +158,49 @@ Recommendations:
 - Recommended Position Size: ${metrics.recommendedPositionSize.toFixed(2)}
 ${this.validateRiskParameters(position).map(warning => `- Warning: ${warning}`).join('\n')}
     `.trim();
+  }
+
+  async analyzeRisk(position: Position): Promise<RiskAnalysis> {
+    const pipValue = this.calculatePipValue(position.symbol);
+    const stopLossPips = Math.abs(position.entry - position.stopLoss) / pipValue;
+    const takeProfitPips = Math.abs(position.takeProfit - position.entry) / pipValue;
+    
+    const potentialLoss = stopLossPips * pipValue * position.size;
+    const potentialProfit = takeProfitPips * pipValue * position.size;
+    const riskRewardRatio = potentialProfit / potentialLoss;
+    const riskPercentage = (potentialLoss / this.accountBalance) * 100;
+
+    const recommendation = this.generateRecommendation(riskRewardRatio, riskPercentage);
+
+    return {
+      riskRewardRatio,
+      potentialLoss,
+      potentialProfit,
+      riskPercentage,
+      stopLossPips,
+      takeProfitPips,
+      recommendation
+    };
+  }
+
+  private calculatePipValue(symbol: string): number {
+    // Mock implementation - should be calculated based on actual market data
+    return symbol.includes('JPY') ? 0.01 : 0.0001;
+  }
+
+  private generateRecommendation(riskRewardRatio: number, riskPercentage: number): string {
+    if (riskPercentage > this.maxRiskPercentage) {
+      return 'Position size too large. Consider reducing position size to limit risk.';
+    }
+
+    if (riskRewardRatio < 1) {
+      return 'Risk/reward ratio unfavorable. Consider adjusting take profit or stop loss levels.';
+    }
+
+    if (riskRewardRatio >= 2) {
+      return 'Good risk/reward setup. Proceed with caution and monitor market conditions.';
+    }
+
+    return 'Acceptable risk/reward ratio. Consider increasing take profit target if market conditions allow.';
   }
 }

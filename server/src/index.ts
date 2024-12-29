@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -28,25 +28,22 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log('Blocked by CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: '*',  // Allow all origins for now
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Middleware for parsing JSON and handling large payloads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
 const io = new Server(httpServer, {
   path: '/ws',
   cors: {
-    origin: allowedOrigins,
+    origin: '*',  // Allow all origins for WebSocket
     methods: ['GET', 'POST'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -66,8 +63,11 @@ const optimizationWS = new OptimizationWebSocketServer(io);
 optimizationWS.initialize();
 console.log('Optimization WebSocket server initialized');
 
-// Middleware
-app.use(express.json());
+// Basic request logging middleware
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRouter);
@@ -77,15 +77,27 @@ app.use('/api/search', searchRouter);
 app.use('/api/user', userRouter);
 
 // Health check endpoint
-app.get('/api/health', (_req: express.Request, res: express.Response) => {
-  res.json({ status: 'ok' });
+app.get('/api/health', (_req: Request, res: Response) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    database: dbStatus
+  });
+});
+
+// 404 handler
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: 'Not Found' });
 });
 
 // Error handling middleware
-app.use((err: Error, _req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
-  next(err);
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Error:', err);
+  res.status(500).json({ 
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
 });
 
 // Connect to MongoDB
@@ -100,14 +112,9 @@ mongoose.connect(config.databaseUrl, {
 })
 .then(() => {
   console.log('Connected to MongoDB');
-  
-  // Start the server
-  const PORT = config.port;
-  httpServer.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log('WebSocket server endpoints:');
-    console.log('- Trading: /ws');
-    console.log('- Optimization: /ws');
+  const port = config.port || 5000;
+  httpServer.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
   });
 })
 .catch((error) => {

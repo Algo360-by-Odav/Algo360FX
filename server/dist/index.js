@@ -7,7 +7,6 @@ const express_1 = __importDefault(require("express"));
 const http_1 = require("http");
 const cors_1 = __importDefault(require("cors"));
 const mongoose_1 = __importDefault(require("mongoose"));
-const body_parser_1 = require("body-parser");
 const socket_io_1 = require("socket.io");
 const trading_1 = __importDefault(require("./websocket/trading"));
 const optimization_1 = __importDefault(require("./websocket/optimization"));
@@ -15,119 +14,96 @@ const search_1 = __importDefault(require("./routes/search"));
 const auth_1 = __importDefault(require("./routes/auth"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
 const market_1 = __importDefault(require("./routes/market"));
-const mt5bridge_1 = __importDefault(require("./services/mt5bridge"));
+const user_1 = __importDefault(require("./routes/user"));
 const config_1 = require("./config/config");
-const metaapi_cloud_sdk_1 = __importDefault(require("metaapi.cloud-sdk"));
 const app = (0, express_1.default)();
+console.log('Express app created');
 const httpServer = (0, http_1.createServer)(app);
-const io = new socket_io_1.Server(httpServer, {
-    path: '/ws',
-    cors: {
-        origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173'],
-        methods: ['GET', 'POST'],
-        credentials: true
-    },
-    transports: ['websocket']
-});
-const tradingServer = new trading_1.default(io);
-const optimizationServer = new optimization_1.default(io);
-mongoose_1.default.connect(config_1.config.mongoUri, {
-    retryWrites: true,
-    w: 'majority',
-    directConnection: false,
-})
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB connection error:', err));
+console.log('HTTP server created');
+// CORS configuration
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://algo360fx-client.onrender.com',
+    'https://algo360fx-frontend.onrender.com',
+    'https://algo360fx.onrender.com'
+];
 app.use((0, cors_1.default)({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173', 'http://localhost:5000'],
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        }
+        else {
+            console.log('Blocked by CORS:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express_1.default.json());
-app.use((0, body_parser_1.json)());
-app.use((err, _req, res, _next) => {
-    console.error(err.stack);
-    res.status(500).json({
-        error: 'Internal Server Error',
-        message: err.message,
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
+// Initialize Socket.IO server
+console.log('Initializing Socket.IO server...');
+const io = new socket_io_1.Server(httpServer, {
+    path: '/ws',
+    cors: {
+        origin: allowedOrigins,
+        methods: ['GET', 'POST'],
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization']
+    },
+    transports: ['websocket', 'polling']
 });
+console.log('Socket.IO server initialized');
+// Initialize and start WebSocket servers
+console.log('Initializing Trading WebSocket server...');
+const tradingWS = new trading_1.default(io);
+tradingWS.initialize();
+console.log('Trading WebSocket server initialized');
+console.log('Initializing Optimization WebSocket server...');
+const optimizationWS = new optimization_1.default(io);
+optimizationWS.initialize();
+console.log('Optimization WebSocket server initialized');
+// Middleware
+app.use(express_1.default.json());
+// Routes
 app.use('/api/auth', auth_1.default);
-app.use('/api/search', search_1.default);
 app.use('/api/notifications', notifications_1.default);
 app.use('/api/market', market_1.default);
-app.post('/api/auth/register', async (_req, res) => {
-    const { email, firstName, lastName, verificationCode } = _req.body;
-    if (verificationCode !== '123456') {
-        return res.status(400).json({ error: 'Invalid verification code' });
-    }
-    return res.json({
-        token: 'dev-token',
-        user: {
-            id: '1',
-            email,
-            firstName,
-            lastName,
-            role: 'USER',
-            preferences: {
-                theme: 'dark',
-                notifications: {
-                    email: true,
-                    push: true,
-                    sms: false
-                },
-                tradingPreferences: {
-                    defaultLeverage: 1,
-                    riskLevel: 'medium',
-                    autoTrade: false
-                },
-                displayPreferences: {
-                    chartType: 'candlestick',
-                    timeframe: '1h',
-                    indicators: ['MA', 'RSI']
-                }
-            }
-        }
+app.use('/api/search', search_1.default);
+app.use('/api/user', user_1.default);
+// Health check endpoint
+app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok' });
+});
+// Error handling middleware
+app.use((err, _req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Something went wrong!' });
+    next(err);
+});
+// Connect to MongoDB
+console.log('Connecting to MongoDB...');
+mongoose_1.default.connect(config_1.config.databaseUrl, {
+    serverSelectionTimeoutMS: 15000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 15000,
+    maxPoolSize: 50,
+    retryWrites: true,
+    retryReads: true,
+})
+    .then(() => {
+    console.log('Connected to MongoDB');
+    // Start the server
+    const PORT = config_1.config.port;
+    httpServer.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log('WebSocket server endpoints:');
+        console.log('- Trading: /ws');
+        console.log('- Optimization: /ws');
     });
+})
+    .catch((error) => {
+    console.error('MongoDB connection error:', error);
+    process.exit(1);
 });
-app.post('/api/auth/send-verification', (_req, res) => {
-    return res.json({ success: true });
-});
-app.get('/', (_req, res) => {
-    res.send('Algo360FX API Server');
-});
-(async () => {
-    try {
-        const api = new metaapi_cloud_sdk_1.default(config_1.config.metaApiToken);
-        const accounts = await api.metatraderAccountApi.getAccounts();
-        console.log('Available MT5 accounts:', accounts.map(acc => ({
-            id: acc.id,
-            name: acc.name,
-            type: acc.type,
-            state: acc.state
-        })));
-        const mt5Bridge = new mt5bridge_1.default(api);
-        await mt5Bridge.start();
-        process.on('SIGTERM', () => {
-            console.log('SIGTERM received. Closing server...');
-            mt5Bridge.stop();
-            io.close();
-            httpServer.close(() => {
-                console.log('Server closed');
-                process.exit(0);
-            });
-        });
-    }
-    catch (error) {
-        console.error('Failed to initialize MT5 connection:', error);
-    }
-})();
-const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log('WebSocket server endpoints:');
-    console.log('- Trading: ws://localhost:5000/ws');
-});
-//# sourceMappingURL=index.js.map

@@ -5,6 +5,7 @@ const mongoose_1 = require("mongoose");
 const analyticsSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
     description: { type: String, required: true },
+    // Add other fields as needed
 });
 const Analytics = (0, mongoose_1.model)('Analytics', analyticsSchema);
 async function searchAnalytics(query) {
@@ -23,4 +24,3 @@ async function searchAnalytics(query) {
         return [];
     }
 }
-//# sourceMappingURL=analyticsService.js.map

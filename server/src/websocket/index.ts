@@ -16,9 +16,17 @@ class TradingWebSocketServer {
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ server });
+    this.heartbeatInterval = setInterval(() => {
+      this.clients.forEach((client, id) => {
+        if (client.ws.readyState === WebSocket.OPEN) {
+          this.sendMessage(client.ws, 'heartbeat', { timestamp: new Date().toISOString() });
+        } else {
+          this.clients.delete(id);
+        }
+      });
+    }, 30000); // Send heartbeat every 30 seconds
     this.setupWebSocket();
     this.initializeMarketData();
-    this.startHeartbeat();
   }
 
   private setupWebSocket() {
@@ -180,18 +188,6 @@ class TradingWebSocketServer {
 
   private randomPrice(min: number, max: number): number {
     return Number((Math.random() * (max - min) + min).toFixed(5));
-  }
-
-  private startHeartbeat() {
-    this.heartbeatInterval = setInterval(() => {
-      this.clients.forEach((client, id) => {
-        if (client.ws.readyState === WebSocket.OPEN) {
-          this.sendMessage(client.ws, 'heartbeat', { timestamp: new Date().toISOString() });
-        } else {
-          this.clients.delete(id);
-        }
-      });
-    }, 30000); // Send heartbeat every 30 seconds
   }
 
   private handleError(error: Error) {

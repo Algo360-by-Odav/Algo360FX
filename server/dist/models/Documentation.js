@@ -66,6 +66,7 @@ const DocumentationSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Create text indexes for search
 DocumentationSchema.index({
     title: 'text',
     content: 'text',
@@ -74,4 +75,3 @@ DocumentationSchema.index({
 });
 exports.Documentation = mongoose_1.default.model('Documentation', DocumentationSchema);
 exports.default = exports.Documentation;
-//# sourceMappingURL=Documentation.js.map

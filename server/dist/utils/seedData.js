@@ -97,7 +97,7 @@ const clearExistingData = async () => {
 };
 const seedDatabase = async () => {
     try {
-        await (0, database_1.connectDatabase)();
+        await (0, database_1.connectToDatabase)();
         await clearExistingData();
         await seedStrategies();
         await seedPortfolios();
@@ -113,4 +113,3 @@ const seedDatabase = async () => {
     }
 };
 seedDatabase();
-//# sourceMappingURL=seedData.js.map

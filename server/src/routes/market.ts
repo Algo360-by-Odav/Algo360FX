@@ -1,75 +1,41 @@
-import { Router } from 'express';
-import { getMetaApiConnection } from '../services/metaapi';
+import { Router, Request, Response } from 'express';
+import { MarketDataService } from '../services/MarketData';
+import { TechnicalAnalysis } from '../services/TechnicalAnalysis';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
+const marketData = new MarketDataService();
+const technicalAnalysis = new TechnicalAnalysis();
 
 // Get market data for a symbol
-router.get('/:symbol', async (req, res) => {
-  const { symbol } = req.params;
-
-  if (!symbol) {
-    return res.status(400).json({
-      error: 'Missing symbol',
-      details: 'Symbol parameter is required'
-    });
-  }
-
+router.get('/:symbol', asyncHandler(async (req: Request, res: Response) => {
   try {
-    // Get MetaAPI connection
-    const connection = await getMetaApiConnection();
-    
-    // Get symbol price
-    const price = await connection.getSymbolPrice(symbol);
-    if (!price) {
-      return res.status(404).json({
-        error: 'Market data not found',
-        details: `No data available for symbol ${symbol}`
-      });
-    }
-
-    return res.json(price);
-  } catch (error) {
-    console.error('Error fetching market data:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch market data',
-      details: error.message
-    });
+    const { symbol } = req.params;
+    const data = await marketData.getMarketData(symbol);
+    return res.json(data);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return res.status(500).json({ error: errorMessage });
   }
-});
+}));
 
-// Get historical candles for a symbol
-router.get('/:symbol/candles', async (req, res) => {
-  const { symbol } = req.params;
-  const { timeframe = '1h', limit = 100 } = req.query;
-
-  if (!symbol) {
-    return res.status(400).json({
-      error: 'Missing symbol',
-      details: 'Symbol parameter is required'
-    });
-  }
-
+// Get technical analysis for a symbol
+router.get('/:symbol/analysis', asyncHandler(async (req: Request, res: Response) => {
   try {
-    // Get MetaAPI connection
-    const connection = await getMetaApiConnection();
+    const { symbol } = req.params;
+    const { timeframe = '1h', indicators = [] } = req.query;
     
-    // Get historical candles
-    const candles = await connection.getHistoricalCandles(symbol, timeframe.toString(), limit.toString());
-    if (!candles || candles.length === 0) {
-      return res.status(404).json({
-        error: 'Historical data not found',
-        details: `No historical data available for symbol ${symbol}`
-      });
-    }
-
-    return res.json(candles);
-  } catch (error) {
-    console.error('Error fetching historical data:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch historical data',
-      details: error.message
-    });
+    const analysis = await technicalAnalysis.analyze(
+      symbol,
+      timeframe as string,
+      Array.isArray(indicators) ? indicators.map(i => String(i)) : [String(indicators)]
+    );
+    
+    return res.json(analysis);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return res.status(500).json({ error: errorMessage });
   }
-});
+}));
 
 export default router;

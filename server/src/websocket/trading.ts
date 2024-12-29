@@ -1,31 +1,29 @@
-import { Server as SocketIOServer } from 'socket.io';
+import { Server, Socket } from 'socket.io';
+import { DefaultEventsMap } from 'socket.io/dist/typed-events';
+import { MarketDataService } from '../services/MarketData';
 import { v4 as uuidv4 } from 'uuid';
 
-interface Client {
-  id: string;
-  socket: any;
-  subscriptions: Set<string>;
-}
-
 export class TradingWebSocketServer {
-  private io: SocketIOServer;
+  private io: Server;
   private clients: Map<string, Client> = new Map();
   private marketData: Map<string, any> = new Map();
   private updateInterval: NodeJS.Timeout;
+  private subscribedSymbols: Set<string>;
 
-  constructor(io: SocketIOServer) {
+  constructor(io: Server) {
     this.io = io;
+    this.subscribedSymbols = new Set();
+    this.updateInterval = setInterval(this.broadcastPrices.bind(this), 1000);
+    this.setupSocketServer();
   }
 
   public initialize() {
-    this.setupSocketServer();
     this.initializeMarketData();
-    this.startUpdates();
     console.log('Trading WebSocket Server initialized');
   }
 
   private setupSocketServer() {
-    this.io.on('connection', (socket) => {
+    this.io.on('connection', (socket: Socket) => {
       const clientId = uuidv4();
       const client: Client = {
         id: clientId,
@@ -38,6 +36,7 @@ export class TradingWebSocketServer {
 
       socket.on('subscribe', (symbol: string) => {
         client.subscriptions.add(symbol);
+        this.subscribedSymbols.add(symbol);
         const data = this.marketData.get(symbol);
         if (data) {
           socket.emit('marketData', { symbol, data });
@@ -46,6 +45,7 @@ export class TradingWebSocketServer {
 
       socket.on('unsubscribe', (symbol: string) => {
         client.subscriptions.delete(symbol);
+        this.subscribedSymbols.delete(symbol);
       });
 
       socket.on('disconnect', () => {
@@ -66,28 +66,17 @@ export class TradingWebSocketServer {
     });
   }
 
-  private startUpdates() {
-    this.updateInterval = setInterval(() => {
-      this.updateMarketData();
-    }, 1000);
-  }
-
-  private updateMarketData() {
-    this.marketData.forEach((data, symbol) => {
-      const movement = (Math.random() - 0.5) * 0.0002;
-      const newData = {
-        bid: data.bid + movement,
-        ask: data.ask + movement,
-        timestamp: Date.now()
-      };
-      this.marketData.set(symbol, newData);
-
-      this.clients.forEach(client => {
-        if (client.subscriptions.has(symbol)) {
-          client.socket.emit('marketData', { symbol, data: newData });
+  private async broadcastPrices(): Promise<void> {
+    for (const symbol of this.subscribedSymbols) {
+      try {
+        const data = this.marketData.get(symbol);
+        if (data) {
+          this.io.emit('marketData', { symbol, data });
         }
-      });
-    });
+      } catch (error) {
+        console.error(`Error broadcasting price for ${symbol}:`, error);
+      }
+    }
   }
 
   public close() {
@@ -95,6 +84,12 @@ export class TradingWebSocketServer {
       clearInterval(this.updateInterval);
     }
   }
+}
+
+interface Client {
+  id: string;
+  socket: Socket;
+  subscriptions: Set<string>;
 }
 
 export default TradingWebSocketServer;

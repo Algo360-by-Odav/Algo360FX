@@ -2,7 +2,7 @@ import Strategy from '../models/Strategy';
 import Portfolio from '../models/Portfolio';
 import Documentation from '../models/Documentation';
 import Analytics from '../models/Analytics';
-import { connectDatabase, disconnectDatabase } from '../config/database';
+import { connectToDatabase, disconnectDatabase } from '../config/database';
 
 const seedStrategies = async () => {
   const strategies = [
@@ -102,7 +102,7 @@ const clearExistingData = async () => {
 
 const seedDatabase = async () => {
   try {
-    await connectDatabase();
+    await connectToDatabase();
     await clearExistingData();
     await seedStrategies();
     await seedPortfolios();

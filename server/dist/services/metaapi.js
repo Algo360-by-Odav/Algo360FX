@@ -5,37 +5,37 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMetaApiConnection = getMetaApiConnection;
 const metaapi_cloud_sdk_1 = __importDefault(require("metaapi.cloud-sdk"));
-const config_1 = require("../config");
+const config_1 = require("../config/config");
+// Initialize MetaAPI with retry mechanism
 const api = new metaapi_cloud_sdk_1.default(config_1.config.metaApiToken);
+// Cache for MetaAPI connections
 let cachedConnection = null;
-let lastConnectionTime = 0;
-const CONNECTION_TIMEOUT = 5 * 60 * 1000;
 async function getMetaApiConnection() {
-    const now = Date.now();
-    if (cachedConnection && (now - lastConnectionTime) < CONNECTION_TIMEOUT) {
+    try {
+        if (!cachedConnection) {
+            console.log('Initializing MetaAPI connection...');
+            // Create MT5 account instance
+            const account = await api.metatraderAccountApi.getAccount(config_1.config.mt5AccountId);
+            if (!account) {
+                throw new Error('MT5 account not found');
+            }
+            console.log('MT5 account found, deploying...');
+            // Deploy account
+            const deployedAccount = await account.deploy();
+            console.log('Account deployed, waiting for connection...');
+            // Wait until account is deployed and connected to broker
+            await deployedAccount.waitConnected();
+            console.log('Account connected to broker');
+            // Get connection instance
+            cachedConnection = await deployedAccount.getStreamingConnection();
+            await cachedConnection.connect();
+            await cachedConnection.waitSynchronized();
+            console.log('MetaAPI connection established and synchronized');
+        }
         return cachedConnection;
     }
-    for (let attempt = 1; attempt <= config_1.config.metaApiRetryAttempts; attempt++) {
-        try {
-            const accounts = await api.metatraderAccountApi.getAccounts();
-            console.log('Available accounts:', accounts.map(acc => ({
-                id: acc.id,
-                login: acc.login,
-                name: acc.name,
-                type: acc.type,
-                state: acc.state
-            })));
-            cachedConnection = api;
-            lastConnectionTime = now;
-            return cachedConnection;
-        }
-        catch (error) {
-            console.error(`Connection attempt ${attempt} failed:`, error);
-            if (attempt === config_1.config.metaApiRetryAttempts) {
-                throw error;
-            }
-            await new Promise(resolve => setTimeout(resolve, config_1.config.metaApiRetryDelay));
-        }
+    catch (error) {
+        console.error('MetaAPI connection error:', error);
+        throw error;
     }
 }
-//# sourceMappingURL=metaapi.js.map

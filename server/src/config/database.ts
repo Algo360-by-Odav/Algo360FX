@@ -1,20 +1,21 @@
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import { config } from './config';
 
-let mongoServer: MongoMemoryServer;
-
-export const connectDatabase = async () => {
+export const connectToDatabase = async () => {
   try {
-    if (config.env === 'development') {
-      mongoServer = await MongoMemoryServer.create();
-      const mongoUri = mongoServer.getUri();
-      await mongoose.connect(mongoUri);
-    } else {
-      await mongoose.connect(config.mongoUri);
-    }
-    
-    console.log('Connected to MongoDB Memory Server');
+    const options = {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 15000,
+      maxPoolSize: 50,
+      retryWrites: true,
+      retryReads: true,
+    };
+
+    await mongoose.connect(config.mongoUri || config.databaseUrl, options);
+    console.log('Connected to MongoDB');
     
     // Create indexes for all models
     await Promise.all([
@@ -33,9 +34,6 @@ export const connectDatabase = async () => {
 export const disconnectDatabase = async () => {
   try {
     await mongoose.disconnect();
-    if (mongoServer) {
-      await mongoServer.stop();
-    }
   } catch (error) {
     console.error('Error disconnecting from database:', error);
     process.exit(1);
@@ -55,9 +53,6 @@ mongoose.connection.on('error', (err) => {
 process.on('SIGINT', async () => {
   try {
     await mongoose.connection.close();
-    if (mongoServer) {
-      await mongoServer.stop();
-    }
     console.log('MongoDB connection closed through app termination');
     process.exit(0);
   } catch (err) {

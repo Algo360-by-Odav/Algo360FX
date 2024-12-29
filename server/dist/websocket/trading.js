@@ -7,9 +7,13 @@ class TradingWebSocketServer {
         this.clients = new Map();
         this.marketData = new Map();
         this.io = io;
+        this.subscribedSymbols = new Set();
+        this.updateInterval = setInterval(this.broadcastPrices.bind(this), 1000);
         this.setupSocketServer();
+    }
+    initialize() {
         this.initializeMarketData();
-        this.startHeartbeat();
+        console.log('Trading WebSocket Server initialized');
     }
     setupSocketServer() {
         this.io.on('connection', (socket) => {
@@ -21,87 +25,52 @@ class TradingWebSocketServer {
             };
             this.clients.set(clientId, client);
             console.log(`Client connected: ${clientId}`);
-            socket.emit('connect_ack', { status: 'connected', clientId });
-            socket.on('subscribe', (channel) => {
-                this.handleSubscribe(client, channel);
+            socket.on('subscribe', (symbol) => {
+                client.subscriptions.add(symbol);
+                this.subscribedSymbols.add(symbol);
+                const data = this.marketData.get(symbol);
+                if (data) {
+                    socket.emit('marketData', { symbol, data });
+                }
             });
-            socket.on('unsubscribe', (channel) => {
-                this.handleUnsubscribe(client, channel);
-            });
-            socket.on('message', (data) => {
-                this.handleMessage(client, data);
+            socket.on('unsubscribe', (symbol) => {
+                client.subscriptions.delete(symbol);
+                this.subscribedSymbols.delete(symbol);
             });
             socket.on('disconnect', () => {
-                this.handleDisconnect(client);
+                this.clients.delete(clientId);
+                console.log(`Client disconnected: ${clientId}`);
             });
         });
     }
-    handleSubscribe(client, channel) {
-        client.subscriptions.add(channel);
-        client.socket.join(channel);
-        console.log(`Client ${client.id} subscribed to ${channel}`);
-        const data = this.marketData.get(channel);
-        if (data) {
-            client.socket.emit('market_data', { channel, data });
-        }
+    initializeMarketData() {
+        const defaultSymbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD'];
+        defaultSymbols.forEach(symbol => {
+            this.marketData.set(symbol, {
+                bid: Math.random() * 2,
+                ask: Math.random() * 2 + 0.0002,
+                timestamp: Date.now()
+            });
+        });
     }
-    handleUnsubscribe(client, channel) {
-        client.subscriptions.delete(channel);
-        client.socket.leave(channel);
-        console.log(`Client ${client.id} unsubscribed from ${channel}`);
-    }
-    handleMessage(client, message) {
-        try {
-            if (message.type === 'market_data_request') {
-                const data = this.marketData.get(message.symbol);
+    async broadcastPrices() {
+        for (const symbol of this.subscribedSymbols) {
+            try {
+                const data = this.marketData.get(symbol);
                 if (data) {
-                    client.socket.emit('market_data', { symbol: message.symbol, data });
+                    this.io.emit('marketData', { symbol, data });
                 }
             }
+            catch (error) {
+                console.error(`Error broadcasting price for ${symbol}:`, error);
+            }
         }
-        catch (error) {
-            console.error('Error handling message:', error);
-            client.socket.emit('error', { message: 'Error processing message' });
-        }
-    }
-    handleDisconnect(client) {
-        this.clients.delete(client.id);
-        console.log(`Client disconnected: ${client.id}`);
-    }
-    initializeMarketData() {
-        this.marketData.set('EURUSD', {
-            bid: 1.0850,
-            ask: 1.0852,
-            timestamp: Date.now()
-        });
-        setInterval(() => {
-            this.updateMarketData();
-        }, 1000);
-    }
-    updateMarketData() {
-        for (const [symbol, data] of this.marketData) {
-            const variation = (Math.random() - 0.5) * 0.0010;
-            const newBid = parseFloat((data.bid + variation).toFixed(4));
-            const newAsk = parseFloat((newBid + 0.0002).toFixed(4));
-            const updatedData = {
-                bid: newBid,
-                ask: newAsk,
-                timestamp: Date.now()
-            };
-            this.marketData.set(symbol, updatedData);
-            this.io.to(symbol).emit('market_data', { symbol, data: updatedData });
-        }
-    }
-    startHeartbeat() {
-        this.heartbeatInterval = setInterval(() => {
-            this.io.emit('heartbeat', { timestamp: Date.now() });
-        }, 30000);
     }
     close() {
-        clearInterval(this.heartbeatInterval);
-        this.io.close();
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+        }
     }
 }
 exports.TradingWebSocketServer = TradingWebSocketServer;
 exports.default = TradingWebSocketServer;
-//# sourceMappingURL=trading.js.map

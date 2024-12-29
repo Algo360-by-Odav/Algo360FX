@@ -1,43 +1,44 @@
-import express from 'express';
-import authenticateToken from '../middleware/auth';
+import { Router, Response } from 'express';
+import { validateRequest } from '../middleware/validateRequest';
+import { updateProfileSchema } from '../schemas/user.schema';
+import { User } from '../models/User';
+import { asyncHandler } from '../middleware/asyncHandler';
+import { auth } from '../middleware/auth';
+import { AuthRequest } from '../types/express';
 
-const router = express.Router();
+const router = Router();
 
 // Get user preferences
-router.get('/preferences', authenticateToken, async (_req, res) => {
+router.get('/preferences', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
   try {
     // For now, return default preferences
     // In a real app, you would fetch this from the database
-    res.json({
-      theme: 'light',
-      language: 'en',
-      notifications: {
-        email: true,
-        push: true,
-        sms: false
-      },
-      reportSettings: {
-        defaultFormat: 'pdf',
-        language: 'en',
-        autoGenerate: false
+    return res.json({
+      preferences: {
+        theme: 'light',
+        notifications: true,
+        riskLevel: 'moderate',
+        tradingPairs: ['EUR/USD', 'GBP/USD', 'USD/JPY'],
+        timeframes: ['1h', '4h', '1d'],
+        indicators: ['RSI', 'MACD', 'Moving Average']
       }
     });
   } catch (error) {
-    console.error('Error fetching user preferences:', error);
-    res.status(500).json({ message: 'Error fetching user preferences' });
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return res.status(500).json({ error: errorMessage });
   }
-});
+}));
 
 // Update user preferences
-router.put('/preferences', authenticateToken, async (req, res) => {
+router.put('/preferences', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
   try {
     const preferences = req.body;
     // In a real app, you would save this to the database
-    res.json(preferences);
+    return res.json({ preferences });
   } catch (error) {
-    console.error('Error updating user preferences:', error);
-    res.status(500).json({ message: 'Error updating user preferences' });
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return res.status(500).json({ error: errorMessage });
   }
-});
+}));
 
 export default router;

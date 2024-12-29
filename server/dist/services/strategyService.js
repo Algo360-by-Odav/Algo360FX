@@ -19,6 +19,7 @@ const strategySchema = new mongoose_1.Schema({
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
+// Create text index for search
 strategySchema.index({ name: 'text', description: 'text' });
 const Strategy = (0, mongoose_1.model)('Strategy', strategySchema);
 async function searchStrategies(query) {
@@ -55,7 +56,9 @@ async function runBacktest(id, startDate, endDate) {
     const strategy = await Strategy.findById(id);
     if (!strategy)
         return null;
+    // TODO: Implement actual backtest logic here
     const backtestResults = {
+        // Mock results
         returns: 0.15,
         sharpeRatio: 1.2,
         maxDrawdown: -0.1,
@@ -68,4 +71,3 @@ async function runBacktest(id, startDate, endDate) {
     };
     return await strategy.save();
 }
-//# sourceMappingURL=strategyService.js.map

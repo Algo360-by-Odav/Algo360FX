@@ -16,4 +16,3 @@ exports.config = {
     jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
     corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173'
 };
-//# sourceMappingURL=config.js.map

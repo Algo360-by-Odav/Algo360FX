@@ -70,6 +70,7 @@ const PortfolioSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Create text indexes for search
 PortfolioSchema.index({
     name: 'text',
     description: 'text',
@@ -77,4 +78,3 @@ PortfolioSchema.index({
 });
 exports.Portfolio = mongoose_1.default.model('Portfolio', PortfolioSchema);
 exports.default = exports.Portfolio;
-//# sourceMappingURL=Portfolio.js.map

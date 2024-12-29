@@ -1,22 +1,20 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
+const express_1 = require("express");
+const validateRequest_1 = require("../middleware/validateRequest");
+const search_schema_1 = require("../schemas/search.schema");
 const analyticsService_1 = require("../services/analyticsService");
 const documentationService_1 = require("../services/documentationService");
 const portfolioService_1 = require("../services/portfolioService");
 const strategyService_1 = require("../services/strategyService");
-const router = express_1.default.Router();
-router.get('/', async (req, res) => {
+const asyncHandler_1 = require("../middleware/asyncHandler");
+const router = (0, express_1.Router)();
+// Search across all resources
+router.post('/', (0, validateRequest_1.validateRequest)(search_schema_1.searchSchema), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     try {
-        const query = req.query.q;
-        const type = req.query.type;
+        const { query, type } = req.body;
         let results = [];
-        if (!query) {
-            return res.status(400).json({ error: 'Query parameter is required' });
-        }
+        // Search based on type
         switch (type) {
             case 'analytics':
                 results = await (0, analyticsService_1.searchAnalytics)(query);
@@ -31,6 +29,7 @@ router.get('/', async (req, res) => {
                 results = await (0, strategyService_1.searchStrategies)(query);
                 break;
             case 'all':
+                // Search across all types
                 const [analytics, docs, portfolios, strategies] = await Promise.all([
                     (0, analyticsService_1.searchAnalytics)(query),
                     (0, documentationService_1.searchDocumentation)(query),
@@ -42,13 +41,11 @@ router.get('/', async (req, res) => {
             default:
                 return res.status(400).json({ error: 'Invalid search type' });
         }
-        results.sort((a, b) => b.score - a.score);
-        return res.json(results);
+        return res.json({ results });
     }
     catch (error) {
-        console.error('Search error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return res.status(500).json({ error: errorMessage });
     }
-});
+}));
 exports.default = router;
-//# sourceMappingURL=search.js.map
