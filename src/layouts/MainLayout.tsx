@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Drawer,
@@ -55,6 +55,7 @@ import { useSearch } from '../context/SearchContext';
 import SearchResults from '@components/SearchResults/SearchResults';
 import useHFTInitialize from '@/hooks/useHFTInitialize';
 import { MobileNavigation } from '@components/MobileNavigation';
+import TradingAssistant from '@components/AI/TradingAssistant';
 
 const DRAWER_WIDTH = 240;
 
@@ -67,12 +68,23 @@ const MainLayout: React.FC<MainLayoutProps> = observer(({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { searchTerm, setSearchTerm, performSearch } = useSearch();
+  const { authStore } = useRootStore();
   const [open, setOpen] = useState(true);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
   const isMobile = useMediaQuery('(max-width:600px)');
+  const [showAI, setShowAI] = useState(false);
 
   useHFTInitialize();
+
+  useEffect(() => {
+    if (authStore.isAuthenticated) {
+      const timer = setTimeout(() => {
+        setShowAI(true);
+      }, 1000); // 1 second delay after login
+      return () => clearTimeout(timer);
+    }
+  }, [authStore.isAuthenticated]);
 
   const menuItems = {
     basic: [
@@ -449,12 +461,15 @@ const MainLayout: React.FC<MainLayoutProps> = observer(({ children }) => {
           p: 3,
           width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
           ml: { sm: `${DRAWER_WIDTH}px` },
+          mt: '64px',
         }}
       >
-        <Toolbar />
-        {children}
+        <Outlet />
       </Box>
 
+      {/* AI Assistant */}
+      {showAI && <TradingAssistant />}
+      
       {/* User Menu */}
       <Menu
         anchorEl={userMenuAnchor}

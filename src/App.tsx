@@ -13,7 +13,6 @@ import ForgotPasswordForm from '@components/auth/ForgotPasswordForm';
 import ResetPasswordForm from '@components/auth/ResetPasswordForm';
 import MainLayout from '@/layouts/MainLayout';
 import { RootStoreProvider } from '@/stores/RootStoreContext';
-import TradingAssistant from '@components/AI/TradingAssistant';
 import { ThemeProvider as CustomThemeProvider } from '@/contexts/ThemeContext';
 
 // Lazy load components
@@ -99,10 +98,9 @@ function App() {
               </Route>
               
               {/* Catch all */}
-              <Route path="*" element={<Navigate to="auth/login" replace />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
-          <TradingAssistant />
         </ThemeProvider>
       </CustomThemeProvider>
     </RootStoreProvider>
