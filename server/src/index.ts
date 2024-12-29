@@ -90,20 +90,27 @@ app.use((err: Error, _req: express.Request, res: express.Response, next: express
 
 // Connect to MongoDB
 console.log('Connecting to MongoDB...');
-mongoose.connect(config.databaseUrl)
-  .then(() => {
-    console.log('Connected to MongoDB');
-    
-    // Start the server
-    const PORT = config.port;
-    httpServer.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log('WebSocket server endpoints:');
-      console.log('- Trading: ws://localhost:5000/ws');
-      console.log('- Optimization: ws://localhost:5000/ws');
-    });
-  })
-  .catch((error) => {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
+mongoose.connect(config.databaseUrl, {
+  serverSelectionTimeoutMS: 15000,
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 15000,
+  maxPoolSize: 50,
+  retryWrites: true,
+  retryReads: true,
+})
+.then(() => {
+  console.log('Connected to MongoDB');
+  
+  // Start the server
+  const PORT = config.port;
+  httpServer.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log('WebSocket server endpoints:');
+    console.log('- Trading: /ws');
+    console.log('- Optimization: /ws');
   });
+})
+.catch((error) => {
+  console.error('MongoDB connection error:', error);
+  process.exit(1);
+});

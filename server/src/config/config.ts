@@ -16,7 +16,7 @@ interface Config {
 
 export const config: Config = {
   port: parseInt(process.env.PORT || '5000'),
-  databaseUrl: process.env.DATABASE_URL || 'mongodb://localhost:27017/algo360fx',
+  databaseUrl: process.env.DATABASE_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/algo360fx',
   jwtSecret: process.env.JWT_SECRET || 'development-secret-key',
   env: process.env.NODE_ENV || 'development',
   metaApiToken: process.env.META_API_TOKEN || '',
