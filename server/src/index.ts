@@ -58,8 +58,17 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  path: '/ws'
+  path: '/ws',
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  connectTimeout: 10000,
+  transports: ['websocket', 'polling']
 });
+
+io.engine.on("connection_error", (err) => {
+  console.error('Socket.IO connection error:', err);
+});
+
 console.log('Socket.IO server initialized');
 
 // Initialize WebSocket servers
