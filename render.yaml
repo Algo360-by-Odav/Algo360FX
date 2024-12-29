@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: algo360fx-server
+    name: algo360fx-api
     env: node
     region: singapore
     plan: starter
@@ -27,18 +27,15 @@ services:
         sync: false
       - key: MT5_ACCOUNT_ID
         sync: false
-      - key: OPENAI_API_KEY
+      - key: MARKET_API_KEY
         sync: false
-    autoDeploy: true
-    domains:
-      - api.algo360fx.com
-    disk:
-      name: algo360fx-api-data
-      mountPath: /data
-      sizeGB: 10
+      - key: META_API_RETRY_ATTEMPTS
+        value: "3"
+      - key: META_API_RETRY_DELAY
+        value: "1000"
 
   - type: web
-    name: algo360fx-frontend
+    name: algo360fx-client
     env: static
     region: singapore
     plan: starter
@@ -48,33 +45,11 @@ services:
       - key: NODE_VERSION
         value: 18.x
       - key: VITE_API_URL
-        value: https://api.algo360fx.com
+        value: https://algo360fx-api.onrender.com
       - key: VITE_WS_URL
-        value: wss://api.algo360fx.com
-      - key: VITE_WS_PATH
-        value: /ws
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    domains:
-      - algo360fx.com
-      - www.algo360fx.com
-    pullRequestPreviewsEnabled: true
-    autoDeploy: true
-
-  - type: redis
-    name: algo360fx-cache
-    region: singapore
-    ipAllowList: 
-      - source: 0.0.0.0/0
-        description: everywhere
-    plan: starter
-    maxmemoryPolicy: allkeys-lru
+        value: wss://algo360fx-api.onrender.com
+      - key: REACT_APP_API_URL
+        value: https://algo360fx-api.onrender.com
 
 databases:
   - name: algo360fx-db
