@@ -24,8 +24,8 @@ export const config: Config = {
   env: process.env.NODE_ENV || 'development',
   metaApiToken: process.env.META_API_TOKEN || '',
   mt5AccountId: process.env.MT5_ACCOUNT_ID || '',
-  metaApiRetryAttempts: 3,
-  metaApiRetryDelay: 1000,
+  metaApiRetryAttempts: parseInt(process.env.META_API_RETRY_ATTEMPTS || '3'),
+  metaApiRetryDelay: parseInt(process.env.META_API_RETRY_DELAY || '1000'),
   redisUrl: process.env.REDIS_URL,
   openaiApiKey: process.env.OPENAI_API_KEY || ''
 };
