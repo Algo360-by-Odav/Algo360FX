@@ -8,7 +8,7 @@
     "dev": "set PORT=5000 && nodemon src/index.ts",
     "clean": "rimraf dist",
     "build": "npm run clean && tsc -p tsconfig.json",
-    "start:prod": "node dist/index.js",
+    "start:prod": "NODE_ENV=production node dist/index.js",
     "postinstall": "npm run build",
     "test": "jest"
   },
