@@ -17,6 +17,9 @@ import mongoose from 'mongoose';
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Trust proxy (required for rate limiting behind reverse proxy)
+app.set('trust proxy', 1);
+
 // CORS configuration
 const corsOptions = {
   origin: [
