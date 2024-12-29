@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: algo360fx-api
+    name: algo360fx-server
     env: node
     region: singapore
     plan: starter
@@ -37,7 +37,7 @@ services:
   - type: web
     name: algo360fx-client
     env: static
-    region: singapore
+    region: global
     plan: starter
     buildCommand: npm ci --production=false && npm run build
     staticPublishPath: ./dist
@@ -45,15 +45,34 @@ services:
       - key: NODE_VERSION
         value: 18.x
       - key: VITE_API_URL
-        value: https://algo360fx-api.onrender.com
+        value: https://algo360fx-server.onrender.com
       - key: VITE_WS_URL
-        value: wss://algo360fx-api.onrender.com
+        value: wss://algo360fx-server.onrender.com
       - key: REACT_APP_API_URL
-        value: https://algo360fx-api.onrender.com
+        value: https://algo360fx-server.onrender.com
+
+  - type: redis
+    name: algo360fx-cache
+    region: singapore
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
+
+  - type: redis
+    name: algo360fx-redis
+    region: singapore
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
 
 databases:
   - name: algo360fx-db
     plan: starter
+    region: singapore
     ipAllowList: 
       - source: 0.0.0.0/0
         description: everywhere
