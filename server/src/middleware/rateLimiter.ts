@@ -25,9 +25,9 @@ const DEV_LIMITS = {
 
 // Production limits
 const PROD_LIMITS = {
-    general: 100,
-    auth: 5,
-    verification: 3
+    general: 300,
+    auth: 20,
+    verification: 10
 };
 
 // Get the appropriate limits based on environment
@@ -36,26 +36,26 @@ const limits = config.NODE_ENV === 'development' ? DEV_LIMITS : PROD_LIMITS;
 // General rate limiter for all routes
 export const generalLimiter = rateLimit(
     createLimiterOptions(
-        15 * 60 * 1000, // 15 minutes
+        5 * 60 * 1000, // 5 minutes
         limits.general,
-        'Too many requests from this IP, please try again later.'
+        'Too many requests from this IP, please try again in 5 minutes.'
     )
 );
 
 // Stricter rate limiter for authentication routes
 export const authLimiter = rateLimit(
     createLimiterOptions(
-        15 * 60 * 1000, // 15 minutes
+        5 * 60 * 1000, // 5 minutes
         limits.auth,
-        'Too many authentication attempts from this IP, please try again after 15 minutes.'
+        'Too many authentication attempts from this IP, please try again in 5 minutes.'
     )
 );
 
 // Rate limiter for verification code requests
 export const verificationLimiter = rateLimit(
     createLimiterOptions(
-        60 * 60 * 1000, // 1 hour
+        15 * 60 * 1000, // 15 minutes
         limits.verification,
-        'Too many verification code requests from this IP, please try again after 1 hour.'
+        'Too many verification code requests from this IP, please try again in 15 minutes.'
     )
 );
