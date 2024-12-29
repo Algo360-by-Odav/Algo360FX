@@ -10,7 +10,11 @@ import authRouter from './routes/auth';
 import notificationsRouter from './routes/notifications';
 import marketRouter from './routes/market';
 import userRouter from './routes/user';
+import portfolioRouter from './routes/portfolio';
+import positionsRouter from './routes/positions';
+import strategiesRouter from './routes/strategies';
 import { config } from './config/config';
+import { standardLimiter, authLimiter, aiLimiter } from './middleware/rateLimiter';
 
 const app = express();
 console.log('Express app created');
@@ -69,12 +73,19 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
+// Apply rate limiters
+app.use('/api/auth', authLimiter);
+app.use(['/api/market', '/api/search', '/api/user', '/api/portfolio', '/api/positions', '/api/strategies'], standardLimiter);
+
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/market', marketRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/user', userRouter);
+app.use('/api/portfolio', portfolioRouter);
+app.use('/api/positions', positionsRouter);
+app.use('/api/strategies', strategiesRouter);
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {

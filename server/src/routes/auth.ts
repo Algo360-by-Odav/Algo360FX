@@ -93,31 +93,33 @@ router.post('/verify/code',
 router.post('/register',
   validateRequest(registerSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { password, firstName, lastName } = req.body;
-    // Generate a default email if none provided
-    const email = req.body.email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@algo360fx.com`;
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      console.log('User already exists:', email);
-      res.status(400).json({ error: 'User already exists' });
-      return;
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user
-    const user = new User({
-      email,
-      password: hashedPassword,
-      firstName,
-      lastName,
-    });
-
     try {
+      const { password, firstName, lastName } = req.body;
+      // Generate a default email if none provided
+      const email = req.body.email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@algo360fx.com`;
+
+      console.log('Registration attempt for:', email);
+
+      // Check if user already exists
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        console.log('User already exists:', email);
+        res.status(400).json({ error: 'User already exists' });
+        return;
+      }
+
+      // Hash password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      // Create user
+      const user = new User({
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName,
+      });
+
       await user.save();
       console.log('User saved successfully:', email);
 
@@ -129,22 +131,21 @@ router.post('/register',
       );
 
       res.status(201).json({
-        message: 'User registered successfully',
+        success: true,
         token,
         user: {
           id: user._id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-        },
+        }
       });
-    } catch (error: any) {
-      console.error('Error saving user:', error);
-      if (error.code === 11000) {
-        res.status(400).json({ error: 'User already exists' });
-        return;
-      }
-      res.status(500).json({ error: 'Failed to register user' });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ 
+        error: 'Registration failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   })
 );
