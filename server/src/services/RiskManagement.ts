@@ -29,6 +29,10 @@ interface RiskAnalysis {
   recommendation: string;
 }
 
+interface MarketData {
+  close: number;
+}
+
 export class RiskManagement {
   private accountBalance: number = 10000; // Default value, should be fetched from user's account
   private maxRiskPerTrade: number = 0.02; // 2% risk per trade
@@ -127,6 +131,31 @@ export class RiskManagement {
     }
     
     return warnings;
+  }
+
+  public async calculateCorrelation(data: MarketData[]): Promise<number> {
+    // Implement correlation calculation using the data
+    const prices = data.map(d => d.close);
+    let correlation = 0;
+    // Add correlation calculation logic here
+    return correlation;
+  }
+
+  public async calculateVolatilityRisk(marketData: MarketData[]): Promise<number> {
+    // Calculate volatility risk using market data
+    const prices = marketData.map(d => d.close);
+    const returns = [];
+    for (let i = 1; i < prices.length; i++) {
+      returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
+    }
+    const volatility = this.calculateStandardDeviation(returns);
+    return volatility;
+  }
+
+  private calculateStandardDeviation(data: number[]): number {
+    const mean = data.reduce((a, b) => a + b, 0) / data.length;
+    const variance = data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / data.length;
+    return Math.sqrt(variance);
   }
 
   public async calculatePositionCorrelations(positions: Position[]): Promise<number> {

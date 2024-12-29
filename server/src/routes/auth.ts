@@ -90,20 +90,34 @@ router.post('/verify/code',
 );
 
 // Register new user
-router.post('/register',
+router.post('/register', 
   validateRequest(registerSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { email, password, verificationCode } = req.body;
+
     try {
-      const { password, firstName, lastName } = req.body;
-      // Generate a default email if none provided
-      const email = req.body.email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@algo360fx.com`;
+      // Check if verification code is valid
+      const storedVerification = verificationCodes.get(email);
+      if (!storedVerification || storedVerification.code !== verificationCode) {
+        res.status(400).json({ error: 'Invalid verification code' });
+        return;
+      }
 
-      console.log('Registration attempt for:', email);
+      if (storedVerification.expires < new Date()) {
+        verificationCodes.delete(email);
+        res.status(400).json({ error: 'Verification code has expired' });
+        return;
+      }
 
-      // Check if user already exists
-      const existingUser = await User.findOne({ email });
+      // Check if user already exists with timeout handling
+      const existingUser = await Promise.race([
+        User.findOne({ email }).maxTimeMS(5000),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database operation timed out')), 5000)
+        )
+      ]);
+
       if (existingUser) {
-        console.log('User already exists:', email);
         res.status(400).json({ error: 'User already exists' });
         return;
       }
@@ -112,39 +126,66 @@ router.post('/register',
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
-      // Create user
+      // Create new user with timeout handling
       const user = new User({
         email,
         password: hashedPassword,
-        firstName,
-        lastName,
+        verifiedEmail: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
 
-      await user.save();
-      console.log('User saved successfully:', email);
+      await Promise.race([
+        user.save().maxTimeMS(5000),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database operation timed out')), 5000)
+        )
+      ]);
+
+      // Remove verification code after successful registration
+      verificationCodes.delete(email);
 
       // Generate JWT token
       const token = jwt.sign(
-        { id: user._id, email: user.email },
+        { userId: user._id },
         config.jwtSecret,
         { expiresIn: '24h' }
       );
 
       res.status(201).json({
-        success: true,
+        message: 'User registered successfully',
         token,
         user: {
           id: user._id,
           email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
+          verifiedEmail: user.verifiedEmail
         }
       });
     } catch (error) {
       console.error('Registration error:', error);
+      
+      // Handle specific error cases
+      if (error instanceof mongoose.Error.ValidationError) {
+        res.status(400).json({ error: 'Invalid user data', details: error.errors });
+        return;
+      }
+      
+      if (error.message === 'Database operation timed out') {
+        res.status(503).json({ 
+          error: 'Service temporarily unavailable',
+          message: 'Database operation timed out. Please try again.'
+        });
+        return;
+      }
+
+      if (error.code === 11000) { // Duplicate key error
+        res.status(400).json({ error: 'User already exists' });
+        return;
+      }
+
       res.status(500).json({ 
         error: 'Registration failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        message: 'An unexpected error occurred during registration. Please try again.'
       });
     }
   })

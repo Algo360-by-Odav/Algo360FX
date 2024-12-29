@@ -111,24 +111,66 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-// Connect to MongoDB
+// Connect to MongoDB with improved configuration and error handling
 console.log('Connecting to MongoDB...');
-mongoose.connect(config.databaseUrl, {
-  serverSelectionTimeoutMS: 15000,
-  socketTimeoutMS: 45000,
-  connectTimeoutMS: 15000,
-  maxPoolSize: 50,
-  retryWrites: true,
-  retryReads: true,
-})
-.then(() => {
-  console.log('Connected to MongoDB');
-  const port = config.port || 5000;
-  httpServer.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-  });
-})
-.catch((error) => {
-  console.error('MongoDB connection error:', error);
-  process.exit(1);
+mongoose.set('strictQuery', true);
+mongoose.set('bufferCommands', false); // Disable buffering
+
+const connectWithRetry = async (retries = 5, interval = 5000) => {
+  try {
+    await mongoose.connect(config.databaseUrl, {
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 15000,
+      maxPoolSize: 50,
+      minPoolSize: 10,
+      retryWrites: true,
+      retryReads: true,
+      w: 'majority',
+      wtimeoutMS: 10000,
+    });
+    console.log('Connected to MongoDB successfully');
+    
+    // Start server only after successful DB connection
+    const port = config.port || 5000;
+    httpServer.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    if (retries > 0) {
+      console.log(`Retrying connection in ${interval/1000} seconds... (${retries} attempts remaining)`);
+      setTimeout(() => connectWithRetry(retries - 1, interval), interval);
+    } else {
+      console.error('Failed to connect to MongoDB after multiple attempts');
+      process.exit(1);
+    }
+  }
+};
+
+// Monitor MongoDB connection
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connection established');
 });
+
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB connection disconnected');
+});
+
+process.on('SIGINT', async () => {
+  try {
+    await mongoose.connection.close();
+    console.log('MongoDB connection closed through app termination');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error closing MongoDB connection:', err);
+    process.exit(1);
+  }
+});
+
+// Start connection process
+connectWithRetry();
