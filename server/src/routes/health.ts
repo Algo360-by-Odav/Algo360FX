@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMetaApiConnection } from '../services/metaapi';
+import { checkMetaApiHealth } from '../services/metaapi';
 
 const router = Router();
 
@@ -17,11 +17,14 @@ router.get('/', async (req, res) => {
 
     // Check MetaAPI connection
     try {
-      await getMetaApiConnection();
-      status.metaapi = 'connected';
+      const metaapiHealth = await checkMetaApiHealth();
+      status.metaapi = metaapiHealth.status;
+      if (metaapiHealth.error) {
+        console.error('MetaAPI health check error:', metaapiHealth.error);
+      }
     } catch (error) {
       status.metaapi = 'disconnected';
-      console.error('MetaAPI connection error:', error);
+      console.error('MetaAPI health check error:', error);
     }
 
     res.json(status);
