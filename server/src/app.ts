@@ -14,12 +14,36 @@ import { logger } from './utils/logger';
 const app = express();
 
 // Middleware
-app.use(helmet());
-app.use(cors());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "wss:", "https:"]
+    }
+  }
+}));
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.CLIENT_URL || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 app.use(compression());
 app.use(morgan('dev'));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // Request logging
 app.use((req, res, next) => {
@@ -27,10 +51,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
+// Public routes
 app.use('/api/auth', authRoutes);
-app.use('/api/market-data', marketDataRoutes);
-app.use('/api/technical-analysis', technicalAnalysisRoutes);
+
+// Protected routes
+app.use('/api/market-data', authenticate, marketDataRoutes);
+app.use('/api/technical-analysis', authenticate, technicalAnalysisRoutes);
 app.use('/api/ai', authenticate, aiAssistantRoutes);
 
 // Error handling
