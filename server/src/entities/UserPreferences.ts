@@ -1,46 +1,49 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity } from './BaseEntity';
 
-@Entity()
-export class UserPreferences {
+@Entity('user_preferences')
+export class UserPreferences extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ unique: true })
-  userId: string;
+  userId: string = '';
 
   @Column({ default: 'light' })
-  theme: string;
+  theme: string = 'light';
 
-  @Column('jsonb', {
-    default: {
-      email: true,
-      push: true,
-      trading: true
-    }
-  })
+  @Column('jsonb', { default: {} })
   notifications: {
     email: boolean;
     push: boolean;
-    trading: boolean;
+    sms: boolean;
+  } = {
+    email: false,
+    push: false,
+    sms: false
   };
 
-  @Column({ default: '1h' })
-  defaultTimeframe: string;
+  @Column({ default: 'H1' })
+  defaultTimeframe: string = 'H1';
 
-  @Column('jsonb', { default: ['EURUSD', 'GBPUSD', 'USDJPY'] })
-  favoriteSymbols: string[];
+  @Column('jsonb', { default: [] })
+  favoriteSymbols: string[] = [];
 
-  @Column('jsonb', {
-    default: {
-      showVolume: true,
-      showIndicators: true,
-      defaultIndicators: ['MA', 'RSI']
-    }
-  })
+  @Column('jsonb', { default: {} })
   chartSettings: {
-    showVolume: boolean;
-    showIndicators: boolean;
-    defaultIndicators: string[];
+    indicators: string[];
+    colors: {
+      background: string;
+      grid: string;
+      text: string;
+    };
+  } = {
+    indicators: [],
+    colors: {
+      background: '#ffffff',
+      grid: '#e0e0e0',
+      text: '#000000'
+    }
   };
 
   @CreateDateColumn()

@@ -1,43 +1,55 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Schema, model } from 'mongoose';
 
-@Entity('user_preferences')
-export class UserPreferences {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+const userPreferencesSchema = new Schema({
+  userId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  theme: {
+    type: String,
+    default: 'light'
+  },
+  notifications: {
+    type: Object,
+    default: {
+      email: false,
+      push: false,
+      sms: false
+    }
+  },
+  language: {
+    type: String,
+    default: 'en'
+  },
+  timezone: {
+    type: String,
+    default: 'UTC'
+  },
+  chartSettings: {
+    type: Object,
+    default: {
+      indicators: [],
+      colors: {
+        background: '#ffffff',
+        grid: '#e0e0e0',
+        text: '#000000'
+      }
+    }
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
 
-  @Column({ type: 'uuid' })
-  userId: string;
+userPreferencesSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
 
-  @Column({ type: 'varchar', default: 'light' })
-  theme: string;
-
-  @Column({ type: 'boolean', default: true })
-  notifications: boolean;
-
-  @Column({ type: 'varchar', default: 'en' })
-  language: string;
-
-  @Column({ type: 'varchar', default: 'UTC' })
-  timezone: string;
-
-  @Column({ type: 'jsonb', nullable: true })
-  chartPreferences?: {
-    defaultTimeframe?: string;
-    indicators?: string[];
-    layout?: string;
-  };
-
-  @Column({ type: 'jsonb', nullable: true })
-  tradingPreferences?: {
-    defaultLotSize?: number;
-    riskPercentage?: number;
-    defaultStopLoss?: number;
-    defaultTakeProfit?: number;
-  };
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
-}
+export const UserPreferences = model('UserPreferences', userPreferencesSchema);

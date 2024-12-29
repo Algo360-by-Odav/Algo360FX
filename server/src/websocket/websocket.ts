@@ -3,7 +3,7 @@ import { Server } from 'http';
 import { logger } from '../utils/logger';
 
 export class WebSocketBase {
-  private wss: WebSocketServer;
+  protected wss: WebSocketServer;
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ 
@@ -76,6 +76,14 @@ export class WebSocketBase {
       connectedClients: this.wss.clients.size,
       uptime: process.uptime()
     };
+  }
+
+  public isHealthy(): boolean {
+    return this.wss.clients.size >= 0;
+  }
+
+  public getConnections(): number {
+    return this.wss.clients.size;
   }
 
   public close() {

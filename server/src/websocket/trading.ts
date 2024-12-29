@@ -1,95 +1,105 @@
-import WebSocket, { Server } from 'ws';
+import { WebSocket, Server } from 'ws';
+import { Server as HttpServer } from 'http';
 import { WebSocketClient, OrderMessage } from '../types/websocket';
-import WebSocketBase from './websocket';
+import { WebSocketBase } from './websocket';
+import { logger } from '../utils/logger';
 
-class TradingWebSocket extends WebSocketBase {
+export class TradingWebSocket extends WebSocketBase {
   protected orders: Map<string, any>;
 
-  constructor(server: Server) {
+  constructor(server: HttpServer) {
     super(server);
     this.orders = new Map();
   }
 
-  protected async handleMessage(client: WebSocketClient, data: OrderMessage): Promise<void> {
+  protected async handleMessage(ws: WebSocket, data: OrderMessage): Promise<void> {
     try {
       switch (data.type) {
         case 'placeOrder':
           if (data.symbol && data.orderType && data.side && data.quantity) {
-            await this.handlePlaceOrder(client, data);
+            await this.handlePlaceOrder(ws, data);
           } else {
-            this.sendError(client, 'Invalid place order message: missing required fields');
+            this.sendError(ws, 'Invalid place order message: missing required fields');
           }
           break;
         case 'cancelOrder':
           if (data.orderId) {
-            await this.handleCancelOrder(client, data.orderId);
+            await this.handleCancelOrder(ws, data.orderId);
           } else {
-            this.sendError(client, 'Invalid cancel order message: missing orderId');
+            this.sendError(ws, 'Invalid cancel order message: missing orderId');
           }
           break;
         case 'modifyOrder':
           if (data.orderId) {
-            await this.handleModifyOrder(client, data);
+            await this.handleModifyOrder(ws, data);
           } else {
-            this.sendError(client, 'Invalid modify order message: missing orderId');
+            this.sendError(ws, 'Invalid modify order message: missing orderId');
           }
           break;
         default:
-          this.sendError(client, `Unknown message type: ${data.type}`);
+          this.sendError(ws, `Unknown message type: ${data.type}`);
       }
     } catch (error) {
-      this.sendError(client, error.message);
+      const err = error as Error;
+      logger.error('Error handling trading message:', err);
+      ws.send(JSON.stringify({
+        type: 'error',
+        data: { message: err.message }
+      }));
     }
   }
 
-  protected async handlePlaceOrder(client: WebSocketClient, order: OrderMessage): Promise<void> {
-    try {
-      // Implement order placement logic here
-      const orderId = Math.random().toString(36).substring(7);
-
-      client.ws.send(JSON.stringify({
-        type: 'order_placed',
+  private async handlePlaceOrder(ws: WebSocket, order: OrderMessage): Promise<void> {
+    // Placeholder for order placement logic
+    const orderId = Math.random().toString(36).substring(7);
+    this.orders.set(orderId, { ...order, status: 'pending' });
+    
+    ws.send(JSON.stringify({
+      type: 'orderPlaced',
+      data: {
         orderId,
-        order
+        status: 'pending',
+        message: 'Order placed successfully'
+      }
+    }));
+  }
+
+  private async handleCancelOrder(ws: WebSocket, orderId: string): Promise<void> {
+    if (this.orders.has(orderId)) {
+      this.orders.delete(orderId);
+      ws.send(JSON.stringify({
+        type: 'orderCancelled',
+        data: {
+          orderId,
+          message: 'Order cancelled successfully'
+        }
       }));
-    } catch (error) {
-      this.sendError(client, 'Failed to place order');
+    } else {
+      this.sendError(ws, `Order not found: ${orderId}`);
     }
   }
 
-  protected async handleCancelOrder(client: WebSocketClient, orderId: string): Promise<void> {
-    try {
-      // Implement order cancellation logic here
-      client.ws.send(JSON.stringify({
-        type: 'order_cancelled',
-        orderId
+  private async handleModifyOrder(ws: WebSocket, order: OrderMessage): Promise<void> {
+    if (this.orders.has(order.orderId!)) {
+      const existingOrder = this.orders.get(order.orderId!);
+      this.orders.set(order.orderId!, { ...existingOrder, ...order });
+      
+      ws.send(JSON.stringify({
+        type: 'orderModified',
+        data: {
+          orderId: order.orderId,
+          message: 'Order modified successfully'
+        }
       }));
-    } catch (error) {
-      this.sendError(client, 'Failed to cancel order');
+    } else {
+      this.sendError(ws, `Order not found: ${order.orderId}`);
     }
   }
 
-  protected async handleModifyOrder(client: WebSocketClient, order: OrderMessage): Promise<void> {
-    try {
-      // Implement order modification logic here
-      client.ws.send(JSON.stringify({
-        type: 'order_modified',
-        orderId: order.orderId,
-        order
-      }));
-    } catch (error) {
-      this.sendError(client, 'Failed to modify order');
-    }
-  }
-
-  protected handleDisconnect(client: WebSocketClient): void {
-    super.handleDisconnect(client);
-    this.clients.delete(client.id);
-  }
-
-  protected sendError(client: WebSocketClient, message: string): void {
-    super.sendError(client, message);
+  private sendError(ws: WebSocket, message: string): void {
+    ws.send(JSON.stringify({
+      type: 'error',
+      data: { message }
+    }));
   }
 }
-
-export default TradingWebSocket;

@@ -1,95 +1,104 @@
-import WebSocket, { Server } from 'ws';
+import { WebSocket, Server } from 'ws';
+import { Server as HttpServer } from 'http';
 import { WebSocketClient, OptimizationMessage } from '../types/websocket';
-import WebSocketBase from './websocket';
+import { WebSocketBase } from './websocket';
+import { logger } from '../utils/logger';
 
-class OptimizationWebSocket extends WebSocketBase {
+export class OptimizationWebSocket extends WebSocketBase {
   protected optimizations: Map<string, any>;
 
-  constructor(server: Server) {
+  constructor(server: HttpServer) {
     super(server);
     this.optimizations = new Map();
   }
 
-  protected async handleMessage(client: WebSocketClient, data: OptimizationMessage): Promise<void> {
+  protected async handleMessage(ws: WebSocket, data: OptimizationMessage): Promise<void> {
     try {
       switch (data.type) {
-        case 'start_optimization':
-          if (data.config) {
-            await this.handleStartOptimization(client, data.config);
+        case 'startOptimization':
+          if (data.parameters && data.strategy) {
+            await this.handleStartOptimization(ws, data);
           } else {
-            this.sendError(client, 'Invalid start optimization message: missing config');
+            this.sendError(ws, 'Invalid optimization message: missing required fields');
           }
           break;
-        case 'stop_optimization':
+        case 'stopOptimization':
           if (data.optimizationId) {
-            await this.handleStopOptimization(client, data.optimizationId);
+            await this.handleStopOptimization(ws, data.optimizationId);
           } else {
-            this.sendError(client, 'Invalid stop optimization message: missing optimizationId');
+            this.sendError(ws, 'Invalid stop optimization message: missing optimizationId');
           }
           break;
-        case 'get_optimization_status':
+        case 'getStatus':
           if (data.optimizationId) {
-            await this.handleGetOptimizationStatus(client, data.optimizationId);
+            await this.handleGetStatus(ws, data.optimizationId);
           } else {
-            this.sendError(client, 'Invalid get optimization status message: missing optimizationId');
+            this.sendError(ws, 'Invalid get status message: missing optimizationId');
           }
           break;
         default:
-          this.sendError(client, `Unknown message type: ${data.type}`);
+          this.sendError(ws, `Unknown message type: ${data.type}`);
       }
     } catch (error) {
-      this.sendError(client, error.message);
+      const err = error as Error;
+      logger.error('Error handling optimization message:', err);
+      ws.send(JSON.stringify({
+        type: 'error',
+        data: { message: err.message }
+      }));
     }
   }
 
-  protected async handleStartOptimization(client: WebSocketClient, config: any): Promise<void> {
-    try {
-      // Implement optimization start logic here
-      const optimizationId = Math.random().toString(36).substring(7);
-
-      client.ws.send(JSON.stringify({
-        type: 'optimization_started',
+  private async handleStartOptimization(ws: WebSocket, data: OptimizationMessage): Promise<void> {
+    // Placeholder for optimization logic
+    const optimizationId = Math.random().toString(36).substring(7);
+    this.optimizations.set(optimizationId, { ...data, status: 'running' });
+    
+    ws.send(JSON.stringify({
+      type: 'optimizationStarted',
+      data: {
         optimizationId,
-        config
+        status: 'running',
+        message: 'Optimization started successfully'
+      }
+    }));
+  }
+
+  private async handleStopOptimization(ws: WebSocket, optimizationId: string): Promise<void> {
+    if (this.optimizations.has(optimizationId)) {
+      this.optimizations.delete(optimizationId);
+      ws.send(JSON.stringify({
+        type: 'optimizationStopped',
+        data: {
+          optimizationId,
+          message: 'Optimization stopped successfully'
+        }
       }));
-    } catch (error) {
-      this.sendError(client, 'Failed to start optimization');
+    } else {
+      this.sendError(ws, `Optimization not found: ${optimizationId}`);
     }
   }
 
-  protected async handleStopOptimization(client: WebSocketClient, optimizationId: string): Promise<void> {
-    try {
-      // Implement optimization stop logic here
-      client.ws.send(JSON.stringify({
-        type: 'optimization_stopped',
-        optimizationId
+  private async handleGetStatus(ws: WebSocket, optimizationId: string): Promise<void> {
+    if (this.optimizations.has(optimizationId)) {
+      const optimization = this.optimizations.get(optimizationId);
+      ws.send(JSON.stringify({
+        type: 'optimizationStatus',
+        data: {
+          optimizationId,
+          status: optimization.status,
+          progress: Math.random() * 100 // Placeholder for actual progress
+        }
       }));
-    } catch (error) {
-      this.sendError(client, 'Failed to stop optimization');
+    } else {
+      this.sendError(ws, `Optimization not found: ${optimizationId}`);
     }
   }
 
-  protected async handleGetOptimizationStatus(client: WebSocketClient, optimizationId: string): Promise<void> {
-    try {
-      // Implement optimization status check logic here
-      client.ws.send(JSON.stringify({
-        type: 'optimization_status',
-        optimizationId,
-        status: 'running'
-      }));
-    } catch (error) {
-      this.sendError(client, 'Failed to get optimization status');
-    }
-  }
-
-  protected handleDisconnect(client: WebSocketClient): void {
-    super.handleDisconnect(client);
-    this.clients.delete(client.id);
-  }
-
-  protected sendError(client: WebSocketClient, message: string): void {
-    super.sendError(client, message);
+  private sendError(ws: WebSocket, message: string): void {
+    ws.send(JSON.stringify({
+      type: 'error',
+      data: { message }
+    }));
   }
 }
-
-export default OptimizationWebSocket;

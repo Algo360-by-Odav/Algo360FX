@@ -142,15 +142,20 @@ class WebSocketManager {
   }
 }
 
-import WebSocketBase from './websocket';
-import TradingWebSocket from './trading';
-import OptimizationWebSocket from './optimization';
+import { Server } from 'http';
+import { TradingWebSocket } from './trading';
+import { OptimizationWebSocket } from './optimization';
 
-export {
-  WebSocketBase,
-  TradingWebSocket,
-  OptimizationWebSocket,
-  WebSocketClient
-};
+export function initializeWebSockets(server: Server) {
+  const tradingWs = new TradingWebSocket(server);
+  const optimizationWs = new OptimizationWebSocket(server);
+
+  return {
+    tradingWs,
+    optimizationWs
+  };
+}
+
+export type { WebSocketClient } from '../types/websocket';
 
 export default WebSocketManager;
