@@ -17,13 +17,13 @@ export const standardLimiter = rateLimit({
 
 // More permissive limiter for authentication routes
 export const authLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 30, // Limit each IP to 30 requests per minute
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
   trustProxy: true,
   skip: skipDevelopment,
-  message: { error: 'Too many authentication attempts, please try again later.' }
+  message: { error: 'Too many authentication attempts, please try again in 15 minutes.' }
 });
 
 // Stricter limiter for AI-related endpoints
