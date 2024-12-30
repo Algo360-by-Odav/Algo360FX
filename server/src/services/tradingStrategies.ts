@@ -35,9 +35,9 @@ export class TradingStrategies {
     longPeriod: number = 21
   ): Promise<StrategyResult> {
     const prices = historicalData.map(d => d.close);
-    const shortEMA = this.technicalAnalysis.calculateEMA(prices, shortPeriod);
-    const longEMA = this.technicalAnalysis.calculateEMA(prices, longPeriod);
-    const rsi = this.technicalAnalysis.calculateRSI(prices);
+    const shortEMA = await this.technicalAnalysis.calculateEMA(prices, shortPeriod);
+    const longEMA = await this.technicalAnalysis.calculateEMA(prices, longPeriod);
+    const rsi = await this.technicalAnalysis.calculateRSI(prices);
 
     const lastShortEMA = shortEMA[shortEMA.length - 1];
     const lastLongEMA = longEMA[longEMA.length - 1];
@@ -71,21 +71,20 @@ export class TradingStrategies {
     period: number = 20
   ): Promise<StrategyResult> {
     const prices = historicalData.map(d => d.close);
-    const bands = this.technicalAnalysis.calculateBollingerBands(prices, period);
-    const rsi = this.technicalAnalysis.calculateRSI(prices);
+    const bands = await this.technicalAnalysis.calculateBollingerBands(prices, period);
+    const rsi = await this.technicalAnalysis.calculateRSI(prices);
 
     const lastPrice = prices[prices.length - 1];
-    const lastUpper = bands.upper[bands.upper.length - 1];
-    const lastLower = bands.lower[bands.lower.length - 1];
+    const lastBand = bands[bands.length - 1];
     const lastRSI = rsi[rsi.length - 1];
 
     let signal: 'buy' | 'sell' | 'neutral' = 'neutral';
     let confidence = 0;
 
-    if (lastPrice < lastLower && lastRSI < 30) {
+    if (lastPrice < lastBand.lower && lastRSI < 30) {
       signal = 'buy';
       confidence = 0.8;
-    } else if (lastPrice > lastUpper && lastRSI > 70) {
+    } else if (lastPrice > lastBand.upper && lastRSI > 70) {
       signal = 'sell';
       confidence = 0.8;
     }
@@ -95,8 +94,9 @@ export class TradingStrategies {
       confidence,
       indicators: {
         price: lastPrice,
-        upperBand: lastUpper,
-        lowerBand: lastLower,
+        upperBand: lastBand.upper,
+        middleBand: lastBand.middle,
+        lowerBand: lastBand.lower,
         rsi: lastRSI
       },
       timestamp: historicalData[historicalData.length - 1].timestamp
@@ -107,32 +107,36 @@ export class TradingStrategies {
     historicalData: MarketData[],
     period: number = 14
   ): Promise<StrategyResult> {
-    const atr = this.technicalAnalysis.calculateATR(historicalData, period);
-    const support = this.technicalAnalysis.findSupportLevels(historicalData);
-    const resistance = this.technicalAnalysis.findResistanceLevels(historicalData);
+    const atr = await this.technicalAnalysis.calculateATR(historicalData, period);
+    const supportLevels = await this.technicalAnalysis.findSupportLevels(historicalData);
+    const resistanceLevels = await this.technicalAnalysis.findResistanceLevels(historicalData);
 
     const lastPrice = historicalData[historicalData.length - 1].close;
     const lastATR = atr[atr.length - 1];
 
+    // Find nearest support and resistance
+    const nearestSupport = Math.max(...supportLevels.filter(s => s < lastPrice));
+    const nearestResistance = Math.min(...resistanceLevels.filter(r => r > lastPrice));
+
     let signal: 'buy' | 'sell' | 'neutral' = 'neutral';
     let confidence = 0;
 
-    // Check for breakouts
-    const nearestResistance = resistance.find(level => level > lastPrice);
-    const nearestSupport = [...support].reverse().find(level => level < lastPrice);
+    const distanceToSupport = lastPrice - nearestSupport;
+    const distanceToResistance = nearestResistance - lastPrice;
 
-    if (nearestResistance && (nearestResistance - lastPrice) < lastATR) {
+    if (distanceToSupport < lastATR * 0.5) {
       signal = 'buy';
-      confidence = 0.7;
-    } else if (nearestSupport && (lastPrice - nearestSupport) < lastATR) {
+      confidence = 0.6 + (0.2 * (1 - distanceToSupport / (lastATR * 0.5)));
+    } else if (distanceToResistance < lastATR * 0.5) {
       signal = 'sell';
-      confidence = 0.7;
+      confidence = 0.6 + (0.2 * (1 - distanceToResistance / (lastATR * 0.5)));
     }
 
     return {
       signal,
       confidence,
       indicators: {
+        price: lastPrice,
         atr: lastATR,
         nearestSupport,
         nearestResistance
@@ -147,23 +151,21 @@ export class TradingStrategies {
     slowPeriod: number = 26,
     signalPeriod: number = 9
   ): Promise<StrategyResult> {
-    const prices = historicalData.map(d => d.close);
-    const macd = this.technicalAnalysis.calculateMACD(prices);
-    const adxResult = this.technicalAnalysis.calculateADX(historicalData);
+    const macd = await this.technicalAnalysis.calculateMACD(historicalData.map(d => d.close));
+    const adx = await this.technicalAnalysis.calculateADX(historicalData);
 
-    const lastMACD = macd.macd[macd.macd.length - 1];
-    const lastSignal = macd.signal[macd.signal.length - 1];
-    const lastADX = adxResult[adxResult.length - 1];
+    const lastMACD = macd[macd.length - 1];
+    const lastADX = adx[adx.length - 1];
 
     let signal: 'buy' | 'sell' | 'neutral' = 'neutral';
     let confidence = 0;
 
-    if (lastMACD > lastSignal && lastADX > 25) {
+    if (lastMACD.histogram > 0 && lastADX > 25) {
       signal = 'buy';
-      confidence = 0.6 + (lastADX > 40 ? 0.2 : 0);
-    } else if (lastMACD < lastSignal && lastADX > 25) {
+      confidence = 0.5 + (Math.min(lastADX, 50) - 25) / 50;
+    } else if (lastMACD.histogram < 0 && lastADX > 25) {
       signal = 'sell';
-      confidence = 0.6 + (lastADX > 40 ? 0.2 : 0);
+      confidence = 0.5 + (Math.min(lastADX, 50) - 25) / 50;
     }
 
     return {
@@ -171,7 +173,6 @@ export class TradingStrategies {
       confidence,
       indicators: {
         macd: lastMACD,
-        signal: lastSignal,
         adx: lastADX
       },
       timestamp: historicalData[historicalData.length - 1].timestamp
@@ -181,26 +182,23 @@ export class TradingStrategies {
   public async executePatternRecognitionStrategy(
     historicalData: MarketData[]
   ): Promise<StrategyResult> {
-    const patterns = this.technicalAnalysis.findCandlePatterns(historicalData);
-    const volume = this.technicalAnalysis.analyzeVolume(historicalData);
+    const patterns = await this.technicalAnalysis.findCandlePatterns(historicalData);
+    const volume = await this.technicalAnalysis.analyzeVolume(historicalData);
 
     let signal: 'buy' | 'sell' | 'neutral' = 'neutral';
     let confidence = 0;
 
-    // Define bullish and bearish patterns
-    const bullishPatterns = ['bullishEngulfing', 'morningstar', 'hammer'];
-    const bearishPatterns = ['bearishEngulfing', 'eveningstar', 'shootingstar'];
+    // Analyze patterns and volume to generate signals
+    // This is a placeholder implementation
+    const bullishPatterns = patterns.filter(p => p.includes('bullish')).length;
+    const bearishPatterns = patterns.filter(p => p.includes('bearish')).length;
 
-    // Count bullish and bearish patterns
-    const bullishCount = patterns.filter(p => bullishPatterns.includes(p)).length;
-    const bearishCount = patterns.filter(p => bearishPatterns.includes(p)).length;
-
-    if (bullishCount > bearishCount && volume.trend === 'increasing') {
+    if (bullishPatterns > bearishPatterns && volume.trend === 'increasing') {
       signal = 'buy';
-      confidence = 0.5 + (bullishCount * 0.1);
-    } else if (bearishCount > bullishCount && volume.trend === 'increasing') {
+      confidence = 0.5 + (0.1 * bullishPatterns);
+    } else if (bearishPatterns > bullishPatterns && volume.trend === 'increasing') {
       signal = 'sell';
-      confidence = 0.5 + (bearishCount * 0.1);
+      confidence = 0.5 + (0.1 * bearishPatterns);
     }
 
     return {
@@ -208,8 +206,7 @@ export class TradingStrategies {
       confidence,
       indicators: {
         patterns,
-        volumeTrend: volume.trend,
-        volumeStrength: volume.strength
+        volume
       },
       timestamp: historicalData[historicalData.length - 1].timestamp
     };

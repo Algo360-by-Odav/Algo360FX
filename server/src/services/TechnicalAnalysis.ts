@@ -32,41 +32,41 @@ export class TechnicalAnalysis {
       for (const indicator of indicators) {
         switch (indicator.toLowerCase()) {
           case 'sma':
-            analysis.sma = this.calculateSMA(historicalData.map((d: MarketData) => d.close));
+            analysis.sma = await this.calculateSMA(historicalData.map((d: MarketData) => d.close));
             break;
           case 'ema':
-            analysis.ema = this.calculateEMA(historicalData.map((d: MarketData) => d.close));
+            analysis.ema = await this.calculateEMA(historicalData.map((d: MarketData) => d.close));
             break;
           case 'rsi':
-            analysis.rsi = this.calculateRSI(historicalData.map((d: MarketData) => d.close));
+            analysis.rsi = await this.calculateRSI(historicalData.map((d: MarketData) => d.close));
             break;
           case 'macd':
-            analysis.macd = this.calculateMACD(historicalData.map((d: MarketData) => d.close));
+            analysis.macd = await this.calculateMACD(historicalData.map((d: MarketData) => d.close));
             break;
           case 'bollinger':
-            analysis.bollinger = this.calculateBollingerBands(historicalData.map((d: MarketData) => d.close));
+            analysis.bollinger = await this.calculateBollingerBands(historicalData.map((d: MarketData) => d.close));
             break;
           case 'atr':
-            analysis.atr = this.calculateATR(historicalData);
+            analysis.atr = await this.calculateATR(historicalData);
             break;
           case 'stochastic':
-            analysis.stochastic = this.calculateStochastic(historicalData);
+            analysis.stochastic = await this.calculateStochastic(historicalData);
             break;
           case 'adx':
-            analysis.adx = this.calculateADX(historicalData);
+            analysis.adx = await this.calculateADX(historicalData);
             break;
           // Add more indicators as needed
         }
       }
 
       // Add trend analysis
-      analysis.trend = this.analyzeTrend(historicalData, analysis);
+      analysis.trend = await this.analyzeTrend(historicalData, analysis);
       
       // Add support/resistance levels
-      analysis.levels = this.findKeyLevels(historicalData);
+      analysis.levels = await this.findKeyLevels(historicalData);
 
       // Add pattern recognition
-      analysis.patterns = this.detectPatterns(historicalData);
+      analysis.patterns = await this.detectPatterns(historicalData);
 
       return analysis;
     } catch (error) {
@@ -75,167 +75,68 @@ export class TechnicalAnalysis {
     }
   }
 
-  private calculateSMA(data: number[], period: number = 20): number[] {
-    const sma: number[] = [];
-    for (let i = period - 1; i < data.length; i++) {
-      const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
-      sma.push(sum / period);
-    }
-    return sma;
+  public async calculateSMA(data: number[], period: number = 14): Promise<number[]> {
+    return technicalIndicators.SMA.calculate({ period, values: data });
   }
 
-  public calculateEMA(data: number[], period: number = 20): number[] {
-    const multiplier = 2 / (period + 1);
-    const ema: number[] = [data[0]];
-    
-    for (let i = 1; i < data.length; i++) {
-      ema.push(
-        (data[i] - ema[i - 1]) * multiplier + ema[i - 1]
-      );
-    }
-    return ema;
+  public async calculateEMA(data: number[], period: number = 14): Promise<number[]> {
+    return technicalIndicators.EMA.calculate({ period, values: data });
   }
 
-  public calculateRSI(data: number[], period: number = 14): number[] {
-    const rsi: number[] = [];
-    const gains: number[] = [];
-    const losses: number[] = [];
-
-    // Calculate price changes
-    for (let i = 1; i < data.length; i++) {
-      const change = data[i] - data[i - 1];
-      gains.push(change > 0 ? change : 0);
-      losses.push(change < 0 ? Math.abs(change) : 0);
-    }
-
-    return this.calculateRSIFromGainsLosses(gains, losses, period);
+  public async calculateRSI(data: number[], period: number = 14): Promise<number[]> {
+    return technicalIndicators.RSI.calculate({ period, values: data });
   }
 
-  public calculateBollingerBands(data: number[], period: number = 20, stdDev: number = 2): { 
-    upper: number[],
-    middle: number[],
-    lower: number[] 
-  } {
-    const sma = this.calculateSMA(data, period);
-    const upper: number[] = [];
-    const lower: number[] = [];
-
-    for (let i = period - 1; i < data.length; i++) {
-      const slice = data.slice(i - period + 1, i + 1);
-      const std = this.calculateStandardDeviation(slice);
-      upper.push(sma[i - period + 1] + stdDev * std);
-      lower.push(sma[i - period + 1] - stdDev * std);
-    }
-
-    return {
-      upper,
-      middle: sma,
-      lower
-    };
-  }
-
-  public calculateATR(data: MarketData[], period: number = 14): number[] {
-    const tr: number[] = [];
-    const atr: number[] = [];
-
-    // Calculate True Range
-    for (let i = 1; i < data.length; i++) {
-      const high = data[i].high;
-      const low = data[i].low;
-      const prevClose = data[i - 1].close;
-      
-      tr.push(Math.max(
-        high - low,
-        Math.abs(high - prevClose),
-        Math.abs(low - prevClose)
-      ));
-    }
-
-    // Calculate ATR
-    let sum = tr.slice(0, period).reduce((a, b) => a + b, 0);
-    atr.push(sum / period);
-
-    for (let i = period; i < tr.length; i++) {
-      atr.push((atr[atr.length - 1] * (period - 1) + tr[i]) / period);
-    }
-
-    return atr;
-  }
-
-  public findSupportLevels(data: MarketData[]): number[] {
-    // Implement support level detection logic
-    const levels: number[] = [];
-    // Add implementation here
-    return levels;
-  }
-
-  public findResistanceLevels(data: MarketData[]): number[] {
-    // Implement resistance level detection logic
-    const levels: number[] = [];
-    // Add implementation here
-    return levels;
-  }
-
-  public analyzeVolume(data: MarketData[]): { trend: string, strength: number } {
-    // Implement volume analysis logic
-    return {
-      trend: 'neutral',
-      strength: 0
-    };
-  }
-
-  public findCandlePatterns(data: MarketData[]): string[] {
-    // Implement candle pattern recognition logic
-    return [];
-  }
-
-  private calculateMACD(data: number[]): Record<string, number[]> {
+  public async calculateMACD(data: number[]): Promise<any> {
     const macdInput: MACDInput = {
       values: data,
       fastPeriod: 12,
       slowPeriod: 26,
       signalPeriod: 9,
-      SimpleMAOscillator: true,
-      SimpleMASignal: true
+      SimpleMAOscillator: false,
+      SimpleMASignal: false
     };
-
-    const macdLine = this.calculateEMA(data, macdInput.fastPeriod)
-      .map((fast, i) => fast - this.calculateEMA(data, macdInput.slowPeriod)[i]);
-    
-    const signalLine = this.calculateEMA(macdLine, macdInput.signalPeriod);
-    const histogram = macdLine.map((macd, i) => macd - signalLine[i]);
-
-    return {
-      macdLine,
-      signalLine,
-      histogram
-    };
+    return technicalIndicators.MACD.calculate(macdInput);
   }
 
-  private calculateStandardDeviation(data: number[]): number {
-    const mean = data.reduce((a, b) => a + b, 0) / data.length;
-    const squaredDiffs = data.map(x => Math.pow(x - mean, 2));
-    const variance = squaredDiffs.reduce((a, b) => a + b, 0) / data.length;
-    return Math.sqrt(variance);
+  public async calculateBollingerBands(data: number[], period: number = 20, stdDev: number = 2): Promise<any> {
+    return technicalIndicators.BollingerBands.calculate({
+      period,
+      values: data,
+      stdDev
+    });
   }
 
-  private calculateRSIFromGainsLosses(gains: number[], losses: number[], period: number): number[] {
-    const rsi: number[] = [];
-    let avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period;
-    let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period;
-
-    for (let i = period; i < gains.length; i++) {
-      avgGain = ((avgGain * (period - 1)) + gains[i - 1]) / period;
-      avgLoss = ((avgLoss * (period - 1)) + losses[i - 1]) / period;
-
-      const rs = avgGain / avgLoss;
-      rsi.push(100 - (100 / (1 + rs)));
-    }
-
-    return rsi;
+  public async calculateATR(data: MarketData[], period: number = 14): Promise<number[]> {
+    return technicalIndicators.ATR.calculate({
+      high: data.map(d => d.high),
+      low: data.map(d => d.low),
+      close: data.map(d => d.close),
+      period
+    });
   }
 
-  private calculateStochastic(data: MarketData[], period: number = 14) {
+  public async findSupportLevels(data: MarketData[]): Promise<number[]> {
+    // Implement support level detection logic
+    return [];
+  }
+
+  public async findResistanceLevels(data: MarketData[]): Promise<number[]> {
+    // Implement resistance level detection logic
+    return [];
+  }
+
+  public async findCandlePatterns(data: MarketData[]): Promise<string[]> {
+    // Implement candlestick pattern recognition
+    return [];
+  }
+
+  public async analyzeVolume(data: MarketData[]): Promise<any> {
+    // Implement volume analysis
+    return {};
+  }
+
+  private async calculateStochastic(data: MarketData[], period: number = 14): Promise<any> {
     const stochastic = technicalIndicators.stochastic({
       high: data.map(d => d.high),
       low: data.map(d => d.low),
@@ -250,27 +151,27 @@ export class TechnicalAnalysis {
     };
   }
 
-  private analyzeTrend(data: MarketData[], indicators: Record<string, any>): Record<string, string> {
+  private async analyzeTrend(data: MarketData[], indicators: Record<string, any>): Promise<Record<string, string>> {
     const closes = data.map(d => d.close);
-    const sma20 = this.calculateSMA(data.map(d => d.close), 20);
-    const sma50 = this.calculateSMA(data.map(d => d.close), 50);
-    const sma200 = this.calculateSMA(data.map(d => d.close), 200);
+    const sma20 = await this.calculateSMA(data.map(d => d.close), 20);
+    const sma50 = await this.calculateSMA(data.map(d => d.close), 50);
+    const sma200 = await this.calculateSMA(data.map(d => d.close), 200);
     
     return {
       shortTerm: closes[closes.length - 1] > sma20[sma20.length - 1] ? 'bullish' : 'bearish',
       mediumTerm: closes[closes.length - 1] > sma50[sma50.length - 1] ? 'bullish' : 'bearish',
       longTerm: closes[closes.length - 1] > sma200[sma200.length - 1] ? 'bullish' : 'bearish',
-      strength: this.calculateTrendStrength(data),
+      strength: await this.calculateTrendStrength(data),
     };
   }
 
-  private calculateTrendStrength(data: MarketData[]): string {
+  private async calculateTrendStrength(data: MarketData[]): Promise<string> {
     // Implement trend strength calculation
     // Could use ADX or other trend strength indicators
     return 'moderate'; // placeholder
   }
 
-  private findKeyLevels(data: MarketData[]): Record<string, number[]> {
+  private async findKeyLevels(data: MarketData[]): Promise<Record<string, number[]>> {
     // Implement support/resistance level detection
     return {
       support: [],
@@ -278,12 +179,12 @@ export class TechnicalAnalysis {
     };
   }
 
-  private detectPatterns(data: MarketData[]): any[] {
+  private async detectPatterns(data: MarketData[]): Promise<any[]> {
     // Implement chart pattern recognition
     return [];
   }
 
-  public calculateADX(data: MarketData[], period: number = 14): number[] {
+  public async calculateADX(data: MarketData[], period: number = 14): Promise<number[]> {
     const trueRanges: number[] = [];
     const plusDM: number[] = [];
     const minusDM: number[] = [];
@@ -323,9 +224,9 @@ export class TechnicalAnalysis {
     }
 
     // Calculate smoothed averages
-    const smoothedTR = this.calculateSmoothedAverage(trueRanges, period);
-    const smoothedPlusDM = this.calculateSmoothedAverage(plusDM, period);
-    const smoothedMinusDM = this.calculateSmoothedAverage(minusDM, period);
+    const smoothedTR = await this.calculateSmoothedAverage(trueRanges, period);
+    const smoothedPlusDM = await this.calculateSmoothedAverage(plusDM, period);
+    const smoothedMinusDM = await this.calculateSmoothedAverage(minusDM, period);
 
     // Calculate Plus and Minus Directional Indicators
     const plusDI: number[] = [];
@@ -343,10 +244,10 @@ export class TechnicalAnalysis {
     }
 
     // Smooth DX to get ADX
-    return this.calculateSmoothedAverage(dx, period);
+    return await this.calculateSmoothedAverage(dx, period);
   }
 
-  private calculateSmoothedAverage(data: number[], period: number): number[] {
+  private async calculateSmoothedAverage(data: number[], period: number): Promise<number[]> {
     const smoothed: number[] = [];
     let sum = data.slice(0, period).reduce((a, b) => a + b, 0);
     smoothed.push(sum / period);
@@ -354,7 +255,6 @@ export class TechnicalAnalysis {
     for (let i = period; i < data.length; i++) {
       smoothed.push((smoothed[smoothed.length - 1] * (period - 1) + data[i]) / period);
     }
-
     return smoothed;
   }
 

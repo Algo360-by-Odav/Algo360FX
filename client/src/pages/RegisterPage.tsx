@@ -39,7 +39,25 @@ const RegisterPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch('https://algo360fx.onrender.com/api/auth/register', {
+      // First verify the code
+      const verifyResponse = await fetch('https://algo360fx-server.onrender.com/api/auth/verify/code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          code: formData.verificationCode,
+        }),
+      });
+
+      if (!verifyResponse.ok) {
+        const errorData = await verifyResponse.json();
+        throw new Error(errorData.error || 'Invalid verification code');
+      }
+
+      // Then proceed with registration
+      const registerResponse = await fetch('https://algo360fx-server.onrender.com/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -48,19 +66,16 @@ const RegisterPage: React.FC = () => {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          verificationCode: formData.verificationCode,
           password: formData.password,
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+      if (!registerResponse.ok) {
+        const errorData = await registerResponse.json();
+        throw new Error(errorData.error || 'Registration failed');
       }
 
       // Show success message
-      setError('');
       alert('Registration successful! Please login with your credentials.');
       
       // Navigate to login page
@@ -86,7 +101,7 @@ const RegisterPage: React.FC = () => {
 
     setIsRequestingCode(true);
     try {
-      const response = await fetch('https://algo360fx.onrender.com/api/auth/verify/send', {
+      const response = await fetch('https://algo360fx-server.onrender.com/api/auth/verify/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -102,6 +117,8 @@ const RegisterPage: React.FC = () => {
         throw new Error(data.error || 'Failed to send verification code');
       }
 
+      // Show success message
+      alert('Verification code sent! Please check your email (or server logs in development).');
       setStep(2);
     } catch (err: any) {
       setError(err.message || 'Failed to send verification code');

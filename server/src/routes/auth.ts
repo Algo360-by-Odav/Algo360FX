@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
 import mongoose from 'mongoose';
 import { validateRequest } from '../middleware/validateRequest';
-import { registerSchema, loginSchema } from '../schemas/auth.schema';
+import { registerSchema, loginSchema, verifyCodeSchema } from '../schemas/auth.schema';
 import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
@@ -46,17 +46,8 @@ router.post('/verify/send',
 
 // Verify code
 router.post('/verify/code',
-  [
-    body('email').isEmail(),
-    body('code').isLength({ min: 6, max: 6 }),
-  ],
+  validateRequest(verifyCodeSchema),
   asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      console.log('Validation errors:', errors.array());
-      res.status(400).json({ errors: errors.array() });
-    }
-
     const { email, code } = req.body;
     console.log('Verifying code:', { email, code });
     console.log('Stored codes:', Array.from(verificationCodes.entries()));
@@ -66,20 +57,21 @@ router.post('/verify/code',
 
     if (!storedData) {
       console.log('No verification code found for email:', email);
-      res.status(400).json({ error: 'No verification code found' });
+      return res.status(400).json({ error: 'No verification code found. Please request a new code.' });
     }
 
     if (new Date() > storedData.expires) {
       console.log('Code expired. Current time:', new Date(), 'Expiry:', storedData.expires);
       verificationCodes.delete(email);
-      res.status(400).json({ error: 'Verification code expired' });
+      return res.status(400).json({ error: 'Verification code expired. Please request a new code.' });
     }
 
     if (storedData.code !== code) {
       console.log('Code mismatch. Received:', code, 'Stored:', storedData.code);
-      res.status(400).json({ error: 'Invalid verification code' });
+      return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
     }
 
+    // Don't delete the code yet, it will be deleted after successful registration
     res.json({ success: true, message: 'Code verified successfully' });
   })
 );
@@ -88,38 +80,10 @@ router.post('/verify/code',
 router.post('/register', 
   validateRequest(registerSchema),
   asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { email, password, verificationCode, firstName, lastName } = req.body;
-    console.log('Registration request body:', { email, firstName, lastName, verificationCode: '***' });
+    const { email, password, firstName, lastName } = req.body;
+    console.log('Registration request body:', { email, firstName, lastName });
 
     try {
-      // Check if verification code is valid
-      const storedVerification = verificationCodes.get(email);
-      console.log('Registration verification check:', {
-        email,
-        hasStoredCode: !!storedVerification,
-        codeExpired: storedVerification ? new Date() > storedVerification.expires : null,
-        allEmails: Array.from(verificationCodes.keys())
-      });
-
-      if (!storedVerification) {
-        console.log('No verification code found for:', email);
-        return res.status(400).json({ error: 'Please request a new verification code' });
-      }
-
-      if (new Date() > storedVerification.expires) {
-        console.log('Verification code expired:', {
-          expires: storedVerification.expires,
-          now: new Date()
-        });
-        verificationCodes.delete(email);
-        return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
-      }
-
-      if (storedVerification.code !== verificationCode) {
-        console.log('Verification code mismatch');
-        return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
-      }
-
       // Check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
@@ -152,10 +116,7 @@ router.post('/register',
       if (error.code === 11000) {
         return res.status(400).json({ error: 'This email is already registered. Please login or use a different email.' });
       }
-      if (error.name === 'ValidationError') {
-        return res.status(400).json({ error: 'Invalid registration data. Please check your input.' });
-      }
-      next(error);
+      res.status(500).json({ error: 'Registration failed. Please try again.' });
     }
   })
 );
