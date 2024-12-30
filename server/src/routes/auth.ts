@@ -22,10 +22,11 @@ const mockSendEmail = async (to: string, code: string): Promise<void> => {
 // Send verification code
 router.post('/verify/send', 
   body('email').isEmail(),
-  asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ errors: errors.array() });
+      return;
     }
 
     const { email } = req.body;
@@ -47,7 +48,7 @@ router.post('/verify/send',
 // Verify code
 router.post('/verify/code',
   validateRequest(verifyCodeSchema),
-  asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response) => {
     const { email, code } = req.body;
     console.log('Verifying code:', { email, code });
     console.log('Stored codes:', Array.from(verificationCodes.entries()));
@@ -56,22 +57,21 @@ router.post('/verify/code',
     console.log('Stored data for email:', storedData);
 
     if (!storedData) {
-      console.log('No verification code found for email:', email);
-      return res.status(400).json({ error: 'No verification code found. Please request a new code.' });
+      res.status(400).json({ error: 'No verification code found. Please request a new code.' });
+      return;
     }
 
     if (new Date() > storedData.expires) {
-      console.log('Code expired. Current time:', new Date(), 'Expiry:', storedData.expires);
       verificationCodes.delete(email);
-      return res.status(400).json({ error: 'Verification code expired. Please request a new code.' });
+      res.status(400).json({ error: 'Verification code expired. Please request a new code.' });
+      return;
     }
 
     if (storedData.code !== code) {
-      console.log('Code mismatch. Received:', code, 'Stored:', storedData.code);
-      return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
+      res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
+      return;
     }
 
-    // Don't delete the code yet, it will be deleted after successful registration
     res.json({ success: true, message: 'Code verified successfully' });
   })
 );
@@ -79,7 +79,7 @@ router.post('/verify/code',
 // Register new user
 router.post('/register', 
   validateRequest(registerSchema),
-  asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response) => {
     const { email, password, firstName, lastName } = req.body;
     console.log('Registration request body:', { email, firstName, lastName });
 
@@ -87,8 +87,8 @@ router.post('/register',
       // Check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        console.log('User already exists:', email);
-        return res.status(400).json({ error: 'This email is already registered. Please login or use a different email.' });
+        res.status(400).json({ error: 'This email is already registered. Please login or use a different email.' });
+        return;
       }
 
       // Hash password
@@ -142,84 +142,73 @@ router.post('/register',
     } catch (error: any) {
       console.error('Registration error:', error);
       if (error.name === 'ValidationError') {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Validation Error',
           details: error.errors
         });
+        return;
       }
       if (error.code === 11000) {
-        return res.status(409).json({
+        res.status(409).json({
           error: 'Email already registered',
           message: 'This email is already in use. Please try a different email or login.'
         });
+        return;
       }
       res.status(500).json({
         error: 'Registration failed',
         message: error.message || 'An unexpected error occurred during registration'
       });
+      return;
     }
   })
 );
 
-// Login
+// Login user
 router.post('/login',
   validateRequest(loginSchema),
-  asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = req.body;
-    
-    const user = await User.findOne({ email });
-    if (!user) {
-      res.status(401).json({ error: 'Invalid credentials' });
+
+    try {
+      const user = await User.findOne({ email });
+      if (!user) {
+        res.status(401).json({ error: 'Invalid email or password' });
+        return;
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        res.status(401).json({ error: 'Invalid email or password' });
+        return;
+      }
+
+      const token = jwt.sign(
+        { id: user._id, email: user.email },
+        config.jwtSecret,
+        { expiresIn: '7d' }
+      );
+
+      res.json({
+        success: true,
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          preferences: user.preferences
+        }
+      });
+    } catch (error: any) {
+      console.error('Login error:', error);
+      res.status(500).json({
+        error: 'Login failed',
+        message: error.message || 'An unexpected error occurred during login'
+      });
+      return;
     }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      config.jwtSecret,
-      { expiresIn: '24h' }
-    );
-
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      },
-    });
   })
 );
-
-// Get user profile
-router.get('/profile', asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-      res.status(401).json({ error: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, config.jwtSecret) as { id: string; email: string };
-    const user = await User.findById(decoded.id);
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json({
-      id: user._id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-    });
-  } catch (error) {
-    console.error('Profile error:', error);
-    res.status(401).json({ error: 'Invalid token' });
-  }
-}));
 
 export default router;
