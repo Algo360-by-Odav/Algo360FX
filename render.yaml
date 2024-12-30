@@ -34,13 +34,21 @@ services:
       - key: MARKET_API_KEY
         sync: false
 
-  - type: web
+  - type: static
     name: algo360fx-client
     env: static
     region: global
     plan: starter
     buildCommand: cd client && npm ci --production=false && npm run build
     staticPublishPath: ./client/build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
     envVars:
       - key: NODE_VERSION
         value: 18.x
