@@ -1,0 +1,102 @@
+services:
+  - type: web
+    name: algo360fx-server
+    env: node
+    region: singapore
+    plan: starter
+    buildCommand: |
+      cd server
+      npm ci
+      npm run build
+      cd dist
+      npm ci --production
+    startCommand: cd server/dist && NODE_ENV=production node index.js
+    healthCheckPath: /api/health
+    healthCheckTimeout: 300
+    autoDeploy: true
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+      targetMemoryPercent: 90
+      targetCPUPercent: 90
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8080"
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: META_API_TOKEN
+        sync: false
+      - key: MT5_ACCOUNT_ID
+        sync: false
+      - key: META_API_RETRY_ATTEMPTS
+        value: "3"
+      - key: META_API_RETRY_DELAY
+        value: "1000"
+      - key: MARKET_API_KEY
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: algo360fx-redis
+          property: connectionString
+
+  - type: static
+    name: algo360fx-client
+    env: static
+    region: global
+    plan: starter
+    buildCommand: cd client && npm ci --production=false && npm run build
+    staticPublishPath: ./client/build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: max-age=0, s-maxage=86400
+      - path: /static/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: VITE_API_URL
+        value: https://algo360fx-server.onrender.com
+      - key: VITE_WS_URL
+        value: wss://algo360fx-server.onrender.com
+      - key: REACT_APP_API_URL
+        value: https://algo360fx-server.onrender.com
+
+  - type: redis
+    name: algo360fx-redis
+    region: singapore
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    maxmemoryMB: 256
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
+
+  - type: redis
+    name: algo360fx-cache
+    region: singapore
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
+
+databases:
+  - name: algo360fx-db
+    plan: starter
+    region: singapore
+    ipAllowList: 
+      - source: 0.0.0.0/0
+        description: everywhere

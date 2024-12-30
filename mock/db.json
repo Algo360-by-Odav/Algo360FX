@@ -1,0 +1,113 @@
+{
+  "users": {
+    "dev-user": {
+      "id": "dev-user",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "phone": "+1 234 567 8900",
+      "photoUrl": null,
+      "timezone": "UTC",
+      "language": "en",
+      "role": "ADMIN",
+      "notificationPreferences": {
+        "email": true,
+        "push": true,
+        "sms": false
+      },
+      "tradingPreferences": {
+        "defaultLeverage": 1,
+        "riskLevel": "medium",
+        "autoTrade": false
+      }
+    }
+  },
+  "notifications": [
+    {
+      "id": "notif-1",
+      "userId": "dev-user",
+      "type": "TRADE_ALERT",
+      "title": "Trade Alert",
+      "message": "EURUSD approaching key resistance level",
+      "read": false,
+      "createdAt": "2024-03-20T10:30:00Z"
+    },
+    {
+      "id": "notif-2",
+      "userId": "dev-user",
+      "type": "SYSTEM",
+      "title": "System Update",
+      "message": "Platform maintenance scheduled for tomorrow",
+      "read": true,
+      "createdAt": "2024-03-19T15:45:00Z"
+    }
+  ],
+  "notification_preferences": {
+    "dev-user": {
+      "trade_alerts": true,
+      "price_alerts": true,
+      "news": true,
+      "system_updates": true,
+      "email_notifications": true,
+      "push_notifications": true
+    }
+  },
+  "preferences": {
+    "dev-user": {
+      "theme": "dark",
+      "notifications": {
+        "email": true,
+        "push": true,
+        "sms": false
+      },
+      "tradingPreferences": {
+        "defaultLeverage": 1,
+        "riskLevel": "medium",
+        "autoTrade": false
+      },
+      "displayPreferences": {
+        "chartType": "candlestick",
+        "timeframe": "1h",
+        "indicators": []
+      }
+    }
+  },
+  "activity": {
+    "dev-user": [
+      {
+        "id": "act-1",
+        "type": "trade",
+        "description": "Executed BTC/USD long position",
+        "timestamp": "2024-03-20T10:30:00Z",
+        "details": {
+          "pair": "BTC/USD",
+          "type": "MARKET",
+          "side": "BUY",
+          "amount": 0.1,
+          "price": 65000
+        }
+      },
+      {
+        "id": "act-2",
+        "type": "strategy",
+        "description": "Updated MA Crossover strategy parameters",
+        "timestamp": "2024-03-20T09:15:00Z",
+        "details": {
+          "strategy": "MA Crossover",
+          "changes": "Updated period from 14 to 21"
+        }
+      },
+      {
+        "id": "act-3",
+        "type": "analysis",
+        "description": "Completed market analysis for EUR/USD",
+        "timestamp": "2024-03-20T08:00:00Z",
+        "details": {
+          "pair": "EUR/USD",
+          "timeframe": "4H",
+          "bias": "Bullish"
+        }
+      }
+    ]
+  }
+}

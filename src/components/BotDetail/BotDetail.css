@@ -1,0 +1,75 @@
+.bot-detail {
+  padding: 24px;
+}
+
+.info-card {
+  height: 100%;
+}
+
+.bot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.bot-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.bot-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.bot-tags {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.stats-card .MuiGrid-item {
+  text-align: center;
+  padding: 16px;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.tabs-section {
+  margin-top: 24px;
+  background-color: #132F4C;
+}
+
+.performance-chart {
+  margin-top: 24px;
+  height: 300px;
+}
+
+.profit-positive {
+  color: #66BB6A !important;
+}
+
+.profit-negative {
+  color: #F44336 !important;
+}
+
+/* Table Styles */
+.MuiTableCell-root {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Review Section */
+.review-item {
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}

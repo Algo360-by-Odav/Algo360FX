@@ -1,0 +1,21 @@
+{
+  "name": "algo360fx-presentation",
+  "private": true,
+  "scripts": {
+    "build": "slidev build",
+    "dev": "slidev --open",
+    "export": "slidev export",
+    "preview": "vite preview --port 4173",
+    "export-detailed": "slidev export slides-detailed.md",
+    "investor": "slidev investor_deck.md",
+    "export-investor": "slidev export investor_deck.md"
+  },
+  "dependencies": {
+    "@slidev/cli": "^0.48.0-beta.0",
+    "@slidev/theme-default": "*",
+    "@slidev/theme-seriph": "*"
+  },
+  "devDependencies": {
+    "playwright-chromium": "^1.40.1"
+  }
+}

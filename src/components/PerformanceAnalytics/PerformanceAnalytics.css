@@ -1,0 +1,62 @@
+.performance-analytics {
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.metrics-grid {
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.metric-card .MuiCardContent-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.charts-grid {
+  margin-bottom: 24px;
+}
+
+.risk-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.risk-metrics .MuiTypography-root {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .performance-analytics {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .metrics-grid {
+    margin-bottom: 16px;
+  }
+
+  .charts-grid {
+    margin-bottom: 16px;
+  }
+}

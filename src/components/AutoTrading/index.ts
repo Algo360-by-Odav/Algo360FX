@@ -1,0 +1,15 @@
+export { default as StrategyMarketplace } from './StrategyMarketplace';
+export { default as ActiveStrategiesWidget } from './ActiveStrategiesWidget';
+export { default as MT5ConnectionWidget } from './MT5ConnectionWidget';
+export { default as StrategyPerformanceWidget } from './StrategyPerformanceWidget';
+export { default as BacktestingWidget } from './BacktestingWidget';
+export { default as AdvancedMT5Widget } from './AdvancedMT5Widget';
+export { default as StrategyCustomizationWidget } from './StrategyCustomizationWidget';
+export { default as PortfolioAnalyticsWidget } from './PortfolioAnalyticsWidget';
+export { default as RiskManagementWidget } from './RiskManagementWidget';
+export { default as NotificationsWidget } from './NotificationsWidget';
+export { default as StrategyDocumentationWidget } from './StrategyDocumentationWidget';
+export { default as AdvancedReportingWidget } from './AdvancedReportingWidget';
+export { default as MarketAnalysisWidget } from './MarketAnalysisWidget';
+export { default as StrategyComparisonWidget } from './StrategyComparisonWidget';
+export { default as AutomatedStrategySelectionWidget } from './AutomatedStrategySelectionWidget';

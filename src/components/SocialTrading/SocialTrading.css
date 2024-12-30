@@ -1,0 +1,109 @@
+.social-trading {
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.tabs {
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.content {
+  margin-top: 24px;
+}
+
+.trader-card {
+  height: 100%;
+  transition: transform 0.2s ease-in-out;
+}
+
+.trader-card:hover {
+  transform: translateY(-4px);
+}
+
+.trader-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.verified-badge {
+  height: 20px;
+}
+
+.trader-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.performance-chart {
+  padding: 16px;
+  height: 300px;
+}
+
+.stats-panel {
+  height: 100%;
+}
+
+.trader-profile-header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+/* Trade Table Styles */
+.MuiTableCell-root {
+  padding: 8px 16px;
+}
+
+.trade-type-chip {
+  min-width: 80px;
+}
+
+/* Profile Dialog */
+.trader-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.stat-card {
+  padding: 16px;
+  text-align: center;
+}
+
+.performance-metrics {
+  display: flex;
+  gap: 24px;
+  margin: 24px 0;
+}
+
+.metric-item {
+  flex: 1;
+  text-align: center;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .trader-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .performance-metrics {
+    flex-direction: column;
+    gap: 16px;
+  }
+}

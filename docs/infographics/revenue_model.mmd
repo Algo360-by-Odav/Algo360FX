@@ -1,0 +1,33 @@
+graph LR
+    A[Revenue Streams] --> B[Subscription Revenue]
+    A --> C[Trading Revenue]
+    A --> D[Professional Services]
+    A --> E[Educational Content]
+    A --> F[Enterprise Solutions]
+
+    B --> B1[Basic Plan]
+    B --> B2[Advanced Plan]
+    B --> B3[Professional Plan]
+
+    C --> C1[Trading Commissions]
+    C --> C2[Signal Provider Fees]
+    C --> C3[HFT Services]
+
+    D --> D1[Money Management]
+    D --> D2[Portfolio Optimization]
+    D --> D3[Custom Solutions]
+
+    E --> E1[Trading Academy]
+    E --> E2[Strategy Templates]
+    E --> E3[Expert Webinars]
+
+    F --> F1[White Label Solutions]
+    F --> F2[Institutional API]
+    F --> F3[Custom Integration]
+
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px
+    classDef revenue fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    classDef plans fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    
+    class A revenue
+    class B1,B2,B3 plans
