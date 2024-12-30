@@ -91,32 +91,72 @@ router.post('/register',
         return res.status(400).json({ error: 'This email is already registered. Please login or use a different email.' });
       }
 
-      // Create new user
+      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user with default preferences
       const user = new User({
         email,
         password: hashedPassword,
         firstName,
         lastName,
+        emailVerified: true, // Set to true since we've verified the email
+        preferences: {
+          theme: 'light',
+          notifications: true,
+          language: 'en',
+          riskLevel: 'medium',
+          defaultLotSize: 0.01,
+          tradingPairs: ['EUR/USD', 'GBP/USD', 'USD/JPY']
+        }
       });
 
+      // Save user
+      console.log('Saving new user:', { email, firstName, lastName });
       await user.save();
-      console.log('User registered successfully:', email);
+      console.log('User saved successfully');
 
-      // Clear verification code after successful registration
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user._id, email: user.email },
+        config.jwtSecret,
+        { expiresIn: '7d' }
+      );
+
+      // Remove verification code after successful registration
       verificationCodes.delete(email);
 
-      // Return success without token
+      // Return success response
       res.status(201).json({
         success: true,
-        message: 'Registration successful! Please login to continue.'
+        message: 'Registration successful',
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          preferences: user.preferences
+        }
       });
     } catch (error: any) {
       console.error('Registration error:', error);
-      if (error.code === 11000) {
-        return res.status(400).json({ error: 'This email is already registered. Please login or use a different email.' });
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({
+          error: 'Validation Error',
+          details: error.errors
+        });
       }
-      res.status(500).json({ error: 'Registration failed. Please try again.' });
+      if (error.code === 11000) {
+        return res.status(409).json({
+          error: 'Email already registered',
+          message: 'This email is already in use. Please try a different email or login.'
+        });
+      }
+      res.status(500).json({
+        error: 'Registration failed',
+        message: error.message || 'An unexpected error occurred during registration'
+      });
     }
   })
 );

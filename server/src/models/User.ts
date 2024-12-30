@@ -5,22 +5,26 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
+    trim: true,
+    lowercase: true
   },
   password: {
     type: String,
-    required: true,
+    required: true
   },
   firstName: {
     type: String,
     required: true,
+    trim: true
   },
   lastName: {
     type: String,
     required: true,
+    trim: true
   },
   emailVerified: {
     type: Boolean,
-    default: false,
+    default: false
   },
   preferences: {
     theme: {
@@ -55,17 +59,25 @@ const userSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now,
+    default: Date.now
   },
   updatedAt: {
     type: Date,
-    default: Date.now,
-  },
+    default: Date.now
+  }
+}, {
+  timestamps: true, 
+  toJSON: {
+    transform: function(doc, ret) {
+      delete ret.password; 
+      delete ret.__v; 
+      return ret;
+    }
+  }
 });
 
-userSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
+// Index for faster queries
+userSchema.index({ email: 1 });
+userSchema.index({ createdAt: -1 });
 
 export const User = mongoose.model('User', userSchema);
