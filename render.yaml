@@ -12,6 +12,13 @@ services:
       npm ci --production
     startCommand: cd server/dist && NODE_ENV=production node index.js
     healthCheckPath: /api/health
+    healthCheckTimeout: 300
+    autoDeploy: true
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+      targetMemoryPercent: 90
+      targetCPUPercent: 90
     envVars:
       - key: NODE_VERSION
         value: 18.x
@@ -33,6 +40,11 @@ services:
         value: "1000"
       - key: MARKET_API_KEY
         sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: algo360fx-redis
+          property: connectionString
 
   - type: static
     name: algo360fx-client
@@ -48,7 +60,10 @@ services:
     headers:
       - path: /*
         name: Cache-Control
-        value: no-cache
+        value: max-age=0, s-maxage=86400
+      - path: /static/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
     envVars:
       - key: NODE_VERSION
         value: 18.x
@@ -60,16 +75,17 @@ services:
         value: https://algo360fx-server.onrender.com
 
   - type: redis
-    name: algo360fx-cache
+    name: algo360fx-redis
     region: singapore
     plan: starter
     maxmemoryPolicy: allkeys-lru
+    maxmemoryMB: 256
     ipAllowList:
       - source: 0.0.0.0/0
         description: everywhere
 
   - type: redis
-    name: algo360fx-redis
+    name: algo360fx-cache
     region: singapore
     plan: starter
     maxmemoryPolicy: allkeys-lru
