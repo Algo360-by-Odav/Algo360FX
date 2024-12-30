@@ -22,6 +22,47 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  preferences: {
+    type: {
+      theme: {
+        type: String,
+        enum: ['light', 'dark'],
+        default: 'light'
+      },
+      notifications: {
+        type: Boolean,
+        default: true
+      },
+      language: {
+        type: String,
+        enum: ['en', 'es', 'fr', 'de', 'zh'],
+        default: 'en'
+      },
+      riskLevel: {
+        type: String,
+        enum: ['low', 'medium', 'high'],
+        default: 'medium'
+      },
+      defaultLotSize: {
+        type: Number,
+        default: 0.01,
+        min: 0.01,
+        max: 100
+      },
+      tradingPairs: {
+        type: [String],
+        default: ['EUR/USD', 'GBP/USD', 'USD/JPY']
+      }
+    },
+    default: {
+      theme: 'light',
+      notifications: true,
+      language: 'en',
+      riskLevel: 'medium',
+      defaultLotSize: 0.01,
+      tradingPairs: ['EUR/USD', 'GBP/USD', 'USD/JPY']
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -6,13 +6,13 @@ const skipDevelopment = () => config.env === 'development';
 
 // Standard rate limiter for most API endpoints
 export const standardLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Increased limit per window
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // Increased limit per window
   standardHeaders: true,
   legacyHeaders: false,
   trustProxy: true,
   skip: skipDevelopment,
-  message: { error: 'Too many requests. Please wait a few minutes and try again.' }
+  message: { error: 'Too many requests. Please wait a minute and try again.' }
 });
 
 // More permissive limiter for authentication routes
