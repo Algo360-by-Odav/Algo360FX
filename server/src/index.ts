@@ -215,21 +215,24 @@ app.use((req: Request, res: Response) => {
 
 // MongoDB configuration
 mongoose.set('strictQuery', true);
-mongoose.set('bufferCommands', false); // Disable buffering
+mongoose.set('bufferCommands', true); // Enable buffering
+mongoose.set('bufferTimeoutMS', 30000); // Set buffer timeout to 30 seconds
 
 const connectWithRetry = async (retries = 5, interval = 5000) => {
   for (let i = 0; i < retries; i++) {
     try {
-      console.log('Attempting to connect to MongoDB...');
+      console.log(`Attempting to connect to MongoDB (attempt ${i + 1}/${retries})...`);
       await mongoose.connect(config.mongoUri || config.databaseUrl, {
-        serverSelectionTimeoutMS: 60000, // Increase timeout to 60 seconds
-        socketTimeoutMS: 60000, // Socket timeout
-        maxPoolSize: 10, // Reduce pool size for free tier
-        minPoolSize: 1, // Minimum pool size
-        connectTimeoutMS: 60000, // Connection timeout
-        heartbeatFrequencyMS: 30000, // Less frequent heartbeats to reduce load
+        serverSelectionTimeoutMS: 30000, // Timeout after 30 seconds
+        socketTimeoutMS: 45000, // Socket timeout
+        connectTimeoutMS: 30000, // Connection timeout
+        maxPoolSize: 50, // Increased for better concurrency
+        minPoolSize: 5, // Minimum connections
+        heartbeatFrequencyMS: 10000, // More frequent heartbeats
         retryWrites: true,
-        w: 'majority'
+        retryReads: true,
+        w: 'majority',
+        family: 4 // Force IPv4
       });
       console.log('MongoDB connected successfully');
       return;
@@ -239,6 +242,7 @@ const connectWithRetry = async (retries = 5, interval = 5000) => {
         console.error('All MongoDB connection attempts failed');
         process.exit(1);
       }
+      console.log(`Waiting ${interval/1000} seconds before next attempt...`);
       await new Promise(resolve => setTimeout(resolve, interval));
     }
   }
@@ -258,6 +262,7 @@ mongoose.connection.on('disconnected', () => {
   connectWithRetry();
 });
 
+// Handle process termination
 process.on('SIGINT', async () => {
   try {
     await mongoose.connection.close();
@@ -276,4 +281,7 @@ connectWithRetry().then(() => {
   httpServer.listen(port, () => {
     console.log(`Server is running on port ${port}`);
   });
+}).catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });
