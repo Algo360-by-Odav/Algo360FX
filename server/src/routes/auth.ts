@@ -89,78 +89,70 @@ router.post('/register',
   validateRequest(registerSchema),
   asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { email, password, verificationCode, firstName, lastName } = req.body;
-    console.log('Registration attempt:', { email, firstName, lastName, verificationCode });
+    console.log('Registration request body:', req.body);
 
     try {
       // Check if verification code is valid
       const storedVerification = verificationCodes.get(email);
-      if (!storedVerification || storedVerification.code !== verificationCode) {
-        console.log('Invalid verification code:', { stored: storedVerification?.code, received: verificationCode });
+      console.log('Registration verification check:', {
+        email,
+        verificationCode,
+        storedData: storedVerification,
+        allStoredCodes: Array.from(verificationCodes.entries())
+      });
+
+      if (!storedVerification) {
+        console.log('No verification code found for:', email);
+        return res.status(400).json({ error: 'Verification code not found or expired' });
+      }
+
+      if (storedVerification.code !== verificationCode) {
+        console.log('Verification code mismatch:', {
+          provided: verificationCode,
+          stored: storedVerification.code
+        });
         return res.status(400).json({ error: 'Invalid verification code' });
       }
 
-      if (storedVerification.expires < new Date()) {
-        console.log('Verification code expired:', { expires: storedVerification.expires, now: new Date() });
+      if (new Date() > storedVerification.expires) {
+        console.log('Verification code expired:', {
+          expires: storedVerification.expires,
+          now: new Date()
+        });
         verificationCodes.delete(email);
         return res.status(400).json({ error: 'Verification code has expired' });
       }
 
       // Check if user already exists
-      const existingUser = await User.findOne({ email }).exec();
+      const existingUser = await User.findOne({ email });
       if (existingUser) {
         console.log('User already exists:', email);
-        return res.status(400).json({ error: 'User already exists' });
+        return res.status(400).json({ error: 'Email already registered' });
       }
 
-      // Hash password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-
       // Create new user
+      const hashedPassword = await bcrypt.hash(password, 10);
       const user = new User({
         email,
         password: hashedPassword,
         firstName,
         lastName,
-        emailVerified: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
       });
 
       await user.save();
-      console.log('User saved successfully:', user._id);
+      console.log('User registered successfully:', email);
 
-      // Remove verification code after successful registration
+      // Clear verification code after successful registration
       verificationCodes.delete(email);
 
-      // Generate JWT token
-      const token = jwt.sign(
-        { userId: user._id },
-        config.jwtSecret,
-        { expiresIn: '24h' }
-      );
-
-      return res.status(201).json({
-        message: 'User registered successfully',
-        token,
-        user: {
-          id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          emailVerified: user.emailVerified
-        }
+      // Return success without token
+      res.status(201).json({
+        success: true,
+        message: 'Registration successful. Please login to continue.'
       });
-    } catch (error) {
-      console.error('Registration error:', error);
-      
-      // Handle specific error cases
-      if (error instanceof mongoose.Error.ValidationError) {
-        return res.status(400).json({ error: 'Invalid user data', details: error.errors });
-      }
-
-      // Handle other errors
-      return res.status(500).json({ error: 'Failed to register user' });
+    } catch (err) {
+      console.error('Registration error:', err);
+      res.status(500).json({ error: 'Registration failed. Please try again.' });
     }
   })
 );

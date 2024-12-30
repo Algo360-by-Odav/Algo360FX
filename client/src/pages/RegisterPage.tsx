@@ -59,12 +59,14 @@ const RegisterPage: React.FC = () => {
         throw new Error(data.error || 'Registration failed');
       }
 
-      // Store the token
-      localStorage.setItem('token', data.token);
+      // Show success message
+      setError('');
+      alert('Registration successful! Please login with your credentials.');
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Navigate to login page
+      navigate('/auth/login');
     } catch (err: any) {
+      console.error('Registration error:', err);
       setError(err.message || 'Failed to register');
     }
   };
