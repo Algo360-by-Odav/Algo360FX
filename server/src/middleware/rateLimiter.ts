@@ -7,7 +7,7 @@ const skipDevelopment = () => config.env === 'development';
 // Standard rate limiter for most API endpoints
 export const standardLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // Increased limit per window
+  max: 300, // Increased limit per window
   standardHeaders: true,
   legacyHeaders: false,
   trustProxy: true,

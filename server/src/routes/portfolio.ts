@@ -5,123 +5,72 @@ import asyncHandler from 'express-async-handler';
 const router = express.Router();
 
 // Get portfolio overview
-router.get('/', authenticateToken, asyncHandler(async (req, res) => {
+router.get('/', authenticateToken, asyncHandler(async (req: any, res) => {
   try {
     // Placeholder data - replace with actual portfolio data from your database
+    const userId = req.user.id;
+    console.log('Fetching portfolio for user:', userId);
+    
     res.json({
+      userId,
       totalBalance: 10000,
       equity: 12000,
       margin: 2000,
       freeMargin: 8000,
       marginLevel: 600,
       currency: 'USD',
-      positions: [
-        {
-          id: '1',
-          symbol: 'EUR/USD',
-          type: 'BUY',
-          volume: 0.1,
-          openPrice: 1.2000,
-          currentPrice: 1.2050,
-          takeProfit: 1.2100,
-          stopLoss: 1.1950,
-          profit: 50,
-          swap: -2,
-          commission: -1,
-          openTime: new Date()
-        }
-      ],
+      positions: [],
       lastUpdated: new Date(),
       pnl: {
-        daily: 150,
-        weekly: 450,
-        monthly: 1200,
-        total: 2000
+        daily: 0,
+        weekly: 0,
+        monthly: 0,
+        total: 0
       },
       metrics: {
-        winRate: 65,
-        profitFactor: 1.8,
-        sharpeRatio: 1.2,
-        maxDrawdown: -15,
-        averageWin: 100,
-        averageLoss: -60,
-        totalTrades: 120
+        winRate: 0,
+        profitFactor: 0,
+        sharpeRatio: 0,
+        maxDrawdown: 0,
+        averageWin: 0,
+        averageLoss: 0,
+        totalTrades: 0
       }
     });
-  } catch (error) {
-    console.error('Error fetching portfolio:', error);
-    res.status(500).json({ error: 'Failed to fetch portfolio data' });
+  } catch (error: any) {
+    console.error('Portfolio fetch error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch portfolio',
+      message: error.message
+    });
   }
 }));
 
 // Get portfolio history
-router.get('/history', authenticateToken, asyncHandler(async (req, res) => {
+router.get('/history', authenticateToken, asyncHandler(async (req: any, res) => {
   try {
-    const now = new Date();
+    const userId = req.user.id;
+    console.log('Fetching portfolio history for user:', userId);
+    
+    // Generate 30 days of mock data
     const history = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date(now);
-      date.setDate(date.getDate() - i);
+      const date = new Date();
+      date.setDate(date.getDate() - (29 - i));
       return {
-        date,
+        date: date.toISOString(),
         balance: 10000 + Math.random() * 2000 - 1000,
         equity: 12000 + Math.random() * 2000 - 1000,
-        profit: Math.random() * 400 - 200,
-        positions: Math.floor(Math.random() * 5),
-        marginLevel: 500 + Math.random() * 200
+        profit: Math.random() * 200 - 100
       };
-    }).reverse();
-
-    res.json({ history });
-  } catch (error) {
-    console.error('Error fetching portfolio history:', error);
-    res.status(500).json({ error: 'Failed to fetch portfolio history' });
-  }
-}));
-
-// Get portfolio performance metrics
-router.get('/metrics', authenticateToken, asyncHandler(async (req, res) => {
-  try {
-    // Placeholder data - replace with actual metrics from your database
-    res.json({
-      metrics: {
-        winRate: 65,
-        profitFactor: 1.8,
-        sharpeRatio: 1.2,
-        maxDrawdown: -15,
-        averageWin: 100,
-        averageLoss: -60,
-        totalTrades: 120,
-        profitableTrades: 78,
-        losingTrades: 42,
-        consecutiveWins: 5,
-        consecutiveLosses: 2,
-        largestWin: 500,
-        largestLoss: -300,
-        averageHoldingTime: '2h 15m',
-        bestPair: 'EUR/USD',
-        worstPair: 'GBP/JPY'
-      },
-      timeframes: {
-        daily: {
-          pnl: 150,
-          trades: 8,
-          winRate: 62.5
-        },
-        weekly: {
-          pnl: 450,
-          trades: 35,
-          winRate: 65.7
-        },
-        monthly: {
-          pnl: 1200,
-          trades: 120,
-          winRate: 65
-        }
-      }
     });
-  } catch (error) {
-    console.error('Error fetching portfolio metrics:', error);
-    res.status(500).json({ error: 'Failed to fetch portfolio metrics' });
+
+    res.json(history);
+  } catch (error: any) {
+    console.error('Portfolio history fetch error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch portfolio history',
+      message: error.message
+    });
   }
 }));
 

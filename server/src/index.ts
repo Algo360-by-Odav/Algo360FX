@@ -121,9 +121,10 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
-// Apply rate limiters
-app.use('/api/auth', authLimiter);
-app.use(['/api/market', '/api/search', '/api/user', '/api/portfolio', '/api/positions', '/api/strategies'], standardLimiter);
+// Apply rate limiters - temporarily disabled for debugging
+// app.use('/api/auth', authLimiter);
+// app.use(['/api/market', '/api/search'], standardLimiter);
+// app.use(['/api/user', '/api/portfolio', '/api/positions', '/api/strategies'], standardLimiter);
 
 // Routes
 app.use('/api/auth', authRouter);
@@ -143,7 +144,8 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ 
     status: 'ok',
     timestamp: new Date().toISOString(),
-    database: dbStatus
+    database: dbStatus,
+    uptime: process.uptime()
   });
 });
 
@@ -151,50 +153,43 @@ app.get('/api/health', (_req: Request, res: Response) => {
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('Global error handler:', {
     error: err,
+    message: err.message,
+    name: err.name,
+    code: err.code,
     stack: err.stack,
     path: req.path,
     method: req.method,
     body: req.body,
-    query: req.query,
     params: req.params,
-    headers: req.headers,
-    origin: req.headers.origin
+    query: req.query,
+    user: req.user
   });
-
-  // Handle CORS errors
-  if (err.message === 'Not allowed by CORS') {
-    return res.status(403).json({
-      error: 'CORS Error',
-      message: 'Origin not allowed',
-      allowedOrigins
-    });
-  }
 
   // Handle specific error types
   if (err.name === 'ValidationError') {
     return res.status(400).json({
       error: 'Validation Error',
-      details: err.errors
+      details: err.errors || err.message
+    });
+  }
+
+  if (err.name === 'MongooseError') {
+    return res.status(503).json({
+      error: 'Database Error',
+      message: 'Unable to process request. Please try again later.'
     });
   }
 
   if (err.name === 'MongoError' || err.name === 'MongoServerError') {
     if (err.code === 11000) {
       return res.status(409).json({
-        error: 'Duplicate Key Error',
-        details: err.keyValue
+        error: 'Conflict',
+        message: 'This resource already exists'
       });
     }
-    return res.status(500).json({
+    return res.status(503).json({
       error: 'Database Error',
-      message: 'An error occurred while accessing the database'
-    });
-  }
-
-  if (err.name === 'JsonWebTokenError') {
-    return res.status(401).json({
-      error: 'Authentication Error',
-      message: 'Invalid or expired token'
+      message: 'Unable to process request. Please try again later.'
     });
   }
 
@@ -207,9 +202,26 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 // 404 handler
 app.use((req: Request, res: Response) => {
+  console.log('404 Not Found:', {
+    method: req.method,
+    path: req.path,
+    query: req.query,
+    body: req.body
+  });
   res.status(404).json({
     error: 'Not Found',
-    message: `Cannot ${req.method} ${req.path}`
+    message: `Cannot ${req.method} ${req.path}`,
+    availableRoutes: [
+      '/api/auth',
+      '/api/notifications',
+      '/api/market',
+      '/api/search',
+      '/api/user',
+      '/api/portfolio',
+      '/api/positions',
+      '/api/strategies',
+      '/api/health'
+    ]
   });
 });
 
