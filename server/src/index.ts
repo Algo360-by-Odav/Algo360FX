@@ -36,18 +36,18 @@ const allowedOrigins = [
   'https://algo360fx.onrender.com'
 ];
 
+// Configure CORS
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: allowedOrigins,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 600 // Increase preflight cache to 10 minutes
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // Middleware for parsing JSON and handling large payloads
 app.use(express.json({ limit: '50mb' }));
@@ -157,8 +157,18 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     body: req.body,
     query: req.query,
     params: req.params,
-    headers: req.headers
+    headers: req.headers,
+    origin: req.headers.origin
   });
+
+  // Handle CORS errors
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      error: 'CORS Error',
+      message: 'Origin not allowed',
+      allowedOrigins
+    });
+  }
 
   // Handle specific error types
   if (err.name === 'ValidationError') {
