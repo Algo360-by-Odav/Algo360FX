@@ -1,43 +1,49 @@
-import { Router, Response } from 'express';
-import { validateRequest } from '../middleware/validateRequest';
-import { updateProfileSchema } from '../schemas/user.schema';
+import express from 'express';
+import { authenticateToken } from '../middleware/auth';
+import asyncHandler from 'express-async-handler';
 import { User } from '../models/User';
-import { asyncHandler } from '../middleware/asyncHandler';
-import { auth } from '../middleware/auth';
-import { AuthRequest } from '../types/express';
 
-const router = Router();
+const router = express.Router();
 
 // Get user preferences
-router.get('/preferences', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/preferences', authenticateToken, asyncHandler(async (req, res) => {
   try {
-    // For now, return default preferences
-    // In a real app, you would fetch this from the database
-    return res.json({
-      preferences: {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Return user preferences or default values
+    res.json({
+      preferences: user.preferences || {
         theme: 'light',
         notifications: true,
-        riskLevel: 'moderate',
-        tradingPairs: ['EUR/USD', 'GBP/USD', 'USD/JPY'],
-        timeframes: ['1h', '4h', '1d'],
-        indicators: ['RSI', 'MACD', 'Moving Average']
+        language: 'en'
       }
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return res.status(500).json({ error: errorMessage });
+    console.error('Error fetching user preferences:', error);
+    res.status(500).json({ error: 'Failed to fetch user preferences' });
   }
 }));
 
 // Update user preferences
-router.put('/preferences', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/preferences', authenticateToken, asyncHandler(async (req, res) => {
   try {
-    const preferences = req.body;
-    // In a real app, you would save this to the database
-    return res.json({ preferences });
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { $set: { preferences: req.body } },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ preferences: user.preferences });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return res.status(500).json({ error: errorMessage });
+    console.error('Error updating user preferences:', error);
+    res.status(500).json({ error: 'Failed to update user preferences' });
   }
 }));
 

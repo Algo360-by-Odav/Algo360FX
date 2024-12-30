@@ -1,39 +1,38 @@
 import rateLimit from 'express-rate-limit';
 import { config } from '../config/config';
 
-// Higher rate limit for development environment
-const getMaxRequests = () => {
-  return config.env === 'production' ? 100 : 1000;
-};
+// Skip rate limiting in development
+const skipDevelopment = () => config.env === 'development';
 
-// Common rate limiter options
-const commonOptions = {
+// Standard rate limiter for most API endpoints
+export const standardLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // Increased limit per window
   standardHeaders: true,
   legacyHeaders: false,
   trustProxy: true,
-  skip: (req: any) => config.env === 'development',
-};
-
-// Create rate limiters with different configurations
-export const standardLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: getMaxRequests(), // Limit each IP
-  message: 'Too many requests from this IP, please try again after 15 minutes',
-  ...commonOptions,
+  skip: skipDevelopment,
+  message: { error: 'Too many requests, please try again later.' }
 });
 
-// Rate limiter for authentication routes (more lenient)
+// More permissive limiter for authentication routes
 export const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: config.env === 'production' ? 50 : 500, // Limit each IP
-  message: 'Too many authentication attempts, please try again after an hour',
-  ...commonOptions,
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // Limit each IP to 30 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  trustProxy: true,
+  skip: skipDevelopment,
+  message: { error: 'Too many authentication attempts, please try again later.' }
 });
 
-// Rate limiter for AI routes (more strict due to resource intensity)
+// Stricter limiter for AI-related endpoints
 export const aiLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: config.env === 'production' ? 30 : 300, // Limit each IP
-  message: 'Too many AI requests, please try again after 5 minutes',
-  ...commonOptions,
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // Limit each IP to 10 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  trustProxy: true,
+  skip: skipDevelopment,
+  message: { error: 'Too many AI requests, please try again later.' }
 });

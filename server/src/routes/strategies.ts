@@ -1,12 +1,11 @@
-import { Router, Response, NextFunction } from 'express';
-import { asyncHandler } from '../middleware/asyncHandler';
+import express from 'express';
 import { auth } from '../middleware/auth';
-import { AuthRequest } from '../types/express';
+import asyncHandler from '../middleware/asyncHandler';
 
-const router = Router();
+const router = express.Router();
 
 // Get all strategies
-router.get('/', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get('/', auth, asyncHandler(async (req, res) => {
   try {
     // For now, return mock strategies data
     res.json({
@@ -62,7 +61,7 @@ router.get('/', auth, asyncHandler(async (req: AuthRequest, res: Response, next:
 }));
 
 // Get strategy by ID
-router.get('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get('/:id', auth, asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     res.json({
@@ -102,8 +101,32 @@ router.get('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response, ne
   }
 }));
 
+// Get strategy performance
+router.get('/:id/performance', auth, asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    res.json({
+      performance: {
+        winRate: 65,
+        profitFactor: 1.8,
+        totalTrades: 150,
+        averageProfit: 25.5,
+        maxDrawdown: 10,
+        sharpeRatio: 1.5,
+        monthlyReturns: [
+          { month: '2024-01', return: 5.2 },
+          { month: '2024-02', return: 3.8 }
+        ]
+      }
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    res.status(500).json({ error: errorMessage });
+  }
+}));
+
 // Update strategy
-router.put('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.put('/:id', auth, asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     res.json({ message: `Strategy ${id} updated successfully` });
@@ -114,7 +137,7 @@ router.put('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response, ne
 }));
 
 // Delete strategy
-router.delete('/:id', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.delete('/:id', auth, asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     res.json({ message: `Strategy ${id} deleted successfully` });

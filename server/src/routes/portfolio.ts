@@ -1,51 +1,66 @@
-import { Router, Response, NextFunction } from 'express';
-import { asyncHandler } from '../middleware/asyncHandler';
-import { auth } from '../middleware/auth';
-import { AuthRequest } from '../types/express';
+import express from 'express';
+import { authenticateToken } from '../middleware/auth';
+import asyncHandler from 'express-async-handler';
 
-const router = Router();
+const router = express.Router();
 
-// Get portfolio summary
-router.get('/', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+// Get portfolio overview
+router.get('/', authenticateToken, asyncHandler(async (req, res) => {
   try {
-    // For now, return mock portfolio data
-    // In a real app, you would fetch this from your trading platform/database
+    // Placeholder data - replace with actual portfolio data from your database
     res.json({
-      balance: 10000.00,
-      equity: 10500.00,
-      margin: 1000.00,
-      freeMargin: 9500.00,
-      marginLevel: 95,
-      profitLoss: 500.00,
+      totalBalance: 10000,
+      equity: 12000,
+      margin: 2000,
+      freeMargin: 8000,
+      marginLevel: 600,
       currency: 'USD',
-      lastUpdated: new Date().toISOString()
+      positions: [],
+      lastUpdated: new Date()
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    console.error('Error fetching portfolio:', error);
+    res.status(500).json({ error: 'Failed to fetch portfolio data' });
   }
 }));
 
 // Get portfolio history
-router.get('/history', auth, asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get('/history', authenticateToken, asyncHandler(async (req, res) => {
   try {
-    // For now, return mock history data
-    const today = new Date();
-    const history = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      return {
-        date: date.toISOString(),
-        balance: 10000 + Math.random() * 1000,
-        equity: 10500 + Math.random() * 1000,
-        profitLoss: Math.random() * 200 - 100
-      };
+    // Placeholder data - replace with actual history data from your database
+    res.json({
+      history: [
+        {
+          date: new Date(),
+          balance: 10000,
+          equity: 12000,
+          profit: 2000
+        }
+      ]
     });
-
-    res.json({ history });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    console.error('Error fetching portfolio history:', error);
+    res.status(500).json({ error: 'Failed to fetch portfolio history' });
+  }
+}));
+
+// Get portfolio performance metrics
+router.get('/metrics', authenticateToken, asyncHandler(async (req, res) => {
+  try {
+    // Placeholder data - replace with actual metrics from your database
+    res.json({
+      metrics: {
+        totalPnL: 2000,
+        winRate: 65,
+        averageWin: 200,
+        averageLoss: -100,
+        sharpeRatio: 1.5,
+        drawdown: -5
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching portfolio metrics:', error);
+    res.status(500).json({ error: 'Failed to fetch portfolio metrics' });
   }
 }));
 
