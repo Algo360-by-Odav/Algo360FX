@@ -21,6 +21,9 @@ import { standardLimiter, authLimiter, aiLimiter } from './middleware/rateLimite
 const app = express();
 console.log('Express app created');
 
+// Trust proxy - required for rate limiting behind proxy
+app.set('trust proxy', 1);
+
 const httpServer = createServer(app);
 console.log('HTTP server created');
 
@@ -137,19 +140,18 @@ console.log('Connecting to MongoDB...');
 mongoose.set('strictQuery', true);
 mongoose.set('bufferCommands', false); // Disable buffering
 
-async function connectWithRetry(retries = 5, interval = 5000) {
+const connectWithRetry = async (retries = 5, interval = 5000) => {
   for (let i = 0; i < retries; i++) {
     try {
-      console.log(`MongoDB connection attempt ${i + 1} of ${retries}`);
-      await mongoose.connect(config.mongoUri || config.databaseUrl, {
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
-        maxPoolSize: 10,
+      console.log('Attempting to connect to MongoDB...');
+      await mongoose.connect(config.mongoUri, {
+        serverSelectionTimeoutMS: 15000, // Increase timeout to 15 seconds
+        socketTimeoutMS: 45000, // Increase socket timeout to 45 seconds
       });
       console.log('MongoDB connected successfully');
       return;
-    } catch (error) {
-      console.error(`MongoDB connection attempt ${i + 1} failed:`, error.message);
+    } catch (err) {
+      console.error(`MongoDB connection attempt ${i + 1} failed:`, err);
       if (i === retries - 1) {
         console.error('All MongoDB connection attempts failed');
         process.exit(1);
@@ -157,7 +159,7 @@ async function connectWithRetry(retries = 5, interval = 5000) {
       await new Promise(resolve => setTimeout(resolve, interval));
     }
   }
-}
+};
 
 // Monitor MongoDB connection
 mongoose.connection.on('connected', () => {
