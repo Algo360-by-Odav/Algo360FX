@@ -212,12 +212,12 @@ const connectWithRetry = async (retries = 5, interval = 5000) => {
     try {
       console.log('Attempting to connect to MongoDB...');
       await mongoose.connect(config.mongoUri || config.databaseUrl, {
-        serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
-        socketTimeoutMS: 45000, // Socket timeout
-        maxPoolSize: 50, // Increase pool size
-        minPoolSize: 10, // Minimum pool size
-        connectTimeoutMS: 30000, // Connection timeout
-        heartbeatFrequencyMS: 10000, // More frequent heartbeats
+        serverSelectionTimeoutMS: 60000, // Increase timeout to 60 seconds
+        socketTimeoutMS: 60000, // Socket timeout
+        maxPoolSize: 10, // Reduce pool size for free tier
+        minPoolSize: 1, // Minimum pool size
+        connectTimeoutMS: 60000, // Connection timeout
+        heartbeatFrequencyMS: 30000, // Less frequent heartbeats to reduce load
         retryWrites: true,
         w: 'majority'
       });
