@@ -63,7 +63,7 @@ const RegisterPage: React.FC = () => {
       localStorage.setItem('token', data.token);
       
       // Navigate to dashboard
-      navigate('/#/dashboard');
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to register');
     }
@@ -232,7 +232,7 @@ const RegisterPage: React.FC = () => {
               </>
             )}
             
-            <Link component={RouterLink} to="/#/auth/login" variant="body2">
+            <Link component={RouterLink} to="/auth/login" variant="body2">
               Already have an account? Sign in
             </Link>
           </Box>
