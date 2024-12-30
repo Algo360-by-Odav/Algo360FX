@@ -167,30 +167,34 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
   // Handle specific error types
   if (err.name === 'ValidationError') {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'Validation Error',
       details: err.errors || err.message
     });
+    return;
   }
 
   if (err.name === 'MongooseError') {
-    return res.status(503).json({
+    res.status(503).json({
       error: 'Database Error',
       message: 'Unable to process request. Please try again later.'
     });
+    return;
   }
 
   if (err.name === 'MongoError' || err.name === 'MongoServerError') {
     if (err.code === 11000) {
-      return res.status(409).json({
+      res.status(409).json({
         error: 'Conflict',
         message: 'This resource already exists'
       });
+      return;
     }
-    return res.status(503).json({
+    res.status(503).json({
       error: 'Database Error',
       message: 'Unable to process request. Please try again later.'
     });
+    return;
   }
 
   // Default error response
@@ -198,6 +202,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     error: 'Internal Server Error',
     message: config.env === 'development' ? err.message : 'An unexpected error occurred'
   });
+  return;
 });
 
 // 404 handler

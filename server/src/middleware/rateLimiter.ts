@@ -2,7 +2,9 @@ import rateLimit from 'express-rate-limit';
 import { config } from '../config/config';
 
 // Skip rate limiting in development
-const skipDevelopment = () => config.env === 'development';
+const skipDevelopment = (req: any) => {
+  return config.env === 'development';
+};
 
 // Standard rate limiter for most API endpoints
 export const standardLimiter = rateLimit({
@@ -10,7 +12,6 @@ export const standardLimiter = rateLimit({
   max: 300, // Increased limit per window
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: true,
   skip: skipDevelopment,
   message: { error: 'Too many requests. Please wait a minute and try again.' }
 });
@@ -21,7 +22,6 @@ export const authLimiter = rateLimit({
   max: 300, // Limit each IP to 300 requests per hour
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: true,
   skip: skipDevelopment,
   message: { 
     error: 'Too many authentication attempts. Please wait an hour or try again later.',
@@ -35,7 +35,6 @@ export const aiLimiter = rateLimit({
   max: 30, // Limit each IP to 30 requests per 5 minutes
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: true,
   skip: skipDevelopment,
   message: { error: 'Too many AI requests. Please wait 5 minutes and try again.' }
 });
