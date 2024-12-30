@@ -39,8 +39,8 @@ services:
     env: static
     region: global
     plan: starter
-    buildCommand: npm ci --production=false && npm run build
-    staticPublishPath: ./dist
+    buildCommand: cd client && npm ci --production=false && npm run build
+    staticPublishPath: ./client/build
     envVars:
       - key: NODE_VERSION
         value: 18.x
