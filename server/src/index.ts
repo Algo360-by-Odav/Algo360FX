@@ -65,14 +65,40 @@ const io = new Server(httpServer, {
   pingTimeout: 60000,
   pingInterval: 25000,
   connectTimeout: 10000,
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  maxHttpBufferSize: 1e8, // 100 MB
+  perMessageDeflate: {
+    threshold: 1024 // Only compress messages larger than 1KB
+  }
 });
 
+// Socket.IO error handling
 io.engine.on("connection_error", (err) => {
-  console.error('Socket.IO connection error:', err);
+  console.error('Socket.IO connection error:', {
+    type: err.type,
+    message: err.message,
+    context: err.context,
+    stack: err.stack
+  });
 });
 
-console.log('Socket.IO server initialized');
+io.on('connect', (socket) => {
+  console.log('Client connected:', socket.id);
+  
+  socket.on('disconnect', (reason) => {
+    console.log('Client disconnected:', socket.id, 'Reason:', reason);
+  });
+
+  socket.on('error', (error) => {
+    console.error('Socket error:', {
+      socketId: socket.id,
+      error: error
+    });
+  });
+});
+
+console.log('Socket.IO server initialized with enhanced configuration');
 
 // Initialize WebSocket servers
 const tradingWsServer = new TradingWebSocketServer(io);
@@ -121,22 +147,63 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
-// 404 handler
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({ error: 'Not Found' });
-});
-
 // Error handling middleware
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({ 
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('Global error handler:', {
+    error: err,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    body: req.body,
+    query: req.query,
+    params: req.params,
+    headers: req.headers
+  });
+
+  // Handle specific error types
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      error: 'Validation Error',
+      details: err.errors
+    });
+  }
+
+  if (err.name === 'MongoError' || err.name === 'MongoServerError') {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        error: 'Duplicate Key Error',
+        details: err.keyValue
+      });
+    }
+    return res.status(500).json({
+      error: 'Database Error',
+      message: 'An error occurred while accessing the database'
+    });
+  }
+
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      error: 'Authentication Error',
+      message: 'Invalid or expired token'
+    });
+  }
+
+  // Default error response
+  res.status(err.status || 500).json({
     error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    message: config.env === 'development' ? err.message : 'An unexpected error occurred'
   });
 });
 
-// Connect to MongoDB with improved configuration and error handling
-console.log('Connecting to MongoDB...');
+// 404 handler
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Cannot ${req.method} ${req.path}`
+  });
+});
+
+// MongoDB configuration
 mongoose.set('strictQuery', true);
 mongoose.set('bufferCommands', false); // Disable buffering
 
@@ -144,9 +211,15 @@ const connectWithRetry = async (retries = 5, interval = 5000) => {
   for (let i = 0; i < retries; i++) {
     try {
       console.log('Attempting to connect to MongoDB...');
-      await mongoose.connect(config.mongoUri, {
-        serverSelectionTimeoutMS: 15000, // Increase timeout to 15 seconds
-        socketTimeoutMS: 45000, // Increase socket timeout to 45 seconds
+      await mongoose.connect(config.mongoUri || config.databaseUrl, {
+        serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
+        socketTimeoutMS: 45000, // Socket timeout
+        maxPoolSize: 50, // Increase pool size
+        minPoolSize: 10, // Minimum pool size
+        connectTimeoutMS: 30000, // Connection timeout
+        heartbeatFrequencyMS: 10000, // More frequent heartbeats
+        retryWrites: true,
+        w: 'majority'
       });
       console.log('MongoDB connected successfully');
       return;
@@ -163,7 +236,7 @@ const connectWithRetry = async (retries = 5, interval = 5000) => {
 
 // Monitor MongoDB connection
 mongoose.connection.on('connected', () => {
-  console.log('MongoDB connection established');
+  console.log('MongoDB connection established successfully');
 });
 
 mongoose.connection.on('error', (err) => {
@@ -171,7 +244,8 @@ mongoose.connection.on('error', (err) => {
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB connection disconnected');
+  console.log('MongoDB disconnected. Attempting to reconnect...');
+  connectWithRetry();
 });
 
 process.on('SIGINT', async () => {
@@ -180,7 +254,7 @@ process.on('SIGINT', async () => {
     console.log('MongoDB connection closed through app termination');
     process.exit(0);
   } catch (err) {
-    console.error('Error closing MongoDB connection:', err);
+    console.error('Error during MongoDB connection closure:', err);
     process.exit(1);
   }
 });
