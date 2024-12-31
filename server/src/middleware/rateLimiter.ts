@@ -13,7 +13,8 @@ export const standardLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipDevelopment,
-  message: { error: 'Too many requests. Please wait a minute and try again.' }
+  message: { error: 'Too many requests. Please wait a minute and try again.' },
+  trustProxy: true // Trust X-Forwarded-For header
 });
 
 // More permissive limiter for authentication routes
@@ -26,7 +27,8 @@ export const authLimiter = rateLimit({
   message: { 
     error: 'Too many authentication attempts. Please try again in 15 minutes.',
     retryAfter: '15 minutes'
-  }
+  },
+  trustProxy: true // Trust X-Forwarded-For header
 });
 
 // Stricter limiter for AI-related endpoints
@@ -36,5 +38,6 @@ export const aiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipDevelopment,
-  message: { error: 'Too many AI requests. Please wait 5 minutes and try again.' }
+  message: { error: 'Too many AI requests. Please wait 5 minutes and try again.' },
+  trustProxy: true // Trust X-Forwarded-For header
 });

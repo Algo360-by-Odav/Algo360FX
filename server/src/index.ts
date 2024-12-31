@@ -37,8 +37,18 @@ import { standardLimiter, authLimiter, aiLimiter } from './middleware/rateLimite
 const app = express();
 console.log('Express app created');
 
-// Trust proxy - required for rate limiting behind proxy
-app.set('trust proxy', 1);
+// Trust proxy settings - required for rate limiting and security behind proxy
+app.set('trust proxy', true);
+app.enable('trust proxy'); // Enable reverse proxy support
+
+// Configure proxy trust based on environment
+if (process.env.NODE_ENV === 'production') {
+  // Trust first proxy in production
+  app.set('trust proxy', 1);
+} else {
+  // Trust all proxies in development
+  app.set('trust proxy', true);
+}
 
 const httpServer = createServer(app);
 console.log('HTTP server created');
