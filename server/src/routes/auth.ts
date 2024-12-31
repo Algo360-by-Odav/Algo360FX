@@ -1,10 +1,9 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { User } from '../models/User';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
-import mongoose from 'mongoose';
 import { validateRequest } from '../middleware/validateRequest';
 import { registerSchema, loginSchema, verifyCodeSchema } from '../schemas/auth.schema';
 import { asyncHandler } from '../middleware/asyncHandler';
@@ -34,8 +33,6 @@ router.post('/verify/send',
     const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     verificationCodes.set(email, { code, expires });
-
-    // In development, just log the code
     await mockSendEmail(email, code);
 
     res.json({ 
@@ -50,11 +47,7 @@ router.post('/verify/code',
   validateRequest(verifyCodeSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { email, code } = req.body;
-    console.log('Verifying code:', { email, code });
-    console.log('Stored codes:', Array.from(verificationCodes.entries()));
-    
     const storedData = verificationCodes.get(email);
-    console.log('Stored data for email:', storedData);
 
     if (!storedData) {
       res.status(400).json({ error: 'No verification code found. Please request a new code.' });
@@ -81,26 +74,21 @@ router.post('/register',
   validateRequest(registerSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { email, password, firstName, lastName } = req.body;
-    console.log('Registration request body:', { email, firstName, lastName });
 
     try {
-      // Check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         res.status(400).json({ error: 'This email is already registered. Please login or use a different email.' });
         return;
       }
 
-      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create user with default preferences
       const user = new User({
         email,
         password: hashedPassword,
         firstName,
         lastName,
-        emailVerified: true, // Set to true since we've verified the email
+        emailVerified: true,
         preferences: {
           theme: 'light',
           notifications: true,
@@ -111,22 +99,16 @@ router.post('/register',
         }
       });
 
-      // Save user
-      console.log('Saving new user:', { email, firstName, lastName });
       await user.save();
-      console.log('User saved successfully');
 
-      // Generate JWT token
       const token = jwt.sign(
         { id: user._id, email: user.email },
         config.jwtSecret,
         { expiresIn: '7d' }
       );
 
-      // Remove verification code after successful registration
       verificationCodes.delete(email);
 
-      // Return success response
       res.status(201).json({
         success: true,
         message: 'Registration successful',
@@ -140,7 +122,6 @@ router.post('/register',
         }
       });
     } catch (error: any) {
-      console.error('Registration error:', error);
       if (error.name === 'ValidationError') {
         res.status(400).json({
           error: 'Validation Error',
@@ -159,7 +140,6 @@ router.post('/register',
         error: 'Registration failed',
         message: error.message || 'An unexpected error occurred during registration'
       });
-      return;
     }
   })
 );
@@ -201,12 +181,10 @@ router.post('/login',
         }
       });
     } catch (error: any) {
-      console.error('Login error:', error);
       res.status(500).json({
         error: 'Login failed',
         message: error.message || 'An unexpected error occurred during login'
       });
-      return;
     }
   })
 );
