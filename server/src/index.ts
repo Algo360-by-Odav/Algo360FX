@@ -80,6 +80,10 @@ if (process.env.ENABLE_SECURITY_HEADERS === 'true') {
 app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 
+// Middleware for parsing JSON and handling large payloads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
 // Compression
 app.use(compression());
 

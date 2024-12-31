@@ -16,9 +16,12 @@ router.post('/register',
     const { email, password, firstName, lastName } = req.body;
 
     try {
+      console.log('Registration attempt:', { email, firstName, lastName });
+
       // Check for existing user
       const existingUser = await User.findOne({ email });
       if (existingUser) {
+        console.log('User already exists:', email);
         return res.status(409).json({ 
           status: 'error',
           code: 'USER_EXISTS',
@@ -28,6 +31,7 @@ router.post('/register',
 
       // Additional validation
       if (password.length < 8) {
+        console.log('Invalid password length');
         return res.status(400).json({
           status: 'error',
           code: 'INVALID_PASSWORD',
@@ -35,7 +39,10 @@ router.post('/register',
         });
       }
 
+      console.log('Hashing password...');
       const hashedPassword = await bcrypt.hash(password, 10);
+      
+      console.log('Creating new user...');
       const user = new User({
         email,
         password: hashedPassword,
@@ -52,15 +59,17 @@ router.post('/register',
         }
       });
 
+      console.log('Saving user to database...');
       await user.save();
 
-      // Generate JWT token
+      console.log('Generating JWT token...');
       const token = jwt.sign(
         { userId: user._id, email: user.email },
         config.jwtSecret,
         { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
       );
 
+      console.log('Registration successful:', email);
       return res.status(201).json({
         status: 'success',
         message: 'Registration successful',
@@ -77,7 +86,12 @@ router.post('/register',
       });
 
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('Registration error details:', {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        name: error.name
+      });
       
       // Handle MongoDB duplicate key error
       if (error.code === 11000) {
@@ -118,14 +132,18 @@ router.post('/login',
     const { email, password } = req.body;
 
     try {
+      console.log('Login attempt:', email);
+
       const user = await User.findOne({ email });
       if (!user) {
+        console.log('User not found:', email);
         res.status(401).json({ error: 'Invalid email or password' });
         return;
       }
 
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
+        console.log('Invalid password for user:', email);
         res.status(401).json({ error: 'Invalid email or password' });
         return;
       }
@@ -136,6 +154,7 @@ router.post('/login',
         { expiresIn: '7d' }
       );
 
+      console.log('Login successful:', email);
       res.json({
         success: true,
         data: {
