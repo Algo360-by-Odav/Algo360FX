@@ -3,13 +3,13 @@ import { config } from '../config/config';
 
 // Skip rate limiting in development
 const skipDevelopment = (req: any) => {
-  return config.env === 'development';
+  return true; // Temporarily disable rate limiting for all environments
 };
 
 // Standard rate limiter for most API endpoints
 export const standardLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 1000, // Increased limit per window
+  max: 10000, // Significantly increased limit per window
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipDevelopment,
@@ -19,7 +19,7 @@ export const standardLimiter = rateLimit({
 // More permissive limiter for authentication routes
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Increased limit per window
+  max: 1000, // Significantly increased limit per window
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipDevelopment,
@@ -32,7 +32,7 @@ export const authLimiter = rateLimit({
 // Stricter limiter for AI-related endpoints
 export const aiLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 60, // Increased limit per window
+  max: 500, // Increased limit per window
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipDevelopment,

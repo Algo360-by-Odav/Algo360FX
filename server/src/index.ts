@@ -98,17 +98,11 @@ if (process.env.ENABLE_DETAILED_LOGGING === 'true') {
 // Global Rate Limiting
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Increased limit for global requests
-  message: 'Too many requests from this IP, please try again later.',
+  max: 10000, // Significantly increased limit for global requests
+  skip: () => true, // Temporarily disable rate limiting
   standardHeaders: true,
   legacyHeaders: false,
 });
-
-app.use(globalLimiter);
-
-// Middleware for parsing JSON and handling large payloads
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Apply rate limiters
 app.use('/api/auth', authLimiter);
