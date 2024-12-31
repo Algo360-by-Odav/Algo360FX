@@ -1,73 +1,13 @@
 import { Router, Request, Response } from 'express';
-import { body, validationResult } from 'express-validator';
 import { User } from '../models/User';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
 import { validateRequest } from '../middleware/validateRequest';
-import { registerSchema, loginSchema, verifyCodeSchema } from '../schemas/auth.schema';
+import { registerSchema, loginSchema } from '../schemas/auth.schema';
 import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
-
-// Store verification codes temporarily (in production, use Redis or similar)
-const verificationCodes = new Map<string, { code: string; expires: Date }>();
-
-// Mock email sending for development
-const mockSendEmail = async (to: string, code: string): Promise<void> => {
-  console.log(`[DEV] Verification code for ${to}: ${code}`);
-};
-
-// Send verification code
-router.post('/verify/send', 
-  body('email').isEmail(),
-  asyncHandler(async (req: Request, res: Response) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ errors: errors.array() });
-      return;
-    }
-
-    const { email } = req.body;
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    verificationCodes.set(email, { code, expires });
-    await mockSendEmail(email, code);
-
-    res.json({ 
-      success: true,
-      message: 'Verification code sent successfully',
-    });
-  })
-);
-
-// Verify code
-router.post('/verify/code',
-  validateRequest(verifyCodeSchema),
-  asyncHandler(async (req: Request, res: Response) => {
-    const { email, code } = req.body;
-    const storedData = verificationCodes.get(email);
-
-    if (!storedData) {
-      res.status(400).json({ error: 'No verification code found. Please request a new code.' });
-      return;
-    }
-
-    if (new Date() > storedData.expires) {
-      verificationCodes.delete(email);
-      res.status(400).json({ error: 'Verification code expired. Please request a new code.' });
-      return;
-    }
-
-    if (storedData.code !== code) {
-      res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
-      return;
-    }
-
-    res.json({ success: true, message: 'Code verified successfully' });
-  })
-);
 
 // Register new user
 router.post('/register', 
@@ -101,7 +41,7 @@ router.post('/register',
         password: hashedPassword,
         firstName,
         lastName,
-        emailVerified: false,
+        emailVerified: true, // Set to true by default for development
         preferences: {
           theme: 'light',
           notifications: true,
@@ -130,7 +70,7 @@ router.post('/register',
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
-            emailVerified: false
+            emailVerified: true
           },
           token
         }
@@ -191,27 +131,27 @@ router.post('/login',
       }
 
       const token = jwt.sign(
-        { id: user._id, email: user.email },
+        { userId: user._id, email: user.email },
         config.jwtSecret,
         { expiresIn: '7d' }
       );
 
       res.json({
         success: true,
-        token,
-        user: {
-          id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          preferences: user.preferences
+        data: {
+          user: {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            emailVerified: user.emailVerified
+          },
+          token
         }
       });
     } catch (error: any) {
-      res.status(500).json({
-        error: 'Login failed',
-        message: error.message || 'An unexpected error occurred during login'
-      });
+      console.error('Login error:', error);
+      res.status(500).json({ error: 'Login failed. Please try again later.' });
     }
   })
 );
