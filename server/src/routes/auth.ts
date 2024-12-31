@@ -1,13 +1,14 @@
 import { Router, Request, Response } from 'express';
-import { User } from '../models/User';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { config } from '../config/config';
-import { validateRequest } from '../middleware/validateRequest';
-import { registerSchema, loginSchema } from '../schemas/auth.schema';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { validateRequest } from '../middleware/validateRequest';
+import { loginSchema, registerSchema } from '../schemas/auth.schema';
+import { UserService } from '../services/User';
+import { AuthService } from '../services/Auth';
+import { config } from '../config/config';
 
 const router = Router();
+const userService = new UserService();
+const authService = new AuthService();
 
 // Register new user
 router.post('/register', 
@@ -18,53 +19,48 @@ router.post('/register',
     try {
       console.log('Registration attempt:', { email, firstName, lastName });
 
-      // Check for existing user
-      const existingUser = await User.findOne({ email });
+      // Check if user already exists
+      const existingUser = await userService.findByEmail(email);
       if (existingUser) {
         console.log('User already exists:', email);
-        return res.status(409).json({ 
+        return res.status(400).json({ 
           status: 'error',
           code: 'USER_EXISTS',
           message: 'This email is already registered. Please login or use a different email.'
         });
       }
 
-      // Hash password
-      console.log('Hashing password...');
-      const hashedPassword = await bcrypt.hash(password, 10);
-      
-      console.log('Creating new user...');
-      const user = new User({
+      // Create new user
+      const user = await userService.create({
         email,
-        password: hashedPassword,
+        password,
         firstName,
-        lastName,
-        emailVerified: true, // Set to true by default for development
-        preferences: {
-          theme: 'light',
-          notifications: true,
-          language: 'en',
-          riskLevel: 'medium',
-          defaultLotSize: 0.01,
-          tradingPairs: ['EUR/USD', 'GBP/USD', 'USD/JPY']
-        }
+        lastName
       });
 
-      console.log('Saving user to database...');
-      await user.save();
+      // Generate tokens
+      const { accessToken, refreshToken } = await authService.generateTokens(user);
+
+      // Set refresh token cookie
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
 
       console.log('Registration successful:', email);
-      return res.status(201).json({
+      res.status(201).json({
         status: 'success',
         message: 'Registration successful',
         data: {
           user: {
-            id: user._id,
+            id: user.id,
             email: user.email,
             firstName: user.firstName,
-            lastName: user.lastName,
-            emailVerified: true
-          }
+            lastName: user.lastName
+          },
+          accessToken
         }
       });
 
@@ -76,7 +72,7 @@ router.post('/register',
         name: error.name
       });
       
-      return res.status(500).json({
+      res.status(500).json({
         status: 'error',
         code: 'REGISTRATION_FAILED',
         message: 'Registration failed. Please try again later.',
@@ -95,10 +91,10 @@ router.post('/login',
     try {
       console.log('Login attempt:', email);
 
-      // Find user
-      const user = await User.findOne({ email }).select('+password');
+      // Validate credentials
+      const user = await authService.validateCredentials(email, password);
       if (!user) {
-        console.log('User not found:', email);
+        console.log('Invalid credentials:', email);
         return res.status(401).json({ 
           status: 'error',
           code: 'INVALID_CREDENTIALS',
@@ -106,39 +102,29 @@ router.post('/login',
         });
       }
 
-      // Verify password
-      console.log('Verifying password...');
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      if (!isValidPassword) {
-        console.log('Invalid password for user:', email);
-        return res.status(401).json({ 
-          status: 'error',
-          code: 'INVALID_CREDENTIALS',
-          message: 'Invalid email or password'
-        });
-      }
+      // Generate tokens
+      const { accessToken, refreshToken } = await authService.generateTokens(user);
 
-      // Generate JWT token
-      console.log('Generating JWT token...');
-      const token = jwt.sign(
-        { userId: user._id, email: user.email },
-        config.jwtSecret,
-        { expiresIn: '7d' }
-      );
+      // Set refresh token cookie
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
 
       console.log('Login successful:', email);
-      return res.status(200).json({
+      res.status(200).json({
         status: 'success',
         message: 'Login successful',
         data: {
           user: {
-            id: user._id,
+            id: user.id,
             email: user.email,
             firstName: user.firstName,
-            lastName: user.lastName,
-            emailVerified: user.emailVerified
+            lastName: user.lastName
           },
-          token
+          accessToken
         }
       });
     } catch (error: any) {
@@ -149,7 +135,7 @@ router.post('/login',
         name: error.name
       });
       
-      return res.status(500).json({
+      res.status(500).json({
         status: 'error',
         code: 'LOGIN_FAILED',
         message: 'Login failed. Please try again later.',

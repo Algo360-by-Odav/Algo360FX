@@ -33,6 +33,7 @@ import healthRouter from './routes/health';
 import testRouter from './routes/test';
 import { config } from './config/config';
 import { standardLimiter, authLimiter, aiLimiter } from './middleware/rateLimiter';
+import { sanitizeData, preventParamPollution, sanitizeRequestBody, xssProtection } from './middleware/sanitizer';
 
 const app = express();
 console.log('Express app created');
@@ -53,81 +54,80 @@ if (process.env.NODE_ENV === 'production') {
 const httpServer = createServer(app);
 console.log('HTTP server created');
 
-// CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
-  'http://localhost:3000',
-  'https://algo360fx-client.onrender.com',
-  'https://algo360fx-frontend.onrender.com'
-];
+// Basic middleware
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(compression());
 
-// Configure CORS
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'wss:', 'https:'],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: true,
+  crossOriginOpenerPolicy: true,
+  crossOriginResourcePolicy: { policy: "same-site" },
+  dnsPrefetchControl: true,
+  frameguard: { action: 'deny' },
+  hidePoweredBy: true,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  ieNoOpen: true,
+  noSniff: true,
+  referrerPolicy: { policy: 'same-origin' },
+  xssFilter: true,
+}));
+
+// Enhanced CORS configuration
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.CLIENT_URL || '', process.env.RENDER_URL || ''].filter(Boolean)
+    : '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  credentials: true,
   maxAge: 600
 }));
 
-// Security Middlewares
-if (process.env.ENABLE_SECURITY_HEADERS === 'true') {
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", ...allowedOrigins],
-      },
-    },
-    crossOriginEmbedderPolicy: false,
-    crossOriginResourcePolicy: { policy: "cross-origin" }
-  }));
-}
+// Data sanitization middleware
+app.use(sanitizeData);
+app.use(preventParamPollution);
+app.use(sanitizeRequestBody);
+app.use(xssProtection);
 
+// Additional security middleware
 app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 
-// Middleware for parsing JSON and handling large payloads
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Compression
-app.use(compression());
-
-// Request Logging
-if (process.env.ENABLE_DETAILED_LOGGING === 'true') {
-  app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined', {
-    skip: (req, res) => process.env.NODE_ENV === 'production' && res.statusCode < 400,
-    stream: {
-      write: (message: string) => {
-        console.log(message.trim());
-      },
-    },
-  }));
-}
-
-// Global Rate Limiting
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10000, // Significantly increased limit for global requests
-  skip: () => true, // Temporarily disable rate limiting
-  standardHeaders: true,
-  legacyHeaders: false,
+// Custom security headers
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  next();
 });
-
-// Apply rate limiters
-app.use('/api/auth', authLimiter);
-app.use(['/api/market', '/api/search'], standardLimiter);
-app.use(['/api/user', '/api/portfolio', '/api/positions', '/api/strategies'], standardLimiter);
 
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: process.env.NODE_ENV === 'production' 
+      ? [process.env.CLIENT_URL || '', process.env.RENDER_URL || ''].filter(Boolean)
+      : '*',
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -200,8 +200,8 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
-// Routes
-app.use('/api/auth', authRouter);
+// Apply rate limiting to routes
+app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/market', marketRouter);
 app.use('/api/search', searchRouter);
@@ -211,6 +211,7 @@ app.use('/api/positions', positionsRouter);
 app.use('/api/strategies', strategiesRouter);
 app.use('/api/test', testRouter);
 app.use('/api/health', healthRouter);
+app.use('/api', standardLimiter); // General API rate limiting
 
 // Error Monitoring
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

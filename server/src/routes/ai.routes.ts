@@ -21,13 +21,14 @@ router.post('/analyze', validateRequest(analyzeSchema), asyncHandler(async (req:
   // Get market data
   const data = await marketData.getMarketData(symbol);
   if (!data) {
-    return res.status(404).json({ error: 'Market data not found' });
+    res.status(404).json({ error: 'Market data not found' });
+    return;
   }
 
   // Perform technical analysis
   const analysis = await technicalAnalysis.analyze(symbol, timeframe, indicators);
 
-  return res.json({
+  res.json({
     symbol,
     timeframe,
     analysis
@@ -42,13 +43,14 @@ router.get('/predict/:symbol', asyncHandler(async (req: Request, res: Response) 
   // Get market data
   const data = await marketData.getMarketData(symbol);
   if (!data) {
-    return res.status(404).json({ error: 'Market data not found' });
+    res.status(404).json({ error: 'Market data not found' });
+    return;
   }
 
   // Generate prediction
   const prediction = await technicalAnalysis.predict(symbol, timeframe as string);
 
-  return res.json({
+  res.json({
     symbol,
     timeframe,
     prediction
@@ -63,13 +65,14 @@ router.get('/signals/:symbol', asyncHandler(async (req: Request, res: Response) 
   // Get market data
   const data = await marketData.getMarketData(symbol);
   if (!data) {
-    return res.status(404).json({ error: 'Market data not found' });
+    res.status(404).json({ error: 'Market data not found' });
+    return;
   }
 
   // Generate signals
   const signals = await technicalAnalysis.generateSignals(symbol, timeframe as string);
 
-  return res.json({
+  res.json({
     symbol,
     timeframe,
     signals
@@ -109,7 +112,7 @@ router.post('/risk', validateRequest(riskAssessmentSchema), asyncHandler(async (
     temperature: 0.5,
   });
 
-  return res.json({
+  res.json({
     assessment: completion.choices[0].message.content,
     riskAnalysis,
     metadata: {

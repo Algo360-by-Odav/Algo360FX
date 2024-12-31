@@ -17,14 +17,24 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await publicRequest(API_ENDPOINTS.AUTH.LOGIN, {
+      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(formData),
       });
 
-      // Store the token
-      if (response.token) {
-        localStorage.setItem('token', response.token);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to login');
+      }
+
+      // Check for success status and token
+      if (data.status === 'success' && data.data?.token) {
+        localStorage.setItem('token', data.data.token);
+        localStorage.setItem('user', JSON.stringify(data.data.user));
         
         // Verify the token works by making an authenticated request
         try {
@@ -33,10 +43,11 @@ const LoginPage: React.FC = () => {
         } catch (verifyError) {
           console.error('Token verification failed:', verifyError);
           localStorage.removeItem('token');
+          localStorage.removeItem('user');
           setError('Authentication failed. Please try logging in again.');
         }
       } else {
-        setError('Invalid response from server');
+        setError(data.message || 'Invalid response from server');
       }
     } catch (err: any) {
       console.error('Login error:', err);

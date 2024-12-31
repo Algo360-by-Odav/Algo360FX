@@ -10,7 +10,8 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true
+    required: true,
+    select: false
   },
   firstName: {
     type: String,
@@ -25,6 +26,10 @@ const userSchema = new mongoose.Schema({
   emailVerified: {
     type: Boolean,
     default: false
+  },
+  tokenVersion: {
+    type: Number,
+    default: 0
   },
   preferences: {
     theme: {
@@ -66,17 +71,20 @@ const userSchema = new mongoose.Schema({
     default: Date.now
   }
 }, {
-  timestamps: true, 
+  timestamps: true,
   toJSON: {
     transform: function(doc, ret) {
-      delete ret.password; 
-      delete ret.__v; 
+      delete ret.password;
+      delete ret.__v;
+      ret.id = ret._id;
+      delete ret._id;
       return ret;
     }
   }
 });
 
 // Index for faster queries
+userSchema.index({ email: 1 });
 userSchema.index({ createdAt: -1 });
 
 export const User = mongoose.model('User', userSchema);

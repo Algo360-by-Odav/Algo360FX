@@ -1,43 +1,41 @@
 import rateLimit from 'express-rate-limit';
 import { config } from '../config/config';
 
-// Skip rate limiting in development
-const skipDevelopment = (req: any) => {
-  return true; // Temporarily disable rate limiting for all environments
+// Base rate limiter settings
+const baseRateLimiter = {
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests from this IP, please try again later.',
+  skipSuccessfulRequests: false,
+  skip: (req: any) => config.nodeEnv === 'development',
 };
 
-// Standard rate limiter for most API endpoints
-export const standardLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 10000, // Significantly increased limit per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: skipDevelopment,
-  message: { error: 'Too many requests. Please wait a minute and try again.' },
-  trustProxy: true // Trust X-Forwarded-For header
-});
-
-// More permissive limiter for authentication routes
+// Auth endpoints rate limiter (more strict)
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Significantly increased limit per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: skipDevelopment,
-  message: { 
-    error: 'Too many authentication attempts. Please try again in 15 minutes.',
-    retryAfter: '15 minutes'
-  },
-  trustProxy: true // Trust X-Forwarded-For header
+  ...baseRateLimiter,
+  max: 5, // 5 requests per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  message: 'Too many authentication attempts, please try again later.',
 });
 
-// Stricter limiter for AI-related endpoints
+// API endpoints rate limiter (moderate)
+export const apiLimiter = rateLimit({
+  ...baseRateLimiter,
+  max: 100, // 100 requests per 15 minutes
+});
+
+// Search endpoints rate limiter (less strict)
+export const searchLimiter = rateLimit({
+  ...baseRateLimiter,
+  max: 30, // 30 requests per 15 minutes
+  windowMs: 15 * 60 * 1000,
+});
+
+// AI endpoints rate limiter (very strict due to resource intensity)
 export const aiLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 500, // Increased limit per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: skipDevelopment,
-  message: { error: 'Too many AI requests. Please wait 5 minutes and try again.' },
-  trustProxy: true // Trust X-Forwarded-For header
+  ...baseRateLimiter,
+  max: 10, // 10 requests per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  message: 'Too many AI requests, please try again later.',
 });
