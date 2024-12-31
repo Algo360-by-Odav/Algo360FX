@@ -1,29 +1,37 @@
 import MetaApi from 'metaapi.cloud-sdk';
 import { config } from '../config/config';
 
+let api: MetaApi | null = null;
+let isMetaApiEnabled = false;
+
 // Initialize MetaAPI with retry mechanism and validation
-if (!config.metaApiToken) {
-  console.error('META_API_TOKEN is not set');
-  throw new Error('META_API_TOKEN is required');
+if (config.metaApiToken && config.mt5AccountId) {
+  try {
+    console.log('Initializing MetaApi with token:', config.metaApiToken.substring(0, 5) + '...');
+    console.log('Using MT5 Account ID:', config.mt5AccountId);
+    console.log('Retry attempts:', config.metaApiRetryAttempts);
+    console.log('Retry delay:', config.metaApiRetryDelay);
+
+    api = new MetaApi(config.metaApiToken);
+    isMetaApiEnabled = true;
+  } catch (error) {
+    console.error('Failed to initialize MetaAPI:', error);
+    api = null;
+    isMetaApiEnabled = false;
+  }
+} else {
+  console.warn('MetaAPI credentials not found. Trading features will be disabled.');
 }
-
-if (!config.mt5AccountId) {
-  console.error('MT5_ACCOUNT_ID is not set');
-  throw new Error('MT5_ACCOUNT_ID is required');
-}
-
-console.log('Initializing MetaApi with token:', config.metaApiToken.substring(0, 5) + '...');
-console.log('Using MT5 Account ID:', config.mt5AccountId);
-console.log('Retry attempts:', config.metaApiRetryAttempts);
-console.log('Retry delay:', config.metaApiRetryDelay);
-
-const api = new MetaApi(config.metaApiToken);
 
 // Cache for MetaAPI connections
 let cachedConnection: any = null;
 let connectionError: Error | null = null;
 
 export async function getMetaApiConnection() {
+  if (!isMetaApiEnabled || !api) {
+    return null;
+  }
+
   try {
     if (connectionError) {
       console.error('Previous connection attempt failed:', connectionError);
@@ -51,14 +59,14 @@ export async function getMetaApiConnection() {
           if (retryCount < config.metaApiRetryAttempts) {
             console.log(`Waiting ${config.metaApiRetryDelay}ms before next attempt...`);
             await new Promise(resolve => setTimeout(resolve, config.metaApiRetryDelay));
-          } else {
-            throw error;
           }
         }
       }
 
-      console.log('MT5 account found, deploying...');
-      
+      if (!account) {
+        throw new Error('Failed to get MT5 account after all retry attempts');
+      }
+
       // Deploy account with retries
       let deployedAccount = null;
       retryCount = 0;
@@ -66,33 +74,32 @@ export async function getMetaApiConnection() {
         try {
           console.log(`Attempt ${retryCount + 1} to deploy account...`);
           deployedAccount = await account.deploy();
-          console.log('Account deployed, waiting for connection...');
-          await deployedAccount.waitConnected();
-          console.log('Account successfully connected to broker');
+          console.log('Account deployed successfully');
         } catch (error) {
           console.error(`Deploy attempt ${retryCount + 1} failed:`, error);
           retryCount++;
           if (retryCount < config.metaApiRetryAttempts) {
             console.log(`Waiting ${config.metaApiRetryDelay}ms before next attempt...`);
             await new Promise(resolve => setTimeout(resolve, config.metaApiRetryDelay));
-          } else {
-            throw error;
           }
         }
       }
 
-      // Get connection instance
+      if (!deployedAccount) {
+        throw new Error('Failed to deploy account after all retry attempts');
+      }
+
       try {
-        console.log('Getting streaming connection...');
-        cachedConnection = await deployedAccount.getStreamingConnection();
-        console.log('Connecting to streaming API...');
-        await cachedConnection.connect();
-        console.log('Waiting for synchronization...');
-        await cachedConnection.waitSynchronized();
+        console.log('Waiting for account to connect...');
+        await account.waitConnected();
+
+        console.log('Waiting for account to synchronize...');
+        await account.waitSynchronized();
+
         console.log('MetaAPI connection established and synchronized');
+        cachedConnection = account;
       } catch (error) {
-        console.error('Failed to establish streaming connection:', error);
-        connectionError = error as Error;
+        console.error('Error while waiting for account connection:', error);
         throw error;
       }
     }
@@ -107,16 +114,18 @@ export async function getMetaApiConnection() {
 
 // Add a health check function
 export async function checkMetaApiHealth() {
+  if (!isMetaApiEnabled) {
+    return { status: 'disabled', message: 'MetaAPI is not configured' };
+  }
+
   try {
     const connection = await getMetaApiConnection();
-    return {
-      status: 'connected',
-      error: null
-    };
+    return { status: 'connected', connection };
   } catch (error) {
-    return {
-      status: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
+    return { status: 'error', error: error.message };
   }
+}
+
+export function isMetaApiServiceEnabled() {
+  return isMetaApiEnabled;
 }

@@ -9,7 +9,7 @@ const skipDevelopment = (req: any) => {
 // Standard rate limiter for most API endpoints
 export const standardLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 300, // Increased limit per window
+  max: 500, // Increased limit per window
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipDevelopment,
@@ -18,14 +18,14 @@ export const standardLimiter = rateLimit({
 
 // More permissive limiter for authentication routes
 export const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 300, // Limit each IP to 300 requests per hour
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipDevelopment,
   message: { 
-    error: 'Too many authentication attempts. Please wait an hour or try again later.',
-    retryAfter: '60 minutes'
+    error: 'Too many authentication attempts. Please try again in 15 minutes.',
+    retryAfter: '15 minutes'
   }
 });
 

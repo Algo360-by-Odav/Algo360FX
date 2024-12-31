@@ -1,36 +1,69 @@
 import { Router } from 'express';
-import { checkMetaApiHealth } from '../services/metaapi';
+import mongoose from 'mongoose';
+import os from 'os';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
-  try {
-    const status = {
-      server: 'healthy',
-      websocket: {
-        trading: global.tradingWsServer ? 'connected' : 'disconnected',
-        optimization: global.optimizationWsServer ? 'connected' : 'disconnected'
-      },
-      metaapi: 'checking',
-      database: global.mongoose?.connection?.readyState === 1 ? 'connected' : 'disconnected'
-    };
+// Enhanced health check endpoint
+router.get('/', asyncHandler(async (req, res) => {
+  const dbState = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+  const mongoStatus = dbState[mongoose.connection.readyState];
+  
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    database: {
+      status: mongoStatus,
+      collections: mongoose.connection.collections ? Object.keys(mongoose.connection.collections).length : 0,
+    },
+    memory: {
+      heapUsed: process.memoryUsage().heapUsed,
+      heapTotal: process.memoryUsage().heapTotal,
+      external: process.memoryUsage().external
+    },
+    environment: process.env.NODE_ENV || 'development'
+  };
 
-    // Check MetaAPI connection
-    try {
-      const metaapiHealth = await checkMetaApiHealth();
-      status.metaapi = metaapiHealth.status;
-      if (metaapiHealth.error) {
-        console.error('MetaAPI health check error:', metaapiHealth.error);
-      }
-    } catch (error) {
-      status.metaapi = 'disconnected';
-      console.error('MetaAPI health check error:', error);
+  const isHealthy = mongoStatus === 'connected';
+  
+  res.status(isHealthy ? 200 : 503).json(health);
+}));
+
+// Detailed health check for internal monitoring
+router.get('/detailed', async (req, res) => {
+  const detailedHealth = {
+    status: 'UP',
+    timestamp: new Date().toISOString(),
+    server: {
+      environment: process.env.NODE_ENV,
+      nodeVersion: process.version,
+      platform: process.platform,
+      memory: process.memoryUsage(),
+      uptime: process.uptime()
+    },
+    system: {
+      cpus: os.cpus(),
+      totalMemory: os.totalmem(),
+      freeMemory: os.freemem(),
+      loadAvg: os.loadavg(),
+      uptime: os.uptime(),
+      networkInterfaces: os.networkInterfaces()
+    },
+    database: {
+      status: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+      name: mongoose.connection.name,
+      host: mongoose.connection.host,
+      port: mongoose.connection.port
     }
+  };
 
-    res.json(status);
+  try {
+    res.status(200).json(detailedHealth);
   } catch (error) {
-    console.error('Health check error:', error);
-    res.status(500).json({ error: 'Health check failed' });
+    detailedHealth.status = 'DOWN';
+    res.status(503).json(detailedHealth);
   }
 });
 

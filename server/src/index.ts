@@ -1,3 +1,13 @@
+declare global {
+  namespace NodeJS {
+    interface Global {
+      tradingWsServer: any;
+      optimizationWsServer: any;
+      mongoose: any;
+    }
+  }
+}
+
 import express, { Request, Response, NextFunction } from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
@@ -273,7 +283,7 @@ const connectWithRetry = async (retries = 5, interval = 5000) => {
         retryWrites: true,
         retryReads: true,
         w: 'majority'
-      });
+      } as mongoose.ConnectOptions);
       console.log('MongoDB connected successfully');
       return;
     } catch (err) {

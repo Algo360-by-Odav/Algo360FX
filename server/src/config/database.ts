@@ -1,17 +1,15 @@
-import mongoose from 'mongoose';
+import mongoose, { ConnectOptions } from 'mongoose';
 import { config } from './config';
 
-export const connectToDatabase = async () => {
+export const connectToDatabase = async (): Promise<void> => {
   try {
-    const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 15000,
+    const options: ConnectOptions = {
+      serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
-      connectTimeoutMS: 15000,
-      maxPoolSize: 50,
+      connectTimeoutMS: 10000,
+      maxPoolSize: 10,
       retryWrites: true,
-      retryReads: true,
+      retryReads: true
     };
 
     await mongoose.connect(config.mongoUri || config.databaseUrl, options);

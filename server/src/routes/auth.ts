@@ -76,10 +76,23 @@ router.post('/register',
     const { email, password, firstName, lastName } = req.body;
 
     try {
+      // Check for existing user
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        res.status(400).json({ error: 'This email is already registered. Please login or use a different email.' });
-        return;
+        return res.status(409).json({ 
+          status: 'error',
+          code: 'USER_EXISTS',
+          message: 'This email is already registered. Please login or use a different email.'
+        });
+      }
+
+      // Additional validation
+      if (password.length < 8) {
+        return res.status(400).json({
+          status: 'error',
+          code: 'INVALID_PASSWORD',
+          message: 'Password must be at least 8 characters long'
+        });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -88,7 +101,7 @@ router.post('/register',
         password: hashedPassword,
         firstName,
         lastName,
-        emailVerified: true,
+        emailVerified: false,
         preferences: {
           theme: 'light',
           notifications: true,
@@ -101,44 +114,58 @@ router.post('/register',
 
       await user.save();
 
+      // Generate JWT token
       const token = jwt.sign(
-        { id: user._id, email: user.email },
+        { userId: user._id, email: user.email },
         config.jwtSecret,
-        { expiresIn: '7d' }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
       );
 
-      verificationCodes.delete(email);
-
-      res.status(201).json({
-        success: true,
+      return res.status(201).json({
+        status: 'success',
         message: 'Registration successful',
-        token,
-        user: {
-          id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          preferences: user.preferences
+        data: {
+          user: {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            emailVerified: false
+          },
+          token
         }
       });
+
     } catch (error: any) {
-      if (error.name === 'ValidationError') {
-        res.status(400).json({
-          error: 'Validation Error',
-          details: error.errors
-        });
-        return;
-      }
+      console.error('Registration error:', error);
+      
+      // Handle MongoDB duplicate key error
       if (error.code === 11000) {
-        res.status(409).json({
-          error: 'Email already registered',
-          message: 'This email is already in use. Please try a different email or login.'
+        return res.status(409).json({
+          status: 'error',
+          code: 'USER_EXISTS',
+          message: 'This email is already registered. Please login or use a different email.'
         });
-        return;
       }
-      res.status(500).json({
-        error: 'Registration failed',
-        message: error.message || 'An unexpected error occurred during registration'
+
+      // Handle validation errors
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({
+          status: 'error',
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid input data',
+          errors: Object.values(error.errors).map((err: any) => ({
+            field: err.path,
+            message: err.message
+          }))
+        });
+      }
+
+      return res.status(500).json({
+        status: 'error',
+        code: 'REGISTRATION_FAILED',
+        message: 'Registration failed. Please try again later.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   })

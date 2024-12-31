@@ -7,8 +7,18 @@ const router = express.Router();
 // Get portfolio overview
 router.get('/', authenticateToken, asyncHandler(async (req: any, res) => {
   try {
-    // Placeholder data - replace with actual portfolio data from your database
     const userId = req.user.id;
+    console.log('Portfolio request received:', {
+      userId,
+      headers: req.headers,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Log MongoDB connection state
+    const dbState = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+    console.log('MongoDB connection state:', dbState[mongoose.connection.readyState]);
+    
+    // Placeholder data - replace with actual portfolio data from your database
     console.log('Fetching portfolio for user:', userId);
     
     res.json({
@@ -38,7 +48,12 @@ router.get('/', authenticateToken, asyncHandler(async (req: any, res) => {
       }
     });
   } catch (error: any) {
-    console.error('Portfolio fetch error:', error);
+    console.error('Portfolio fetch error:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      timestamp: new Date().toISOString()
+    });
     res.status(500).json({
       error: 'Failed to fetch portfolio',
       message: error.message

@@ -1,16 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import {
-  Container,
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Link,
-  Paper,
-  CircularProgress,
-} from '@mui/material';
-import { API_ENDPOINTS, apiRequest } from '../config/api';
+import { useNavigate } from 'react-router-dom';
+import { API_ENDPOINTS, publicRequest, authenticatedRequest } from '../config/api';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -27,13 +17,27 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const data = await apiRequest(API_ENDPOINTS.AUTH.LOGIN, {
+      const response = await publicRequest(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
         body: JSON.stringify(formData),
       });
 
-      localStorage.setItem('token', data.token);
-      navigate('/dashboard');
+      // Store the token
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        
+        // Verify the token works by making an authenticated request
+        try {
+          await authenticatedRequest(API_ENDPOINTS.USER.PREFERENCES);
+          navigate('/dashboard');
+        } catch (verifyError) {
+          console.error('Token verification failed:', verifyError);
+          localStorage.removeItem('token');
+          setError('Authentication failed. Please try logging in again.');
+        }
+      } else {
+        setError('Invalid response from server');
+      }
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'Failed to login');
@@ -43,85 +47,79 @@ const LoginPage: React.FC = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          mt: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            p: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%',
-          }}
-        >
-          <Typography component="h1" variant="h5">
-            Sign in to Algo360FX
-          </Typography>
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-            {error && (
-              <Typography color="error" align="center" sx={{ mb: 2 }}>
-                {error}
-              </Typography>
-            )}
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={formData.email}
-              onChange={handleChange}
-              disabled={loading}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={handleChange}
-              disabled={loading}
-            />
-            <Button
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Sign in to your account
+          </h2>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="sr-only">Email address</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Email address"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="rounded-md bg-red-50 p-4">
+              <div className="flex">
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    {error}
+                  </h3>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <button
               type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
               disabled={loading}
+              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
+                loading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
+              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
             >
-              {loading ? <CircularProgress size={24} /> : 'Sign In'}
-            </Button>
-            <Box sx={{ textAlign: 'center' }}>
-              <Link component={RouterLink} to="/auth/register" variant="body2">
-                {"Don't have an account? Sign Up"}
-              </Link>
-            </Box>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 };
 
