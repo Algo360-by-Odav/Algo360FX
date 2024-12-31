@@ -9,9 +9,11 @@ import {
   Link,
   Paper,
 } from '@mui/material';
+import { useApp } from '../context/AppContext';
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const { dispatch } = useApp();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -21,12 +23,9 @@ const RegisterPage: React.FC = () => {
     password: '',
     confirmPassword: '',
   });
-  const [error, setError] = useState('');
-  const [isRequestingCode, setIsRequestingCode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
 
     if (step === 1) {
       await requestVerificationCode();
@@ -34,11 +33,25 @@ const RegisterPage: React.FC = () => {
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          message: 'Passwords do not match',
+          type: 'error'
+        }
+      });
       return;
     }
 
     try {
+      dispatch({ 
+        type: 'SET_LOADING', 
+        payload: { 
+          isLoading: true, 
+          message: 'Verifying code...' 
+        } 
+      });
+
       // First verify the code
       const verifyResponse = await fetch('https://algo360fx-server.onrender.com/api/auth/verify/code', {
         method: 'POST',
@@ -51,10 +64,18 @@ const RegisterPage: React.FC = () => {
         }),
       });
 
+      const verifyData = await verifyResponse.json();
       if (!verifyResponse.ok) {
-        const errorData = await verifyResponse.json();
-        throw new Error(errorData.error || 'Invalid verification code');
+        throw new Error(verifyData.error || 'Invalid verification code');
       }
+
+      dispatch({ 
+        type: 'SET_LOADING', 
+        payload: { 
+          isLoading: true, 
+          message: 'Creating your account...' 
+        } 
+      });
 
       // Then proceed with registration
       const registerResponse = await fetch('https://algo360fx-server.onrender.com/api/auth/register', {
@@ -70,19 +91,34 @@ const RegisterPage: React.FC = () => {
         }),
       });
 
+      const registerData = await registerResponse.json();
       if (!registerResponse.ok) {
-        const errorData = await registerResponse.json();
-        throw new Error(errorData.error || 'Registration failed');
+        throw new Error(registerData.error || registerData.message || 'Registration failed');
       }
 
-      // Show success message
-      alert('Registration successful! Please login with your credentials.');
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          message: 'Registration successful! Please login with your credentials.',
+          type: 'success'
+        }
+      });
       
-      // Navigate to login page
       navigate('/auth/login');
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError(err.message || 'Failed to register');
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          message: err.message || 'Failed to register',
+          type: 'error'
+        }
+      });
+    } finally {
+      dispatch({ 
+        type: 'SET_LOADING', 
+        payload: { isLoading: false } 
+      });
     }
   };
 
@@ -95,12 +131,25 @@ const RegisterPage: React.FC = () => {
 
   const requestVerificationCode = async () => {
     if (!formData.email) {
-      setError('Please enter your email first');
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          message: 'Please enter your email first',
+          type: 'error'
+        }
+      });
       return;
     }
 
-    setIsRequestingCode(true);
     try {
+      dispatch({ 
+        type: 'SET_LOADING', 
+        payload: { 
+          isLoading: true, 
+          message: 'Sending verification code...' 
+        } 
+      });
+
       const response = await fetch('https://algo360fx-server.onrender.com/api/auth/verify/send', {
         method: 'POST',
         headers: {
@@ -112,18 +161,31 @@ const RegisterPage: React.FC = () => {
       });
 
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.error || 'Failed to send verification code');
       }
 
-      // Show success message
-      alert('Verification code sent! Please check your email (or server logs in development).');
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          message: 'Verification code sent! Please check your email.',
+          type: 'success'
+        }
+      });
       setStep(2);
     } catch (err: any) {
-      setError(err.message || 'Failed to send verification code');
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          message: err.message || 'Failed to send verification code',
+          type: 'error'
+        }
+      });
     } finally {
-      setIsRequestingCode(false);
+      dispatch({ 
+        type: 'SET_LOADING', 
+        payload: { isLoading: false } 
+      });
     }
   };
 
@@ -151,12 +213,6 @@ const RegisterPage: React.FC = () => {
             Create your Algo360FX Account
           </Typography>
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-            {error && (
-              <Typography color="error" align="center" sx={{ mb: 2 }}>
-                {error}
-              </Typography>
-            )}
-            
             {step === 1 ? (
               <>
                 <TextField
@@ -176,9 +232,8 @@ const RegisterPage: React.FC = () => {
                   fullWidth
                   variant="contained"
                   sx={{ mt: 3, mb: 2 }}
-                  disabled={isRequestingCode}
                 >
-                  {isRequestingCode ? 'Sending...' : 'Send Verification Code'}
+                  Send Verification Code
                 </Button>
               </>
             ) : (
@@ -201,7 +256,6 @@ const RegisterPage: React.FC = () => {
                   id="firstName"
                   label="First Name"
                   name="firstName"
-                  autoComplete="given-name"
                   value={formData.firstName}
                   onChange={handleChange}
                 />
@@ -212,7 +266,6 @@ const RegisterPage: React.FC = () => {
                   id="lastName"
                   label="Last Name"
                   name="lastName"
-                  autoComplete="family-name"
                   value={formData.lastName}
                   onChange={handleChange}
                 />
@@ -224,7 +277,6 @@ const RegisterPage: React.FC = () => {
                   label="Password"
                   type="password"
                   id="password"
-                  autoComplete="new-password"
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -236,7 +288,6 @@ const RegisterPage: React.FC = () => {
                   label="Confirm Password"
                   type="password"
                   id="confirmPassword"
-                  autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                 />
@@ -246,14 +297,16 @@ const RegisterPage: React.FC = () => {
                   variant="contained"
                   sx={{ mt: 3, mb: 2 }}
                 >
-                  Create Account
+                  Register
                 </Button>
               </>
             )}
-            
-            <Link component={RouterLink} to="/auth/login" variant="body2">
-              Already have an account? Sign in
-            </Link>
+            <Typography variant="body2" align="center" sx={{ mt: 2 }}>
+              Already have an account?{' '}
+              <Link component={RouterLink} to="/auth/login" variant="body2">
+                Sign in
+              </Link>
+            </Typography>
           </Box>
         </Paper>
       </Box>
