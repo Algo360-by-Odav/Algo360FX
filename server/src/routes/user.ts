@@ -1,67 +1,64 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/auth';
-import { User } from '../models/User';
-import asyncHandler from 'express-async-handler';
-import type { AuthRequest } from '../middleware/auth';
+import { auth } from '../middleware/auth';
+import { UserService } from '../services/User';
+import { AsyncRequestHandler } from '../types/express';
+import { validateRequest } from '../middleware/validateRequest';
+import { updateUserSchema } from '../schemas/user.schema';
 
 const router = express.Router();
 
-// Get user preferences
-router.get('/preferences', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
-  const user = await User.findById(req.user._id);
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    return;
+// Get user profile
+const getProfile: AsyncRequestHandler = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const user = await UserService.getUserById(userId);
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching user profile' });
   }
-  res.json({ preferences: user.preferences });
-}));
+};
+
+// Update user profile
+const updateProfile: AsyncRequestHandler = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const updates = req.body;
+    const user = await UserService.updateUser(userId, updates);
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user profile' });
+  }
+};
 
 // Update user preferences
-router.put('/preferences', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
-  const user = await User.findById(req.user._id);
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    return;
+const updatePreferences: AsyncRequestHandler = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const preferences = req.body;
+    const user = await UserService.updatePreferences(userId, preferences);
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user preferences' });
   }
+};
 
-  // Validate preferences
-  const { theme, notifications, language, riskLevel, defaultLotSize, tradingPairs } = req.body;
-
-  const updatedPreferences = {
-    theme: theme || user.preferences.theme,
-    notifications: notifications !== undefined ? notifications : user.preferences.notifications,
-    language: language || user.preferences.language,
-    riskLevel: riskLevel || user.preferences.riskLevel,
-    defaultLotSize: defaultLotSize || user.preferences.defaultLotSize,
-    tradingPairs: tradingPairs || user.preferences.tradingPairs
-  };
-
-  // Update user preferences
-  user.preferences = updatedPreferences;
-  await user.save();
-
-  res.json({ 
-    message: 'Preferences updated successfully',
-    preferences: user.preferences 
-  });
-}));
-
-// Get user profile
-router.get('/profile', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
-  const user = await User.findById(req.user._id);
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    return;
+// Delete user account
+const deleteAccount: AsyncRequestHandler = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    await UserService.deleteUser(userId);
+    res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting user account' });
   }
+};
 
-  res.json({
-    id: user._id,
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    preferences: user.preferences,
-    emailVerified: user.emailVerified
-  });
-}));
+// Register routes
+router.use(auth);
 
-export default router;
+router.get('/profile', getProfile);
+router.put('/profile', validateRequest(updateUserSchema), updateProfile);
+router.put('/preferences', updatePreferences);
+router.delete('/account', deleteAccount);
+
+export { router as userRouter };

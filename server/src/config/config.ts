@@ -1,54 +1,66 @@
 import dotenv from 'dotenv';
-
-// Load environment variables
 dotenv.config();
 
-interface Config {
-  nodeEnv: string;
+export interface Config {
+  env: string;
   port: number;
-  mongoUri: string;
-  jwtSecret: string;
-  jwtRefreshSecret: string;
-  jwtExpiresIn: string;
-  jwtRefreshExpiresIn: string;
-  openaiApiKey: string;
-  allowedOrigins: string[];
-  corsEnabled: boolean;
-  rateLimiting: {
-    enabled: boolean;
+  databaseUrl: string;
+  jwt: {
+    secret: string;
+    refreshSecret: string;
+    accessExpiresIn: string;
+    refreshExpiresIn: string;
+  };
+  openai: {
+    apiKey: string;
+  };
+  rateLimits: {
     windowMs: number;
-    max: number;
+    maxRequests: number;
   };
-  security: {
-    bcryptRounds: number;
-    csrfProtection: boolean;
-    xssProtection: boolean;
-    noSqlInjection: boolean;
-    parameterPollution: boolean;
+  cors: {
+    origin: string | string[];
+    credentials: boolean;
   };
+  bcryptRounds: number;
+  csrfProtection: boolean;
+  xssProtection: boolean;
+  noSqlInjectionProtection: boolean;
+  parameterPollutionProtection: boolean;
+  metaApiToken: string;
+  mt5AccountId: string;
+  metaApiRetryAttempts: number;
+  metaApiRetryDelay: number;
 }
 
 export const config: Config = {
-  nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '3000', 10),
-  mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/algo360fx',
-  jwtSecret: process.env.JWT_SECRET || 'your-jwt-secret',
-  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'your-jwt-refresh-secret',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
-  jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-  openaiApiKey: process.env.OPENAI_API_KEY || '',
-  allowedOrigins: (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean),
-  corsEnabled: process.env.CORS_ENABLED === 'true',
-  rateLimiting: {
-    enabled: process.env.RATE_LIMITING_ENABLED === 'true',
-    windowMs: parseInt(process.env.RATE_LIMITING_WINDOW_MS || '900000', 10), // 15 minutes
-    max: parseInt(process.env.RATE_LIMITING_MAX || '100', 10),
+  env: process.env.NODE_ENV || 'development',
+  port: parseInt(process.env.PORT || '10000', 10),
+  databaseUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/algo360fx',
+  jwt: {
+    secret: process.env.JWT_SECRET || 'your-secret-key',
+    refreshSecret: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
+    accessExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
   },
-  security: {
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
-    csrfProtection: process.env.CSRF_PROTECTION === 'true',
-    xssProtection: process.env.XSS_PROTECTION === 'true',
-    noSqlInjection: process.env.NOSQL_INJECTION_PROTECTION === 'true',
-    parameterPollution: process.env.PARAMETER_POLLUTION_PROTECTION === 'true',
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || ''
   },
+  rateLimits: {
+    windowMs: parseInt(process.env.RATE_LIMITING_WINDOW_MS || '900000', 10),
+    maxRequests: parseInt(process.env.RATE_LIMITING_MAX || '100', 10)
+  },
+  cors: {
+    origin: (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean),
+    credentials: process.env.CORS_ENABLED === 'true'
+  },
+  bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
+  csrfProtection: process.env.CSRF_PROTECTION === 'true',
+  xssProtection: process.env.XSS_PROTECTION === 'true',
+  noSqlInjectionProtection: process.env.NOSQL_INJECTION_PROTECTION === 'true',
+  parameterPollutionProtection: process.env.PARAMETER_POLLUTION_PROTECTION === 'true',
+  metaApiToken: process.env.MT5_API_TOKEN || '',
+  mt5AccountId: process.env.MT5_ACCOUNT_ID || '',
+  metaApiRetryAttempts: parseInt(process.env.META_API_RETRY_ATTEMPTS || '3', 10),
+  metaApiRetryDelay: parseInt(process.env.META_API_RETRY_DELAY || '1000', 10)
 };

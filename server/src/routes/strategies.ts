@@ -1,119 +1,128 @@
-import express, { Request, Response } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import { asyncHandler } from '../middleware/asyncHandler';
+import express from 'express';
+import { auth } from '../middleware/auth';
+import { Strategy } from '../models/Strategy';
+import { AsyncRequestHandler } from '../types/express';
+import { validateRequest } from '../middleware/validateRequest';
+import { createStrategySchema, updateStrategySchema } from '../schemas/strategy.schema';
 
 const router = express.Router();
 
 // Get all strategies
-router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+const getStrategies: AsyncRequestHandler = async (req, res) => {
   try {
-    // For now, return mock strategies data
-    res.json({
-      strategies: [
-        {
-          id: '1',
-          name: 'Trend Following EMA',
-          description: 'Uses exponential moving averages to identify and follow trends',
-          status: 'active',
-          performance: {
-            winRate: 65,
-            profitFactor: 1.8,
-            totalTrades: 150
-          }
-        }
-      ]
-    });
+    const strategies = await Strategy.find({ user: req.user?._id });
+    res.json(strategies);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ message: 'Error fetching strategies' });
   }
-}));
+};
 
 // Get strategy by ID
-router.get('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+const getStrategyById: AsyncRequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
-    res.json({
-      id,
-      name: 'Trend Following EMA',
-      description: 'Uses exponential moving averages to identify and follow trends',
-      status: 'active',
-      performance: {
-        winRate: 65,
-        profitFactor: 1.8,
-        totalTrades: 150,
-        averageProfit: 25.5,
-        sharpeRatio: 1.2
-      },
-      parameters: {
-        fastEMA: 12,
-        slowEMA: 26,
-        signalEMA: 9,
-        timeframe: '1h',
-        symbols: ['EUR/USD', 'GBP/USD']
-      },
-      backtest: {
-        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        endDate: new Date().toISOString(),
-        initialBalance: 10000,
-        finalBalance: 12500,
-        maxDrawdown: 8.5,
-        totalTrades: 150,
-        profitableTrades: 98,
-        unprofitableTrades: 52
-      },
-      lastModified: new Date().toISOString()
+    const strategy = await Strategy.findOne({
+      _id: req.params.id,
+      user: req.user?._id
     });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
-  }
-}));
 
-// Get strategy performance
-router.get('/:id/performance', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    res.json({
-      performance: {
-        winRate: 65,
-        profitFactor: 1.8,
-        totalTrades: 150,
-        averageProfit: 25.5,
-        maxDrawdown: 10,
-        sharpeRatio: 1.5,
-        monthlyReturns: [
-          { month: '2024-01', return: 5.2 },
-          { month: '2024-02', return: 3.8 }
-        ]
-      }
-    });
+    if (!strategy) {
+      return res.status(404).json({ message: 'Strategy not found' });
+    }
+
+    res.json(strategy);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ message: 'Error fetching strategy' });
   }
-}));
+};
+
+// Create strategy
+const createStrategy: AsyncRequestHandler = async (req, res) => {
+  try {
+    const strategy = new Strategy({
+      ...req.body,
+      user: req.user?._id
+    });
+
+    await strategy.save();
+    res.status(201).json(strategy);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating strategy' });
+  }
+};
 
 // Update strategy
-router.put('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+const updateStrategy: AsyncRequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
-    res.json({ message: `Strategy ${id} updated successfully` });
+    const strategy = await Strategy.findOneAndUpdate(
+      { _id: req.params.id, user: req.user?._id },
+      req.body,
+      { new: true }
+    );
+
+    if (!strategy) {
+      return res.status(404).json({ message: 'Strategy not found' });
+    }
+
+    res.json(strategy);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ message: 'Error updating strategy' });
   }
-}));
+};
 
 // Delete strategy
-router.delete('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+const deleteStrategy: AsyncRequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
-    res.json({ message: `Strategy ${id} deleted successfully` });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
-  }
-}));
+    const strategy = await Strategy.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user?._id
+    });
 
-export default router;
+    if (!strategy) {
+      return res.status(404).json({ message: 'Strategy not found' });
+    }
+
+    res.json({ message: 'Strategy deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting strategy' });
+  }
+};
+
+// Backtest strategy
+const backtestStrategy: AsyncRequestHandler = async (req, res) => {
+  try {
+    const strategy = await Strategy.findOne({
+      _id: req.params.id,
+      user: req.user?._id
+    });
+
+    if (!strategy) {
+      return res.status(404).json({ message: 'Strategy not found' });
+    }
+
+    // TODO: Implement backtesting logic
+    const backtestResults = {
+      strategyId: strategy._id,
+      profitLoss: 0,
+      winRate: 0,
+      trades: [],
+      startDate: new Date(),
+      endDate: new Date()
+    };
+
+    res.json(backtestResults);
+  } catch (error) {
+    res.status(500).json({ message: 'Error backtesting strategy' });
+  }
+};
+
+// Register routes
+router.use(auth);
+
+router.get('/', getStrategies);
+router.get('/:id', getStrategyById);
+router.post('/', validateRequest(createStrategySchema), createStrategy);
+router.put('/:id', validateRequest(updateStrategySchema), updateStrategy);
+router.delete('/:id', deleteStrategy);
+router.post('/:id/backtest', backtestStrategy);
+
+export { router as strategyRouter };

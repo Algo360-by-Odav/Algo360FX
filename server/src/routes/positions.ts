@@ -1,53 +1,99 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/auth';
-import asyncHandler from 'express-async-handler';
+import { auth } from '../middleware/auth';
+import { Position } from '../models/Position';
+import { AsyncRequestHandler } from '../types/express';
+import { validateRequest } from '../middleware/validateRequest';
+import { createPositionSchema, updatePositionSchema } from '../schemas/position.schema';
 
 const router = express.Router();
 
 // Get all positions
-router.get('/', authenticateToken, asyncHandler(async (req: any, res) => {
+const getPositions: AsyncRequestHandler = async (req, res) => {
   try {
-    const userId = req.user.id;
-    console.log('Fetching positions for user:', userId);
-
-    // Return empty positions for now
-    res.json({
-      userId,
-      positions: [],
-      lastUpdated: new Date()
-    });
-  } catch (error: any) {
-    console.error('Positions fetch error:', error);
-    res.status(500).json({
-      error: 'Failed to fetch positions',
-      message: error.message
-    });
+    const positions = await Position.find({ user: req.user?._id });
+    res.json(positions);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching positions' });
   }
-}));
+};
 
 // Get position by ID
-router.get('/:id', authenticateToken, asyncHandler(async (req: any, res) => {
+const getPositionById: AsyncRequestHandler = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { id } = req.params;
-    console.log('Fetching position:', id, 'for user:', userId);
+    const position = await Position.findOne({
+      _id: req.params.id,
+      user: req.user?._id
+    });
 
-    // Return 404 for now since we don't have real positions
-    res.status(404).json({
-      error: 'Position not found',
-      message: `No position found with ID: ${id}`
-    });
-  } catch (error: any) {
-    console.error('Position fetch error:', error);
-    res.status(500).json({
-      error: 'Failed to fetch position',
-      message: error.message
-    });
+    if (!position) {
+      return res.status(404).json({ message: 'Position not found' });
+    }
+
+    res.json(position);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching position' });
   }
-}));
+};
+
+// Create position
+const createPosition: AsyncRequestHandler = async (req, res) => {
+  try {
+    const position = new Position({
+      ...req.body,
+      user: req.user?._id
+    });
+
+    await position.save();
+    res.status(201).json(position);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating position' });
+  }
+};
+
+// Update position
+const updatePosition: AsyncRequestHandler = async (req, res) => {
+  try {
+    const position = await Position.findOneAndUpdate(
+      { _id: req.params.id, user: req.user?._id },
+      req.body,
+      { new: true }
+    );
+
+    if (!position) {
+      return res.status(404).json({ message: 'Position not found' });
+    }
+
+    res.json(position);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating position' });
+  }
+};
+
+// Close position
+const closePosition: AsyncRequestHandler = async (req, res) => {
+  try {
+    const position = await Position.findOne({
+      _id: req.params.id,
+      user: req.user?._id
+    });
+
+    if (!position) {
+      return res.status(404).json({ message: 'Position not found' });
+    }
+
+    position.status = 'closed';
+    position.closedAt = new Date();
+    position.closePrice = req.body.closePrice;
+    await position.save();
+
+    res.json(position);
+  } catch (error) {
+    res.status(500).json({ message: 'Error closing position' });
+  }
+};
 
 // Get position history
-router.get('/history', authenticateToken, asyncHandler(async (req, res) => {
+const getPositionHistory: AsyncRequestHandler = async (req, res) => {
   try {
     // Placeholder - replace with actual history from database
     res.json({
@@ -73,6 +119,16 @@ router.get('/history', authenticateToken, asyncHandler(async (req, res) => {
     console.error('Error fetching position history:', error);
     res.status(500).json({ error: 'Failed to fetch position history' });
   }
-}));
+};
 
-export default router;
+// Register routes
+router.use(auth);
+
+router.get('/', getPositions);
+router.get('/:id', getPositionById);
+router.post('/', validateRequest(createPositionSchema), createPosition);
+router.put('/:id', validateRequest(updatePositionSchema), updatePosition);
+router.post('/:id/close', closePosition);
+router.get('/history', getPositionHistory);
+
+export { router as positionRouter };

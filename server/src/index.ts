@@ -1,13 +1,3 @@
-declare global {
-  namespace NodeJS {
-    interface Global {
-      tradingWsServer: any;
-      optimizationWsServer: any;
-      mongoose: any;
-    }
-  }
-}
-
 import express, { Request, Response, NextFunction } from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
@@ -21,19 +11,31 @@ import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
 import TradingWebSocketServer from './websocket/trading';
 import OptimizationWebSocketServer from './websocket/optimization';
-import searchRouter from './routes/search';
 import authRouter from './routes/auth';
+import { userRouter } from './routes/user';
+import { portfolioRouter } from './routes/portfolio';
+import { strategyRouter } from './routes/strategies';
+import { positionRouter } from './routes/positions';
+import searchRouter from './routes/search';
 import notificationsRouter from './routes/notifications';
 import marketRouter from './routes/market';
-import userRouter from './routes/user';
-import portfolioRouter from './routes/portfolio';
-import positionsRouter from './routes/positions';
-import strategiesRouter from './routes/strategies';
 import healthRouter from './routes/health';
 import testRouter from './routes/test';
+import { aiRouter } from './routes/ai.routes';
 import { config } from './config/config';
-import { standardLimiter, authLimiter, aiLimiter } from './middleware/rateLimiter';
-import { sanitizeData, preventParamPollution, sanitizeRequestBody, xssProtection } from './middleware/sanitizer';
+import { limiter, apiLimiter } from './middleware/rateLimiter';
+import { errorHandler } from './middleware/errorHandler';
+import { sanitizer } from './middleware/sanitizer';
+
+declare global {
+  namespace NodeJS {
+    interface Global {
+      tradingWsServer: any;
+      optimizationWsServer: any;
+      mongoose: any;
+    }
+  }
+}
 
 const app = express();
 console.log('Express app created');
@@ -60,38 +62,7 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(compression());
 
 // Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", 'wss:', 'https:'],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
-  crossOriginEmbedderPolicy: true,
-  crossOriginOpenerPolicy: true,
-  crossOriginResourcePolicy: { policy: "same-site" },
-  dnsPrefetchControl: true,
-  frameguard: { action: 'deny' },
-  hidePoweredBy: true,
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
-  ieNoOpen: true,
-  noSniff: true,
-  referrerPolicy: { policy: 'same-origin' },
-  xssFilter: true,
-}));
-
-// Enhanced CORS configuration
+app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? [process.env.CLIENT_URL || '', process.env.RENDER_URL || ''].filter(Boolean)
@@ -102,12 +73,26 @@ app.use(cors({
   credentials: true,
   maxAge: 600
 }));
+app.use(limiter);
+app.use(sanitizer);
+
+// Enhanced CORS configuration
+// app.use(cors({
+//   origin: process.env.NODE_ENV === 'production' 
+//     ? [process.env.CLIENT_URL || '', process.env.RENDER_URL || ''].filter(Boolean)
+//     : '*',
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization'],
+//   exposedHeaders: ['Content-Range', 'X-Content-Range'],
+//   credentials: true,
+//   maxAge: 600
+// }));
 
 // Data sanitization middleware
-app.use(sanitizeData);
-app.use(preventParamPollution);
-app.use(sanitizeRequestBody);
-app.use(xssProtection);
+// app.use(sanitizeData);
+// app.use(preventParamPollution);
+// app.use(sanitizeRequestBody);
+// app.use(xssProtection);
 
 // Additional security middleware
 app.use(mongoSanitize()); // Prevent NoSQL injection
@@ -201,53 +186,21 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 // Apply rate limiting to routes
-app.use('/api/auth', authLimiter, authRouter);
+app.use('/api/auth', apiLimiter, authRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/market', marketRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/user', userRouter);
 app.use('/api/portfolio', portfolioRouter);
-app.use('/api/positions', positionsRouter);
-app.use('/api/strategies', strategiesRouter);
+app.use('/api/positions', positionRouter);
+app.use('/api/strategies', strategyRouter);
+app.use('/api/ai', aiRouter);
 app.use('/api/test', testRouter);
 app.use('/api/health', healthRouter);
-app.use('/api', standardLimiter); // General API rate limiting
+app.use('/api', limiter); // General API rate limiting
 
 // Error Monitoring
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  const logLevel = process.env.LOG_LEVEL || 'error';
-  
-  // Log error details based on log level
-  if (logLevel === 'debug') {
-    console.error('Error details:', {
-      timestamp: new Date().toISOString(),
-      error: {
-        name: err.name,
-        message: err.message,
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-      },
-      request: {
-        method: req.method,
-        url: req.url,
-        headers: req.headers,
-        body: req.body,
-        ip: req.ip
-      }
-    });
-  } else {
-    console.error('Error:', err.message);
-  }
-
-  // Send error response
-  res.status(err.status || 500).json({
-    status: 'error',
-    code: err.code || 'INTERNAL_SERVER_ERROR',
-    message: process.env.NODE_ENV === 'production' 
-      ? 'An unexpected error occurred' 
-      : err.message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
+app.use(errorHandler);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
@@ -279,33 +232,24 @@ mongoose.set('strictQuery', true);
 mongoose.set('bufferCommands', true); // Enable buffering
 mongoose.set('bufferTimeoutMS', 30000); // Set buffer timeout to 30 seconds
 
-const connectWithRetry = async (retries = 5, interval = 5000) => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      console.log(`Attempting to connect to MongoDB (attempt ${i + 1}/${retries})...`);
-      await mongoose.connect(config.mongoUri || config.databaseUrl, {
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
-        connectTimeoutMS: 10000,
-        maxPoolSize: 10,
-        minPoolSize: 1,
-        retryWrites: true,
-        retryReads: true,
-        w: 'majority'
-      } as mongoose.ConnectOptions);
-      console.log('MongoDB connected successfully');
-      return;
-    } catch (err) {
-      console.error(`MongoDB connection attempt ${i + 1} failed:`, err);
-      if (i === retries - 1) {
-        console.error('All MongoDB connection attempts failed');
-        process.exit(1);
-      }
-      console.log(`Waiting ${interval/1000} seconds before next attempt...`);
-      await new Promise(resolve => setTimeout(resolve, interval));
-    }
+async function connectDB() {
+  try {
+    await mongoose.connect(config.databaseUrl, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      retryWrites: true,
+      retryReads: true,
+      w: 'majority'
+    } as mongoose.ConnectOptions);
+    console.log('MongoDB connected successfully');
+  } catch (err) {
+    console.error('Failed to connect to MongoDB:', err);
+    process.exit(1);
   }
-};
+}
 
 // Monitor MongoDB connection
 mongoose.connection.on('connected', () => {
@@ -318,7 +262,7 @@ mongoose.connection.on('error', (err) => {
 
 mongoose.connection.on('disconnected', () => {
   console.log('MongoDB disconnected. Attempting to reconnect...');
-  connectWithRetry();
+  connectDB();
 });
 
 // Handle process termination
@@ -334,7 +278,7 @@ process.on('SIGINT', async () => {
 });
 
 // Start connection process
-connectWithRetry().then(() => {
+connectDB().then(() => {
   // Start server only after successful DB connection
   const port = config.port || 5000;
   httpServer.listen(port, () => {

@@ -7,20 +7,6 @@ declare module 'express-serve-static-core' {
   interface Request {
     user?: User;
   }
-
-  interface RequestHandler<
-    P = ParamsDictionary,
-    ResBody = any,
-    ReqBody = any,
-    ReqQuery = ParsedQs,
-    Locals extends Record<string, any> = Record<string, any>
-  > {
-    (
-      req: Request<P, ResBody, ReqBody, ReqQuery>,
-      res: Response<ResBody, Locals>,
-      next: NextFunction
-    ): void | Promise<void> | Promise<Response<ResBody, Locals>> | Response<ResBody, Locals>;
-  }
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -52,4 +38,16 @@ export type AsyncRequestHandler<
   req: Request<P, ResBody, ReqBody, ReqQuery>,
   res: Response<ResBody, Locals>,
   next: NextFunction
-) => Promise<void | Response<ResBody, Locals>> | void | Response<ResBody, Locals>;
+) => Promise<void | Response<ResBody, Locals>>;
+
+export type RequestHandler<
+  P = ParamsDictionary,
+  ResBody = any,
+  ReqBody = any,
+  ReqQuery = ParsedQs,
+  Locals extends Record<string, any> = Record<string, any>
+> = (
+  req: Request<P, ResBody, ReqBody, ReqQuery>,
+  res: Response<ResBody, Locals>,
+  next: NextFunction
+) => void | Promise<void> | Response<ResBody, Locals> | Promise<Response<ResBody, Locals>>;

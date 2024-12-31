@@ -57,4 +57,3 @@ PortfolioSchema.index({
 });
 
 export const Portfolio = mongoose.model<IPortfolio>('Portfolio', PortfolioSchema);
-export default Portfolio;

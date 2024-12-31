@@ -1,41 +1,23 @@
 import rateLimit from 'express-rate-limit';
 import { config } from '../config/config';
 
-// Base rate limiter settings
-const baseRateLimiter = {
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Too many requests from this IP, please try again later.',
-  skipSuccessfulRequests: false,
-  skip: (req: any) => config.nodeEnv === 'development',
-};
+// Create a limiter that applies to all routes
+export const limiter = rateLimit({
+  windowMs: config.rateLimits.windowMs,
+  max: config.rateLimits.maxRequests,
+  message: 'Too many requests from this IP, please try again later.'
+});
 
-// Auth endpoints rate limiter (more strict)
+// Create a more strict limiter for auth routes
 export const authLimiter = rateLimit({
-  ...baseRateLimiter,
-  max: 5, // 5 requests per 15 minutes
-  windowMs: 15 * 60 * 1000,
-  message: 'Too many authentication attempts, please try again later.',
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: 'Too many login attempts from this IP, please try again after 15 minutes'
 });
 
-// API endpoints rate limiter (moderate)
+// Create a limiter for API routes
 export const apiLimiter = rateLimit({
-  ...baseRateLimiter,
-  max: 100, // 100 requests per 15 minutes
-});
-
-// Search endpoints rate limiter (less strict)
-export const searchLimiter = rateLimit({
-  ...baseRateLimiter,
-  max: 30, // 30 requests per 15 minutes
-  windowMs: 15 * 60 * 1000,
-});
-
-// AI endpoints rate limiter (very strict due to resource intensity)
-export const aiLimiter = rateLimit({
-  ...baseRateLimiter,
-  max: 10, // 10 requests per 15 minutes
-  windowMs: 15 * 60 * 1000,
-  message: 'Too many AI requests, please try again later.',
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // limit each IP to 30 requests per minute
+  message: 'Too many API requests from this IP, please try again later'
 });

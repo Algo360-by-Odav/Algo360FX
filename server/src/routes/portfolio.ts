@@ -1,11 +1,14 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/auth';
-import asyncHandler from 'express-async-handler';
+import { auth } from '../middleware/auth';
+import { Portfolio } from '../models/Portfolio';
+import { AsyncRequestHandler } from '../types/express';
+import { validateRequest } from '../middleware/validateRequest';
+import { createPortfolioSchema, updatePortfolioSchema } from '../schemas/portfolio.schema';
 
 const router = express.Router();
 
 // Get portfolio overview
-router.get('/', authenticateToken, asyncHandler(async (req: any, res) => {
+const getPortfolioOverview: AsyncRequestHandler = async (req, res) => {
   try {
     const userId = req.user.id;
     console.log('Portfolio request received:', {
@@ -59,10 +62,10 @@ router.get('/', authenticateToken, asyncHandler(async (req: any, res) => {
       message: error.message
     });
   }
-}));
+};
 
 // Get portfolio history
-router.get('/history', authenticateToken, asyncHandler(async (req: any, res) => {
+const getPortfolioHistory: AsyncRequestHandler = async (req, res) => {
   try {
     const userId = req.user.id;
     console.log('Fetching portfolio history for user:', userId);
@@ -87,6 +90,12 @@ router.get('/history', authenticateToken, asyncHandler(async (req: any, res) => 
       message: error.message
     });
   }
-}));
+};
 
-export default router;
+// Register routes
+router.use(auth);
+
+router.get('/', getPortfolioOverview);
+router.get('/history', getPortfolioHistory);
+
+export { router as portfolioRouter };

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { asyncHandler } from '../middleware/asyncHandler';
+import { AsyncRequestHandler } from '../types/express';
 import { validateRequest } from '../middleware/validateRequest';
 import { loginSchema, registerSchema } from '../schemas/auth.schema';
 import { UserService } from '../services/User';
@@ -13,14 +13,14 @@ const authService = new AuthService();
 // Register new user
 router.post('/register', 
   validateRequest(registerSchema),
-  asyncHandler(async (req: Request, res: Response) => {
+  ((async (req: Request, res: Response) => {
     const { email, password, firstName, lastName } = req.body;
 
     try {
       console.log('Registration attempt:', { email, firstName, lastName });
 
       // Check if user already exists
-      const existingUser = await userService.findByEmail(email);
+      const existingUser = await UserService.getUserByEmail(email);
       if (existingUser) {
         console.log('User already exists:', email);
         return res.status(400).json({ 
@@ -31,7 +31,7 @@ router.post('/register',
       }
 
       // Create new user
-      const user = await userService.create({
+      const user = await UserService.createUser({
         email,
         password,
         firstName,
@@ -39,7 +39,7 @@ router.post('/register',
       });
 
       // Generate tokens
-      const { accessToken, refreshToken } = await authService.generateTokens(user);
+      const { accessToken, refreshToken } = await AuthService.generateTokens(user);
 
       // Set refresh token cookie
       res.cookie('refreshToken', refreshToken, {
@@ -79,20 +79,20 @@ router.post('/register',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
-  })
+  }) as AsyncRequestHandler)
 );
 
 // Login user
 router.post('/login',
   validateRequest(loginSchema),
-  asyncHandler(async (req: Request, res: Response) => {
+  ((async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     try {
       console.log('Login attempt:', email);
 
       // Validate credentials
-      const user = await authService.validateCredentials(email, password);
+      const { user, accessToken, refreshToken } = await AuthService.login(email, password);
       if (!user) {
         console.log('Invalid credentials:', email);
         return res.status(401).json({ 
@@ -101,9 +101,6 @@ router.post('/login',
           message: 'Invalid email or password'
         });
       }
-
-      // Generate tokens
-      const { accessToken, refreshToken } = await authService.generateTokens(user);
 
       // Set refresh token cookie
       res.cookie('refreshToken', refreshToken, {
@@ -142,7 +139,7 @@ router.post('/login',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
-  })
+  }) as AsyncRequestHandler)
 );
 
 export default router;

@@ -1,39 +1,23 @@
-import mongoose, { ConnectOptions } from 'mongoose';
+import mongoose from 'mongoose';
 import { config } from './config';
 
-export const connectToDatabase = async (): Promise<void> => {
+export const connectDB = async () => {
   try {
-    const options: ConnectOptions = {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
-      maxPoolSize: 10,
-      retryWrites: true,
-      retryReads: true
-    };
-
-    await mongoose.connect(config.mongoUri || config.databaseUrl, options);
-    console.log('Connected to MongoDB');
-    
-    // Create indexes for all models
-    await Promise.all([
-      mongoose.model('Strategy').createIndexes(),
-      mongoose.model('Portfolio').createIndexes(),
-      mongoose.model('Documentation').createIndexes(),
-      mongoose.model('Analytics').createIndexes(),
-    ]);
-    console.log('Database indexes created successfully');
+    const conn = await mongoose.connect(config.databaseUrl);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
-    console.error('Error connecting to database:', error);
+    console.error('Error connecting to MongoDB:', error);
     process.exit(1);
   }
 };
 
-export const disconnectDatabase = async () => {
+export const closeDB = async () => {
   try {
-    await mongoose.disconnect();
+    await mongoose.connection.close();
+    console.log('MongoDB connection closed');
   } catch (error) {
-    console.error('Error disconnecting from database:', error);
+    console.error('Error closing MongoDB connection:', error);
     process.exit(1);
   }
 };

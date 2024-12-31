@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { IUser } from '../types/User';
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -13,14 +14,18 @@ const userSchema = new mongoose.Schema({
     required: true,
     select: false
   },
-  firstName: {
+  username: {
     type: String,
     required: true,
+    unique: true,
+    trim: true
+  },
+  firstName: {
+    type: String,
     trim: true
   },
   lastName: {
     type: String,
-    required: true,
     trim: true
   },
   emailVerified: {
@@ -30,6 +35,11 @@ const userSchema = new mongoose.Schema({
   tokenVersion: {
     type: Number,
     default: 0
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
   },
   preferences: {
     theme: {
@@ -85,6 +95,7 @@ const userSchema = new mongoose.Schema({
 
 // Index for faster queries
 userSchema.index({ email: 1 });
+userSchema.index({ username: 1 });
 userSchema.index({ createdAt: -1 });
 
-export const User = mongoose.model('User', userSchema);
+export const User = mongoose.model<IUser>('User', userSchema);

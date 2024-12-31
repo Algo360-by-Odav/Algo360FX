@@ -52,4 +52,3 @@ DocumentationSchema.index({
 });
 
 export const Documentation = mongoose.model<IDocumentation>('Documentation', DocumentationSchema);
-export default Documentation;
