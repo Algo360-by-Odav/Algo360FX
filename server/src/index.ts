@@ -3,6 +3,12 @@ import { createServer } from 'http';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { Server } from 'socket.io';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
+import hpp from 'hpp';
 import TradingWebSocketServer from './websocket/trading';
 import OptimizationWebSocketServer from './websocket/optimization';
 import searchRouter from './routes/search';
@@ -28,12 +34,10 @@ const httpServer = createServer(app);
 console.log('HTTP server created');
 
 // CORS configuration
-const allowedOrigins = [
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
   'http://localhost:3000',
-  'http://localhost:5173',
   'https://algo360fx-client.onrender.com',
-  'https://algo360fx-frontend.onrender.com',
-  'https://algo360fx.onrender.com'
+  'https://algo360fx-frontend.onrender.com'
 ];
 
 // Configure CORS
@@ -43,15 +47,63 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 600 // Increase preflight cache to 10 minutes
+  maxAge: 600
 }));
 
-// Handle preflight requests
-app.options('*', cors());
+// Security Middlewares
+if (process.env.ENABLE_SECURITY_HEADERS === 'true') {
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", ...allowedOrigins],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  }));
+}
+
+app.use(mongoSanitize()); // Prevent NoSQL injection
+app.use(hpp()); // Prevent HTTP Parameter Pollution
+
+// Compression
+app.use(compression());
+
+// Request Logging
+if (process.env.ENABLE_DETAILED_LOGGING === 'true') {
+  app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined', {
+    skip: (req, res) => process.env.NODE_ENV === 'production' && res.statusCode < 400,
+    stream: {
+      write: (message: string) => {
+        console.log(message.trim());
+      },
+    },
+  }));
+}
+
+// Global Rate Limiting
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Increased limit for global requests
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(globalLimiter);
 
 // Middleware for parsing JSON and handling large payloads
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Apply rate limiters
+app.use('/api/auth', authLimiter);
+app.use(['/api/market', '/api/search'], standardLimiter);
+app.use(['/api/user', '/api/portfolio', '/api/positions', '/api/strategies'], standardLimiter);
 
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
@@ -100,31 +152,35 @@ io.on('connect', (socket) => {
 
 console.log('Socket.IO server initialized with enhanced configuration');
 
-// Initialize WebSocket servers
-const tradingWsServer = new TradingWebSocketServer(io);
-const optimizationWsServer = new OptimizationWebSocketServer(io);
+// Initialize WebSocket servers if MetaAPI is configured
+if (config.metaApiToken && config.mt5AccountId) {
+  try {
+    const tradingWsServer = new TradingWebSocketServer(io);
+    const optimizationWsServer = new OptimizationWebSocketServer(io);
 
-// Store WebSocket servers globally for health checks
-global.tradingWsServer = tradingWsServer;
-global.optimizationWsServer = optimizationWsServer;
-global.mongoose = mongoose;
+    // Store WebSocket servers globally for health checks
+    global.tradingWsServer = tradingWsServer;
+    global.optimizationWsServer = optimizationWsServer;
+    global.mongoose = mongoose;
 
-tradingWsServer.initialize();
-console.log('Trading WebSocket server initialized');
+    tradingWsServer.initialize();
+    console.log('Trading WebSocket server initialized');
 
-optimizationWsServer.initialize();
-console.log('Optimization WebSocket server initialized');
+    optimizationWsServer.initialize();
+    console.log('Optimization WebSocket server initialized');
+  } catch (error) {
+    console.error('Failed to initialize trading servers:', error);
+    console.warn('Trading features will be disabled');
+  }
+} else {
+  console.warn('MetaAPI credentials not found. Trading features will be disabled.');
+}
 
 // Basic request logging middleware
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
-
-// Apply rate limiters - temporarily disabled for debugging
-// app.use('/api/auth', authLimiter);
-// app.use(['/api/market', '/api/search'], standardLimiter);
-// app.use(['/api/user', '/api/portfolio', '/api/positions', '/api/strategies'], standardLimiter);
 
 // Routes
 app.use('/api/auth', authRouter);
@@ -138,71 +194,40 @@ app.use('/api/strategies', strategiesRouter);
 app.use('/api/test', testRouter);
 app.use('/api/health', healthRouter);
 
-// Health check endpoint
-app.get('/api/health', (_req: Request, res: Response) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  res.json({ 
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    database: dbStatus,
-    uptime: process.uptime()
-  });
-});
-
-// Error handling middleware
+// Error Monitoring
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('Global error handler:', {
-    error: err,
-    message: err.message,
-    name: err.name,
-    code: err.code,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    body: req.body,
-    params: req.params,
-    query: req.query,
-    user: req.user
-  });
-
-  // Handle specific error types
-  if (err.name === 'ValidationError') {
-    res.status(400).json({
-      error: 'Validation Error',
-      details: err.errors || err.message
+  const logLevel = process.env.LOG_LEVEL || 'error';
+  
+  // Log error details based on log level
+  if (logLevel === 'debug') {
+    console.error('Error details:', {
+      timestamp: new Date().toISOString(),
+      error: {
+        name: err.name,
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      },
+      request: {
+        method: req.method,
+        url: req.url,
+        headers: req.headers,
+        body: req.body,
+        ip: req.ip
+      }
     });
-    return;
+  } else {
+    console.error('Error:', err.message);
   }
 
-  if (err.name === 'MongooseError') {
-    res.status(503).json({
-      error: 'Database Error',
-      message: 'Unable to process request. Please try again later.'
-    });
-    return;
-  }
-
-  if (err.name === 'MongoError' || err.name === 'MongoServerError') {
-    if (err.code === 11000) {
-      res.status(409).json({
-        error: 'Conflict',
-        message: 'This resource already exists'
-      });
-      return;
-    }
-    res.status(503).json({
-      error: 'Database Error',
-      message: 'Unable to process request. Please try again later.'
-    });
-    return;
-  }
-
-  // Default error response
+  // Send error response
   res.status(err.status || 500).json({
-    error: 'Internal Server Error',
-    message: config.env === 'development' ? err.message : 'An unexpected error occurred'
+    status: 'error',
+    code: err.code || 'INTERNAL_SERVER_ERROR',
+    message: process.env.NODE_ENV === 'production' 
+      ? 'An unexpected error occurred' 
+      : err.message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
-  return;
 });
 
 // 404 handler
@@ -240,16 +265,14 @@ const connectWithRetry = async (retries = 5, interval = 5000) => {
     try {
       console.log(`Attempting to connect to MongoDB (attempt ${i + 1}/${retries})...`);
       await mongoose.connect(config.mongoUri || config.databaseUrl, {
-        serverSelectionTimeoutMS: 30000, // Timeout after 30 seconds
-        socketTimeoutMS: 45000, // Socket timeout
-        connectTimeoutMS: 30000, // Connection timeout
-        maxPoolSize: 50, // Increased for better concurrency
-        minPoolSize: 5, // Minimum connections
-        heartbeatFrequencyMS: 10000, // More frequent heartbeats
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 10000,
+        maxPoolSize: 10,
+        minPoolSize: 1,
         retryWrites: true,
         retryReads: true,
-        w: 'majority',
-        family: 4 // Force IPv4
+        w: 'majority'
       });
       console.log('MongoDB connected successfully');
       return;
