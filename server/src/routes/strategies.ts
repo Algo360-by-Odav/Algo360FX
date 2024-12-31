@@ -1,11 +1,11 @@
-import express from 'express';
-import { auth } from '../middleware/auth';
-import asyncHandler from '../middleware/asyncHandler';
+import express, { Request, Response } from 'express';
+import { authenticateToken } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = express.Router();
 
 // Get all strategies
-router.get('/', auth, asyncHandler(async (req, res) => {
+router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     // For now, return mock strategies data
     res.json({
@@ -18,39 +18,8 @@ router.get('/', auth, asyncHandler(async (req, res) => {
           performance: {
             winRate: 65,
             profitFactor: 1.8,
-            totalTrades: 150,
-            averageProfit: 25.5,
-            sharpeRatio: 1.2
-          },
-          parameters: {
-            fastEMA: 12,
-            slowEMA: 26,
-            signalEMA: 9,
-            timeframe: '1h',
-            symbols: ['EUR/USD', 'GBP/USD']
-          },
-          lastModified: new Date().toISOString()
-        },
-        {
-          id: '2',
-          name: 'RSI Mean Reversion',
-          description: 'Trades oversold and overbought conditions using RSI',
-          status: 'inactive',
-          performance: {
-            winRate: 58,
-            profitFactor: 1.5,
-            totalTrades: 200,
-            averageProfit: 18.3,
-            sharpeRatio: 1.1
-          },
-          parameters: {
-            rsiPeriod: 14,
-            oversold: 30,
-            overbought: 70,
-            timeframe: '4h',
-            symbols: ['EUR/USD', 'USD/JPY']
-          },
-          lastModified: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+            totalTrades: 150
+          }
         }
       ]
     });
@@ -61,7 +30,7 @@ router.get('/', auth, asyncHandler(async (req, res) => {
 }));
 
 // Get strategy by ID
-router.get('/:id', auth, asyncHandler(async (req, res) => {
+router.get('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     res.json({
@@ -102,7 +71,7 @@ router.get('/:id', auth, asyncHandler(async (req, res) => {
 }));
 
 // Get strategy performance
-router.get('/:id/performance', auth, asyncHandler(async (req, res) => {
+router.get('/:id/performance', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     res.json({
@@ -126,7 +95,7 @@ router.get('/:id/performance', auth, asyncHandler(async (req, res) => {
 }));
 
 // Update strategy
-router.put('/:id', auth, asyncHandler(async (req, res) => {
+router.put('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     res.json({ message: `Strategy ${id} updated successfully` });
@@ -137,7 +106,7 @@ router.put('/:id', auth, asyncHandler(async (req, res) => {
 }));
 
 // Delete strategy
-router.delete('/:id', auth, asyncHandler(async (req, res) => {
+router.delete('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     res.json({ message: `Strategy ${id} deleted successfully` });
