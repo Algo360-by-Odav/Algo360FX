@@ -29,16 +29,7 @@ router.post('/register',
         });
       }
 
-      // Additional validation
-      if (password.length < 8) {
-        console.log('Invalid password length');
-        return res.status(400).json({
-          status: 'error',
-          code: 'INVALID_PASSWORD',
-          message: 'Password must be at least 8 characters long'
-        });
-      }
-
+      // Hash password
       console.log('Hashing password...');
       const hashedPassword = await bcrypt.hash(password, 10);
       
@@ -62,13 +53,6 @@ router.post('/register',
       console.log('Saving user to database...');
       await user.save();
 
-      console.log('Generating JWT token...');
-      const token = jwt.sign(
-        { userId: user._id, email: user.email },
-        config.jwtSecret,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-      );
-
       console.log('Registration successful:', email);
       return res.status(201).json({
         status: 'success',
@@ -80,8 +64,7 @@ router.post('/register',
             firstName: user.firstName,
             lastName: user.lastName,
             emailVerified: true
-          },
-          token
+          }
         }
       });
 
@@ -93,28 +76,6 @@ router.post('/register',
         name: error.name
       });
       
-      // Handle MongoDB duplicate key error
-      if (error.code === 11000) {
-        return res.status(409).json({
-          status: 'error',
-          code: 'USER_EXISTS',
-          message: 'This email is already registered. Please login or use a different email.'
-        });
-      }
-
-      // Handle validation errors
-      if (error.name === 'ValidationError') {
-        return res.status(400).json({
-          status: 'error',
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid input data',
-          errors: Object.values(error.errors).map((err: any) => ({
-            field: err.path,
-            message: err.message
-          }))
-        });
-      }
-
       return res.status(500).json({
         status: 'error',
         code: 'REGISTRATION_FAILED',
@@ -134,20 +95,31 @@ router.post('/login',
     try {
       console.log('Login attempt:', email);
 
-      const user = await User.findOne({ email });
+      // Find user
+      const user = await User.findOne({ email }).select('+password');
       if (!user) {
         console.log('User not found:', email);
-        res.status(401).json({ error: 'Invalid email or password' });
-        return;
+        return res.status(401).json({ 
+          status: 'error',
+          code: 'INVALID_CREDENTIALS',
+          message: 'Invalid email or password'
+        });
       }
 
+      // Verify password
+      console.log('Verifying password...');
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
         console.log('Invalid password for user:', email);
-        res.status(401).json({ error: 'Invalid email or password' });
-        return;
+        return res.status(401).json({ 
+          status: 'error',
+          code: 'INVALID_CREDENTIALS',
+          message: 'Invalid email or password'
+        });
       }
 
+      // Generate JWT token
+      console.log('Generating JWT token...');
       const token = jwt.sign(
         { userId: user._id, email: user.email },
         config.jwtSecret,
@@ -155,8 +127,9 @@ router.post('/login',
       );
 
       console.log('Login successful:', email);
-      res.json({
-        success: true,
+      return res.status(200).json({
+        status: 'success',
+        message: 'Login successful',
         data: {
           user: {
             id: user._id,
@@ -169,8 +142,19 @@ router.post('/login',
         }
       });
     } catch (error: any) {
-      console.error('Login error:', error);
-      res.status(500).json({ error: 'Login failed. Please try again later.' });
+      console.error('Login error details:', {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        name: error.name
+      });
+      
+      return res.status(500).json({
+        status: 'error',
+        code: 'LOGIN_FAILED',
+        message: 'Login failed. Please try again later.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   })
 );
