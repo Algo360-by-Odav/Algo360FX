@@ -6,7 +6,7 @@ export const API_BASE_URL = process.env.NODE_ENV === 'production'
 // Socket.IO Configuration
 export const SOCKET_CONFIG = {
   path: '/ws',
-  transports: ['websocket'] as const,
+  transports: ['websocket'] as string[],
   secure: process.env.NODE_ENV === 'production',
   rejectUnauthorized: process.env.NODE_ENV === 'production',
   reconnection: true,

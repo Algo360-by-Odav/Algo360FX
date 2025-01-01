@@ -30,15 +30,16 @@ export class WebSocketService {
     try {
       console.log('Connecting to Socket.IO at', API_BASE_URL);
       
-      this.socket = io(API_BASE_URL, {
+      const socketOptions = {
         ...SOCKET_CONFIG,
         reconnectionAttempts: this.maxReconnectAttempts,
         reconnectionDelay: this.reconnectDelay,
         auth: {
           timestamp: Date.now()
         }
-      });
+      };
 
+      this.socket = io(API_BASE_URL, socketOptions);
       this.setupSocketListeners();
     } catch (error) {
       console.error('Failed to initialize socket:', error);
