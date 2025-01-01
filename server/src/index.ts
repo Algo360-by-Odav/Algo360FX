@@ -43,9 +43,9 @@ interface CustomResponse extends Response {
 
 // Initialize global variables
 declare global {
-  var tradingWsServer: TradingWebSocketServer | undefined;
-  var optimizationWsServer: OptimizationWebSocketServer | undefined;
-  var mongoose: { connection: Connection } | undefined;
+  let tradingWsServer: TradingWebSocketServer | undefined;
+  let optimizationWsServer: OptimizationWebSocketServer | undefined;
+  let mongoose: { connection: Connection } | undefined;
 }
 
 // Set initial values
