@@ -42,16 +42,9 @@ interface CustomResponse extends Response {
 }
 
 // Initialize global variables
-declare global {
-  let tradingWsServer: TradingWebSocketServer | undefined;
-  let optimizationWsServer: OptimizationWebSocketServer | undefined;
-  let mongoose: { connection: Connection } | undefined;
-}
-
-// Set initial values
-global.tradingWsServer = undefined;
-global.optimizationWsServer = undefined;
-global.mongoose = undefined;
+globalThis.tradingWsServer = undefined;
+globalThis.optimizationWsServer = undefined;
+globalThis.mongooseConnection = undefined;
 
 const app = express();
 console.log('Express app created');
@@ -178,9 +171,9 @@ if (config.metaApiToken && config.mt5AccountId) {
     const optimizationWsServer = new OptimizationWebSocketServer(io);
 
     // Store WebSocket servers globally for health checks
-    global.tradingWsServer = tradingWsServer;
-    global.optimizationWsServer = optimizationWsServer;
-    global.mongoose = mongoose;
+    globalThis.tradingWsServer = tradingWsServer;
+    globalThis.optimizationWsServer = optimizationWsServer;
+    globalThis.mongooseConnection = mongoose.connection;
 
     tradingWsServer.initialize();
     console.log('Trading WebSocket server initialized');

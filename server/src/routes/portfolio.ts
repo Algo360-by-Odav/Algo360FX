@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { auth } from '../middleware/auth';
 import { Portfolio } from '../models/Portfolio';
 import { AsyncRequestHandler } from '../types/express';
@@ -23,6 +24,8 @@ const getPortfolioOverview: AsyncRequestHandler = async (req, res) => {
     
     // Placeholder data - replace with actual portfolio data from your database
     console.log('Fetching portfolio for user:', userId);
+    
+    const session = await mongoose.startSession();
     
     res.json({
       userId,
