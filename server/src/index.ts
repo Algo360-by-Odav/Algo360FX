@@ -73,7 +73,8 @@ const io = new Server(httpServer, {
       ? config.corsOrigin 
       : ['http://localhost:5173', config.corsOrigin],
     credentials: true,
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   },
   transports: ['websocket'],
   pingTimeout: 60000,
@@ -82,17 +83,6 @@ const io = new Server(httpServer, {
   allowUpgrades: true,
   perMessageDeflate: {
     threshold: 1024 // Only compress messages larger than 1KB
-  },
-  handlePreflightRequest: (req, res) => {
-    const headers = {
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      "Access-Control-Allow-Origin": process.env.NODE_ENV === 'production' 
-        ? config.corsOrigin 
-        : req.headers.origin || "",
-      "Access-Control-Allow-Credentials": "true"
-    };
-    res.writeHead(200, headers);
-    res.end();
   }
 });
 
@@ -137,7 +127,9 @@ app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? config.corsOrigin 
     : ['http://localhost:5173', config.corsOrigin],
-  credentials: true
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"],
+  methods: ["GET", "POST"]
 }));
 
 // Apply other middleware
