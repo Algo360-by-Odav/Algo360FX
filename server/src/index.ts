@@ -42,9 +42,9 @@ interface CustomResponse extends Response {
 }
 
 // Initialize global variables
-globalThis.tradingWsServer = undefined;
-globalThis.optimizationWsServer = undefined;
-globalThis.mongooseConnection = undefined;
+globalThis.tradingWsServer = null;
+globalThis.optimizationWsServer = null;
+globalThis.mongooseConnection = null;
 
 const app = express();
 console.log('Express app created');
