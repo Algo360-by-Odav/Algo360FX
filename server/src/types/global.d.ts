@@ -10,12 +10,10 @@ declare global {
       marketDataService: any;
     }
   }
-}
 
-declare global {
-  let tradingWsServer: TradingWebSocketServer | undefined;
-  let optimizationWsServer: OptimizationWebSocketServer | undefined;
-  let mongoose: { connection: Connection } | undefined;
+  var tradingWsServer: TradingWebSocketServer | undefined;
+  var optimizationWsServer: OptimizationWebSocketServer | undefined;
+  var mongoose: { connection: Connection } | undefined;
 }
 
 export {};

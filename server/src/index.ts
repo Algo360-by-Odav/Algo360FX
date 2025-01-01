@@ -1,16 +1,18 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { createServer } from 'http';
 import cors from 'cors';
-import mongoose from 'mongoose';
-import { Server } from 'socket.io';
-import helmet from 'helmet';
-import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import { Server } from 'socket.io';
+import { createServer } from 'http';
+import { Connection } from 'mongoose';
+import { TradingWebSocketServer } from './websocket/trading';
+import { OptimizationWebSocketServer } from './websocket/optimization';
+import mongoose from 'mongoose';
+import helmet from 'helmet';
+import compression from 'compression';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
-import TradingWebSocketServer from './websocket/trading';
-import OptimizationWebSocketServer from './websocket/optimization';
 import authRouter from './routes/auth';
 import { userRouter } from './routes/user';
 import { portfolioRouter } from './routes/portfolio';
@@ -39,11 +41,17 @@ interface CustomResponse extends Response {
   token?: any;
 }
 
-interface Global {
-  tradingWsServer: any;
-  optimizationWsServer: any;
-  mongoose: any;
+// Initialize global variables
+declare global {
+  var tradingWsServer: TradingWebSocketServer | undefined;
+  var optimizationWsServer: OptimizationWebSocketServer | undefined;
+  var mongoose: { connection: Connection } | undefined;
 }
+
+// Set initial values
+global.tradingWsServer = undefined;
+global.optimizationWsServer = undefined;
+global.mongoose = undefined;
 
 const app = express();
 console.log('Express app created');
