@@ -249,7 +249,7 @@ export class TechnicalAnalysis {
 
   private async calculateSmoothedAverage(data: number[], period: number): Promise<number[]> {
     const smoothed: number[] = [];
-    let sum = data.slice(0, period).reduce((a, b) => a + b, 0);
+    const sum = data.slice(0, period).reduce((a, b) => a + b, 0);
     smoothed.push(sum / period);
 
     for (let i = period; i < data.length; i++) {

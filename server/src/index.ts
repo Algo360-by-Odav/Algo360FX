@@ -27,14 +27,22 @@ import { limiter, apiLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
 import { sanitizer } from './middleware/sanitizer';
 
-declare global {
-  namespace NodeJS {
-    interface Global {
-      tradingWsServer: any;
-      optimizationWsServer: any;
-      mongoose: any;
-    }
-  }
+// Define interfaces for custom Express types
+interface CustomRequest extends Request {
+  user?: any;
+  token?: any;
+  io?: any;
+}
+
+interface CustomResponse extends Response {
+  user?: any;
+  token?: any;
+}
+
+interface Global {
+  tradingWsServer: any;
+  optimizationWsServer: any;
+  mongoose: any;
 }
 
 const app = express();
