@@ -7,7 +7,8 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     trim: true,
-    lowercase: true
+    lowercase: true,
+    index: true
   },
   password: {
     type: String,
@@ -18,7 +19,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    trim: true
+    trim: true,
+    index: true
   },
   firstName: {
     type: String,
@@ -74,7 +76,8 @@ const userSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    index: -1
   },
   updatedAt: {
     type: Date,
@@ -94,8 +97,6 @@ const userSchema = new mongoose.Schema({
 });
 
 // Index for faster queries
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
 userSchema.index({ createdAt: -1 });
 
 export const User = mongoose.model<IUser>('User', userSchema);

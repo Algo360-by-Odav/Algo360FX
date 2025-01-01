@@ -3,7 +3,7 @@ import { OptimizationWebSocketServer } from '../websocket/optimization';
 import { Connection } from 'mongoose';
 
 declare global {
-  var globalThis: {
+  let globalThis: {
     tradingWsServer: TradingWebSocketServer | undefined;
     optimizationWsServer: OptimizationWebSocketServer | undefined;
     mongooseConnection: Connection | undefined;
