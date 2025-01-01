@@ -3,9 +3,9 @@ import { OptimizationWebSocketServer } from '../websocket/optimization';
 import { Connection } from 'mongoose';
 
 declare global {
-  var tradingWsServer: TradingWebSocketServer | undefined;
-  var optimizationWsServer: OptimizationWebSocketServer | undefined;
-  var mongooseConnection: Connection | undefined;
+  let tradingWsServer: TradingWebSocketServer | undefined;
+  let optimizationWsServer: OptimizationWebSocketServer | undefined;
+  let mongooseConnection: Connection | undefined;
 
   namespace NodeJS {
     interface Global {
