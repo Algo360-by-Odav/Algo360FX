@@ -24,7 +24,7 @@ import marketRouter from './routes/market';
 import healthRouter from './routes/health';
 import testRouter from './routes/test';
 import { aiRouter } from './routes/ai.routes';
-import { config } from './config/config';
+import { config } from './config';
 import { generalLimiter, authLimiter, apiLimiter } from './middleware/rateLimit';
 import { errorHandler } from './middleware/errorHandler';
 import { sanitizer } from './middleware/sanitizer';
@@ -78,7 +78,9 @@ app.use('/api', apiLimiter); // Apply to all API routes
 
 // Apply CORS
 app.use(cors({
-  origin: [config.corsOrigin, 'http://localhost:5173'],
+  origin: process.env.NODE_ENV === 'production' 
+    ? config.corsOrigin 
+    : ['http://localhost:5173', config.corsOrigin],
   credentials: true
 }));
 
@@ -92,7 +94,9 @@ app.use(morgan('dev'));
 console.log('Initializing Socket.IO server...');
 const io = new Server(httpServer, {
   cors: {
-    origin: [config.corsOrigin, 'http://localhost:5173'],
+    origin: process.env.NODE_ENV === 'production' 
+      ? config.corsOrigin 
+      : ['http://localhost:5173', config.corsOrigin],
     credentials: true
   },
   path: '/ws',
@@ -212,7 +216,7 @@ mongoose.set('bufferTimeoutMS', 30000); // Set buffer timeout to 30 seconds
 
 async function connectDB() {
   try {
-    await mongoose.connect(config.databaseUrl, {
+    await mongoose.connect(config.mongoUri, {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
       connectTimeoutMS: 10000,

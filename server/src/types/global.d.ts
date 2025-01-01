@@ -1,6 +1,7 @@
 import { TradingWebSocketServer } from '../websocket/trading';
 import { OptimizationWebSocketServer } from '../websocket/optimization';
 import { Connection } from 'mongoose';
+import { Config } from '../config';
 
 declare global {
   let globalThis: {
