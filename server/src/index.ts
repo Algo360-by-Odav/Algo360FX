@@ -65,6 +65,62 @@ if (process.env.NODE_ENV === 'production') {
 const httpServer = createServer(app);
 console.log('HTTP server created');
 
+// Initialize Socket.IO with enhanced configuration
+const io = new Server(httpServer, {
+  path: '/ws',
+  cors: {
+    origin: process.env.NODE_ENV === 'production' 
+      ? config.corsOrigin 
+      : ['http://localhost:5173', config.corsOrigin],
+    credentials: true,
+    methods: ["GET", "POST"]
+  },
+  transports: ['websocket'],
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  connectTimeout: 10000,
+  allowUpgrades: true,
+  perMessageDeflate: {
+    threshold: 1024 // Only compress messages larger than 1KB
+  },
+  handlePreflightRequest: (req, res) => {
+    const headers = {
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Origin": process.env.NODE_ENV === 'production' 
+        ? config.corsOrigin 
+        : req.headers.origin || "",
+      "Access-Control-Allow-Credentials": "true"
+    };
+    res.writeHead(200, headers);
+    res.end();
+  }
+});
+
+// Socket.IO connection handling with enhanced error handling
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+  
+  socket.on('disconnect', (reason) => {
+    console.log('Client disconnected:', socket.id, 'Reason:', reason);
+  });
+
+  socket.on('error', (error) => {
+    console.error('Socket error:', {
+      socketId: socket.id,
+      error: error.message || error
+    });
+  });
+});
+
+// Socket.IO server error handling
+io.engine.on("connection_error", (err) => {
+  console.error('Socket.IO connection error:', {
+    type: err.type,
+    message: err.message,
+    context: err.context
+  });
+});
+
 // Apply security middleware
 app.use(helmet());
 app.use(compression());
@@ -89,54 +145,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
-
-// Initialize Socket.IO server
-console.log('Initializing Socket.IO server...');
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? config.corsOrigin 
-      : ['http://localhost:5173', config.corsOrigin],
-    credentials: true
-  },
-  path: '/ws',
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  connectTimeout: 10000,
-  transports: ['websocket', 'polling'],
-  allowEIO3: true,
-  maxHttpBufferSize: 1e8, // 100 MB
-  perMessageDeflate: {
-    threshold: 1024 // Only compress messages larger than 1KB
-  }
-});
-
-// Socket.IO error handling
-io.engine.on("connection_error", (err) => {
-  console.error('Socket.IO connection error:', {
-    type: err.type,
-    message: err.message,
-    context: err.context,
-    stack: err.stack
-  });
-});
-
-io.on('connect', (socket) => {
-  console.log('Client connected:', socket.id);
-  
-  socket.on('disconnect', (reason) => {
-    console.log('Client disconnected:', socket.id, 'Reason:', reason);
-  });
-
-  socket.on('error', (error) => {
-    console.error('Socket error:', {
-      socketId: socket.id,
-      error: error
-    });
-  });
-});
-
-console.log('Socket.IO server initialized with enhanced configuration');
 
 // Initialize WebSocket servers if MetaAPI is configured
 if (config.metaApiToken && config.mt5AccountId) {

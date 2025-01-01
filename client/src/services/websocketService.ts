@@ -1,12 +1,18 @@
 import { io, Socket } from 'socket.io-client';
-import { API_BASE_URL } from '../config/constants';
+import { 
+  API_BASE_URL, 
+  MAX_RECONNECT_ATTEMPTS, 
+  INITIAL_RECONNECT_DELAY, 
+  DEFAULT_TIMEOUT,
+  SOCKET_CONFIG
+} from '../config/constants';
 
 export class WebSocketService {
   private static instance: WebSocketService;
   private socket: Socket | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000; // Start with 1 second
+  private maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS;
+  private reconnectDelay = INITIAL_RECONNECT_DELAY;
   private listeners: Map<string, Set<(data: any) => void>> = new Map();
 
   private constructor() {
@@ -25,16 +31,18 @@ export class WebSocketService {
       console.log('Connecting to Socket.IO at', API_BASE_URL);
       
       this.socket = io(API_BASE_URL, {
-        transports: ['websocket'],
-        reconnection: true,
+        ...SOCKET_CONFIG,
         reconnectionAttempts: this.maxReconnectAttempts,
         reconnectionDelay: this.reconnectDelay,
-        timeout: 10000,
+        auth: {
+          timestamp: Date.now()
+        }
       });
 
       this.setupSocketListeners();
     } catch (error) {
       console.error('Failed to initialize socket:', error);
+      this.handleReconnect();
     }
   }
 
@@ -44,7 +52,7 @@ export class WebSocketService {
     this.socket.on('connect', () => {
       console.log('Socket.IO connected');
       this.reconnectAttempts = 0;
-      this.reconnectDelay = 1000;
+      this.reconnectDelay = INITIAL_RECONNECT_DELAY;
     });
 
     this.socket.on('disconnect', () => {
@@ -58,39 +66,34 @@ export class WebSocketService {
     });
 
     // Add custom event listeners
-    this.socket.onAny((eventName, ...args) => {
+    this.socket.onAny((eventName: string, data: any) => {
       const listeners = this.listeners.get(eventName);
       if (listeners) {
-        listeners.forEach(listener => listener(...args));
+        listeners.forEach(listener => listener(data));
       }
     });
   }
 
   private handleReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.reconnectAttempts++;
+      this.reconnectDelay *= 2; // Exponential backoff
+      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+      setTimeout(() => this.initializeSocket(), this.reconnectDelay);
+    } else {
       console.error('Max reconnection attempts reached');
-      return;
     }
-
-    this.reconnectAttempts++;
-    this.reconnectDelay *= 2; // Exponential backoff
-    
-    setTimeout(() => {
-      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-      this.initializeSocket();
-    }, this.reconnectDelay);
   }
 
   public subscribe<T>(event: string, callback: (data: T) => void): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
-    
     const eventListeners = this.listeners.get(event)!;
-    eventListeners.add(callback);
+    eventListeners.add(callback as (data: any) => void);
 
     return () => {
-      eventListeners.delete(callback);
+      eventListeners.delete(callback as (data: any) => void);
       if (eventListeners.size === 0) {
         this.listeners.delete(event);
       }
@@ -101,11 +104,7 @@ export class WebSocketService {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
     } else {
-      console.warn('Socket not connected. Message queued.');
-      // Queue the message to be sent when reconnected
-      this.subscribe('connect', () => {
-        this.socket?.emit(event, data);
-      });
+      console.warn('Socket not connected. Message not sent:', { event, data });
     }
   }
 
@@ -115,6 +114,7 @@ export class WebSocketService {
 
   public disconnect() {
     this.socket?.disconnect();
+    this.socket = null;
   }
 }
 
