@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import { auth } from '../middleware/auth';
 import { Portfolio } from '../models/Portfolio';
+import { Position } from '../models/Position';
 import { AsyncRequestHandler } from '../types/express';
 import { validateRequest } from '../middleware/validateRequest';
 import { createPortfolioSchema, updatePortfolioSchema } from '../schemas/portfolio.schema';
@@ -11,58 +12,60 @@ const router = express.Router();
 // Get portfolio overview
 const getPortfolioOverview: AsyncRequestHandler = async (req, res) => {
   try {
-    const userId = req.user.id;
-    console.log('Portfolio request received:', {
-      userId,
-      headers: req.headers,
-      timestamp: new Date().toISOString()
-    });
+    const userId = req.user._id;
     
-    // Log MongoDB connection state
-    const dbState = ['disconnected', 'connected', 'connecting', 'disconnecting'];
-    console.log('MongoDB connection state:', dbState[mongoose.connection.readyState]);
-    
-    // Placeholder data - replace with actual portfolio data from your database
-    console.log('Fetching portfolio for user:', userId);
-    
-    const session = await mongoose.startSession();
-    
+    // Get all portfolios for the user
+    const portfolios = await Portfolio.find({ user: userId })
+      .populate('strategies')
+      .lean();
+
+    // Get all open positions
+    const positions = await Position.find({
+      user: userId,
+      status: 'open'
+    }).lean();
+
+    // Calculate totals
+    const totalBalance = portfolios.reduce((sum, p) => sum + (p.balance || 0), 0);
+    const totalEquity = portfolios.reduce((sum, p) => sum + (p.equity || 0), 0);
+    const totalPnL = positions.reduce((sum, p) => sum + (p.profitLoss || 0), 0);
+
+    // Calculate metrics
+    const closedPositions = await Position.find({
+      user: userId,
+      status: 'closed'
+    }).lean();
+
+    const winningTrades = closedPositions.filter(p => (p.profitLoss || 0) > 0).length;
+    const totalTrades = closedPositions.length;
+    const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+
+    const profits = closedPositions.filter(p => (p.profitLoss || 0) > 0)
+      .reduce((sum, p) => sum + (p.profitLoss || 0), 0);
+    const losses = Math.abs(closedPositions.filter(p => (p.profitLoss || 0) < 0)
+      .reduce((sum, p) => sum + (p.profitLoss || 0), 0));
+    const profitFactor = losses > 0 ? profits / losses : profits > 0 ? Infinity : 0;
+
     res.json({
-      userId,
-      totalBalance: 10000,
-      equity: 12000,
-      margin: 2000,
-      freeMargin: 8000,
-      marginLevel: 600,
-      currency: 'USD',
-      positions: [],
-      lastUpdated: new Date(),
-      pnl: {
-        daily: 0,
-        weekly: 0,
-        monthly: 0,
-        total: 0
-      },
+      portfolios,
+      totalBalance,
+      totalEquity,
+      openPositions: positions,
       metrics: {
-        winRate: 0,
-        profitFactor: 0,
-        sharpeRatio: 0,
-        maxDrawdown: 0,
-        averageWin: 0,
-        averageLoss: 0,
-        totalTrades: 0
-      }
+        winRate,
+        profitFactor,
+        totalTrades,
+        openTrades: positions.length,
+        totalPnL
+      },
+      lastUpdated: new Date()
     });
-  } catch (error: any) {
-    console.error('Portfolio fetch error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id,
-      timestamp: new Date().toISOString()
-    });
-    res.status(500).json({
-      error: 'Failed to fetch portfolio',
-      message: error.message
+  } catch (error) {
+    console.error('Portfolio overview error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Error fetching portfolio overview',
+      error: error.message
     });
   }
 };
@@ -70,27 +73,58 @@ const getPortfolioOverview: AsyncRequestHandler = async (req, res) => {
 // Get portfolio history
 const getPortfolioHistory: AsyncRequestHandler = async (req, res) => {
   try {
-    const userId = req.user.id;
-    console.log('Fetching portfolio history for user:', userId);
-    
-    // Generate 30 days of mock data
-    const history = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (29 - i));
-      return {
-        date: date.toISOString(),
-        balance: 10000 + Math.random() * 2000 - 1000,
-        equity: 12000 + Math.random() * 2000 - 1000,
-        profit: Math.random() * 200 - 100
-      };
-    });
+    const userId = req.user._id;
+    const { days = 30 } = req.query;
 
-    res.json(history);
-  } catch (error: any) {
-    console.error('Portfolio history fetch error:', error);
-    res.status(500).json({
-      error: 'Failed to fetch portfolio history',
-      message: error.message
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - Number(days));
+
+    const positions = await Position.find({
+      user: userId,
+      closedAt: { $gte: startDate }
+    }).sort({ closedAt: 1 }).lean();
+
+    // Group by day
+    const history = positions.reduce((acc, pos) => {
+      const date = pos.closedAt.toISOString().split('T')[0];
+      if (!acc[date]) {
+        acc[date] = {
+          date,
+          pnl: 0,
+          trades: 0
+        };
+      }
+      acc[date].pnl += pos.profitLoss || 0;
+      acc[date].trades += 1;
+      return acc;
+    }, {});
+
+    res.json(Object.values(history));
+  } catch (error) {
+    console.error('Portfolio history error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Error fetching portfolio history',
+      error: error.message
+    });
+  }
+};
+
+// Create portfolio
+const createPortfolio: AsyncRequestHandler = async (req, res) => {
+  try {
+    const portfolio = new Portfolio({
+      ...req.body,
+      user: req.user._id
+    });
+    await portfolio.save();
+    res.status(201).json(portfolio);
+  } catch (error) {
+    console.error('Create portfolio error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Error creating portfolio',
+      error: error.message
     });
   }
 };
@@ -100,5 +134,6 @@ router.use(auth);
 
 router.get('/', getPortfolioOverview);
 router.get('/history', getPortfolioHistory);
+router.post('/', validateRequest(createPortfolioSchema), createPortfolio);
 
 export { router as portfolioRouter };

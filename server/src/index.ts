@@ -25,7 +25,7 @@ import healthRouter from './routes/health';
 import testRouter from './routes/test';
 import { aiRouter } from './routes/ai.routes';
 import { config } from './config/config';
-import { limiter, apiLimiter } from './middleware/rateLimiter';
+import { generalLimiter, authLimiter, apiLimiter } from './middleware/rateLimit';
 import { errorHandler } from './middleware/errorHandler';
 import { sanitizer } from './middleware/sanitizer';
 
@@ -65,64 +65,34 @@ if (process.env.NODE_ENV === 'production') {
 const httpServer = createServer(app);
 console.log('HTTP server created');
 
-// Basic middleware
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-app.use(compression());
-
-// Security middleware
+// Apply security middleware
 app.use(helmet());
+app.use(compression());
+app.use(mongoSanitize());
+app.use(hpp());
+
+// Apply rate limiting
+app.use(generalLimiter); // Apply to all routes
+app.use('/api/auth', authLimiter); // Stricter limits for auth routes
+app.use('/api', apiLimiter); // Apply to all API routes
+
+// Apply CORS
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.CLIENT_URL || '', process.env.RENDER_URL || ''].filter(Boolean)
-    : '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  credentials: true,
-  maxAge: 600
+  origin: [config.corsOrigin, 'http://localhost:5173'],
+  credentials: true
 }));
-app.use(limiter);
-app.use(sanitizer);
 
-// Enhanced CORS configuration
-// app.use(cors({
-//   origin: process.env.NODE_ENV === 'production' 
-//     ? [process.env.CLIENT_URL || '', process.env.RENDER_URL || ''].filter(Boolean)
-//     : '*',
-//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-//   allowedHeaders: ['Content-Type', 'Authorization'],
-//   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-//   credentials: true,
-//   maxAge: 600
-// }));
-
-// Data sanitization middleware
-// app.use(sanitizeData);
-// app.use(preventParamPollution);
-// app.use(sanitizeRequestBody);
-// app.use(xssProtection);
-
-// Additional security middleware
-app.use(mongoSanitize()); // Prevent NoSQL injection
-app.use(hpp()); // Prevent HTTP Parameter Pollution
-
-// Custom security headers
-app.use((req: Request, res: Response, next: NextFunction) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  next();
-});
+// Apply other middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+app.use(morgan('dev'));
 
 // Initialize Socket.IO server
 console.log('Initializing Socket.IO server...');
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? [process.env.CLIENT_URL || '', process.env.RENDER_URL || ''].filter(Boolean)
-      : '*',
-    methods: ["GET", "POST"],
+    origin: [config.corsOrigin, 'http://localhost:5173'],
     credentials: true
   },
   path: '/ws',
@@ -194,8 +164,8 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
-// Apply rate limiting to routes
-app.use('/api/auth', apiLimiter, authRouter);
+// Apply routes
+app.use('/api/auth', authRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/market', marketRouter);
 app.use('/api/search', searchRouter);
@@ -206,7 +176,6 @@ app.use('/api/strategies', strategyRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/test', testRouter);
 app.use('/api/health', healthRouter);
-app.use('/api', limiter); // General API rate limiting
 
 // Error Monitoring
 app.use(errorHandler);

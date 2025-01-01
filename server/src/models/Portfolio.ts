@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPortfolio extends Document {
+  user: mongoose.Types.ObjectId;
   name: string;
   description: string;
   category: string;
@@ -9,11 +10,19 @@ export interface IPortfolio extends Document {
     strategyId: mongoose.Types.ObjectId;
     weight: number;
   }[];
+  balance: number;
+  equity: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const PortfolioSchema = new Schema({
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
   name: {
     type: String,
     required: true,
@@ -45,15 +54,20 @@ const PortfolioSchema = new Schema({
       max: 100,
     },
   }],
+  balance: {
+    type: Number,
+    default: 0
+  },
+  equity: {
+    type: Number,
+    default: 0
+  }
 }, {
   timestamps: true,
 });
 
-// Create text indexes for search
-PortfolioSchema.index({
-  name: 'text',
-  description: 'text',
-  category: 'text',
-});
+// Indexes
+PortfolioSchema.index({ user: 1, name: 1 }, { unique: true });
+PortfolioSchema.index({ user: 1, category: 1 });
 
 export const Portfolio = mongoose.model<IPortfolio>('Portfolio', PortfolioSchema);
