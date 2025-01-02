@@ -18,6 +18,10 @@ export class UserService {
     return User.findOne({ email });
   }
 
+  static async getUserByUsername(username: string): Promise<IUser | null> {
+    return User.findOne({ username });
+  }
+
   static async getUserById(id: string): Promise<IUser | null> {
     return User.findById(id);
   }

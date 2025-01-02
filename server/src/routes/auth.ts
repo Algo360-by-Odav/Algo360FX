@@ -14,10 +14,10 @@ const authService = new AuthService();
 router.post('/register', 
   validateRequest(registerSchema),
   ((async (req: Request, res: Response) => {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, username, firstName, lastName } = req.body;
 
     try {
-      console.log('Registration attempt:', { email, firstName, lastName });
+      console.log('Registration attempt:', { email, username, firstName, lastName });
 
       // Check if user already exists
       const existingUser = await UserService.getUserByEmail(email);
@@ -30,10 +30,22 @@ router.post('/register',
         });
       }
 
+      // Check if username is taken
+      const existingUsername = await UserService.getUserByUsername(username);
+      if (existingUsername) {
+        console.log('Username already taken:', username);
+        return res.status(400).json({
+          status: 'error',
+          code: 'USERNAME_EXISTS',
+          message: 'This username is already taken. Please choose a different username.'
+        });
+      }
+
       // Create new user
       const user = await UserService.createUser({
         email,
         password,
+        username,
         firstName,
         lastName
       });
@@ -57,6 +69,7 @@ router.post('/register',
           user: {
             id: user.id,
             email: user.email,
+            username: user.username,
             firstName: user.firstName,
             lastName: user.lastName
           },
