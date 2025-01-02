@@ -7,13 +7,10 @@ services:
     buildCommand: |
       cd server
       npm ci
-      npx prisma generate
       npm run build
-      mkdir -p dist/prisma
-      cp prisma/schema.prisma dist/prisma/
       cd dist
       npm ci --production
-    startCommand: cd server/dist && NODE_ENV=production node index.js
+    startCommand: cd server && npm run start:prod
     healthCheckPath: /api/health
     healthCheckTimeout: 300
     autoDeploy: true
