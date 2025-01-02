@@ -1,44 +1,45 @@
-import mongoose from 'mongoose';
-import { config } from './config';
+import { PrismaClient } from '@prisma/client';
 
-export const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(config.databaseUrl);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-    return conn;
-  } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
-    process.exit(1);
-  }
-};
-
-export const closeDB = async () => {
-  try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed');
-  } catch (error) {
-    console.error('Error closing MongoDB connection:', error);
-    process.exit(1);
-  }
-};
-
-// Handle database connection events
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB error:', err);
-});
+export async function connectToDatabase() {
+  try {
+    await prisma.$connect();
+    console.log('Connected to database successfully');
+    return prisma;
+  } catch (error: any) {
+    console.error('Database connection error:', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
+}
 
-// Gracefully close the connection when the app is shutting down
+export async function disconnectFromDatabase() {
+  try {
+    await prisma.$disconnect();
+    console.log('Disconnected from database successfully');
+  } catch (error: any) {
+    console.error('Database disconnection error:', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
+}
+
 process.on('SIGINT', async () => {
   try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed through app termination');
+    await disconnectFromDatabase();
     process.exit(0);
-  } catch (err) {
-    console.error('Error closing MongoDB connection:', err);
+  } catch (error) {
     process.exit(1);
   }
 });
+
+export default prisma;

@@ -1,28 +1,23 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import compression from 'compression';
 import morgan from 'morgan';
-import { config } from 'dotenv';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 import cookieParser from 'cookie-parser';
-import rateLimit from 'express-rate-limit';
-
-// Load environment variables
-config();
+import compression from 'compression';
+import { connectToDatabase } from './config/database';
+import { errorHandler } from './middleware/errorHandler';
+import authRoutes from './routes/auth';
+import userRoutes from './routes/user';
+import portfolioRoutes from './routes/portfolio';
+import healthRoutes from './routes/health';
 
 // Import routes
-import { authRouter } from './routes/auth';
-import { userRouter } from './routes/user';
-import { portfolioRouter } from './routes/portfolio';
 import { strategyRouter } from './routes/strategies';
 import { positionRouter } from './routes/positions';
 import { searchRouter } from './routes/search';
 import { aiRouter } from './routes/ai.routes';
 
 // Import middleware
-import { errorHandler } from './middleware/errorHandler';
 import { sanitizer } from './middleware/sanitizer';
 import { generalLimiter, authLimiter, apiLimiter } from './middleware/rateLimit';
 
@@ -30,12 +25,11 @@ import { generalLimiter, authLimiter, apiLimiter } from './middleware/rateLimit'
 import { TradingWebSocketServer } from './websocket/trading';
 import { OptimizationWebSocketServer } from './websocket/optimization';
 
-// Create Express app
 const app = express();
-const httpServer = createServer(app);
 
 // Configure Socket.IO
-const io = new Server(httpServer, {
+const httpServer = require('http').createServer(app);
+const io = require('socket.io')(httpServer, {
   cors: {
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     methods: ['GET', 'POST'],
@@ -44,15 +38,16 @@ const io = new Server(httpServer, {
 });
 
 // Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true
 }));
 app.use(helmet());
-app.use(compression());
 app.use(morgan('dev'));
-app.use(express.json());
 app.use(cookieParser());
+app.use(compression());
 app.use(sanitizer);
 
 // Rate limiting
@@ -61,9 +56,10 @@ app.use('/api/auth', authLimiter);
 app.use('/api', apiLimiter);
 
 // Routes
-app.use('/api/auth', authRouter);
-app.use('/api/users', userRouter);
-app.use('/api/portfolios', portfolioRouter);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/portfolio', portfolioRoutes);
+app.use('/api/health', healthRoutes);
 app.use('/api/strategies', strategyRouter);
 app.use('/api/positions', positionRouter);
 app.use('/api/search', searchRouter);
@@ -73,11 +69,25 @@ app.use('/api/ai', aiRouter);
 const tradingWss = new TradingWebSocketServer(io);
 const optimizationWss = new OptimizationWebSocketServer(io);
 
-// Error handling middleware
+// Error handling
 app.use(errorHandler);
 
 // Start server
-const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 5000;
+
+async function startServer() {
+  try {
+    // Connect to database
+    await connectToDatabase();
+
+    // Start listening
+    httpServer.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error: any) {
+    console.error('Failed to start server:', error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
