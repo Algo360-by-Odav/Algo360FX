@@ -40,7 +40,7 @@ services:
       - key: MT5_WS_PORT
         value: "6780"
       - key: CORS_ORIGIN
-        value: https://algo360fx.onrender.com
+        value: "https://algo360fx.onrender.com"
 
   - type: web
     name: algo360fx
