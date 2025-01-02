@@ -8,7 +8,7 @@ services:
       cd server
       npm install
       mkdir -p prisma dist/prisma
-      echo '
+      cat > schema.tmp << 'EOL'
       generator client {
         provider = "prisma-client-js"
       }
@@ -106,7 +106,9 @@ services:
         status      String
         createdAt   DateTime @default(now())
         updatedAt   DateTime @updatedAt
-      }' > prisma/schema.prisma
+      }
+      EOL
+      mv schema.tmp prisma/schema.prisma
       cp prisma/schema.prisma dist/prisma/
       npx prisma generate
       npm run build
