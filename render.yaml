@@ -4,7 +4,7 @@ services:
     env: node
     region: singapore
     plan: starter
-    buildCommand: cd server && npm install && mkdir -p dist/prisma && cp prisma/schema.prisma dist/prisma/ && npx prisma generate && npm run build && cd dist && npm install --production
+    buildCommand: cd server && chmod +x scripts/build.sh && ./scripts/build.sh
     startCommand: cd server && npm run start:prod
     healthCheckPath: /api/health
     healthCheckTimeout: 300
