@@ -11,7 +11,7 @@
     "start:prod": "NODE_ENV=production node dist/index.js",
     "dev": "nodemon src/index.ts",
     "prebuild": "rimraf dist",
-    "build": "mkdir -p dist/prisma && cp -r prisma/* dist/prisma/ && tsc && prisma generate",
+    "build": "tsc",
     "test": "jest --config jest.config.js",
     "postinstall": "prisma generate",
     "lint": "eslint . --ext .ts",
