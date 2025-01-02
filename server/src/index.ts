@@ -70,25 +70,29 @@ const io = new Server(httpServer, {
   path: '/ws',
   cors: {
     origin: process.env.NODE_ENV === 'production' 
-      ? config.corsOrigin 
+      ? [config.corsOrigin, 'https://algo360fx-client.onrender.com']
       : ['http://localhost:5173', config.corsOrigin],
     credentials: true,
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type", "Authorization"]
   },
-  transports: ['websocket'],
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  connectTimeout: 10000,
+  transports: ['websocket', 'polling'],
+  pingTimeout: 120000,
+  pingInterval: 30000,
+  connectTimeout: 30000,
   allowUpgrades: true,
   perMessageDeflate: {
-    threshold: 1024 // Only compress messages larger than 1KB
-  }
+    threshold: 1024
+  },
+  maxHttpBufferSize: 1e8
 });
 
-// Socket.IO connection handling with enhanced error handling
+// Socket.IO connection handling with enhanced error handling and logging
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
+  
+  // Send initial connection acknowledgment
+  socket.emit('connection_ack', { status: 'connected', socketId: socket.id });
   
   socket.on('disconnect', (reason) => {
     console.log('Client disconnected:', socket.id, 'Reason:', reason);
@@ -97,7 +101,16 @@ io.on('connection', (socket) => {
   socket.on('error', (error) => {
     console.error('Socket error:', {
       socketId: socket.id,
-      error: error.message || error
+      error: error.message || error,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('Connection error:', {
+      socketId: socket.id,
+      error: error.message || error,
+      timestamp: new Date().toISOString()
     });
   });
 });
@@ -211,31 +224,58 @@ app.use((req: Request, res: Response) => {
 
 // MongoDB configuration
 mongoose.set('strictQuery', true);
-mongoose.set('bufferCommands', true); // Enable buffering
-mongoose.set('bufferTimeoutMS', 30000); // Set buffer timeout to 30 seconds
+mongoose.set('bufferCommands', true);
+mongoose.set('bufferTimeoutMS', 60000); // Increase buffer timeout to 60 seconds
+mongoose.set('autoIndex', true);
+mongoose.set('autoCreate', true);
 
 async function connectDB() {
-  try {
-    await mongoose.connect(config.mongoUri, {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
-      maxPoolSize: 10,
-      minPoolSize: 1,
-      retryWrites: true,
-      retryReads: true,
-      w: 'majority'
-    } as mongoose.ConnectOptions);
-    console.log('MongoDB connected successfully');
-  } catch (err) {
-    console.error('Failed to connect to MongoDB:', err);
-    process.exit(1);
+  const retryAttempts = 5;
+  const retryDelay = 5000; // 5 seconds
+
+  for (let attempt = 1; attempt <= retryAttempts; attempt++) {
+    try {
+      console.log(`MongoDB connection attempt ${attempt}/${retryAttempts}`);
+      
+      await mongoose.connect(config.mongoUri, {
+        serverSelectionTimeoutMS: 30000, // Increase from 5000 to 30000
+        socketTimeoutMS: 75000, // Increase from 45000 to 75000
+        connectTimeoutMS: 30000, // Increase from 10000 to 30000
+        maxPoolSize: 50, // Increase from 10 to 50
+        minPoolSize: 5, // Increase from 1 to 5
+        retryWrites: true,
+        retryReads: true,
+        w: 'majority',
+        waitQueueTimeoutMS: 30000,
+        heartbeatFrequencyMS: 10000,
+        keepAlive: true,
+        keepAliveInitialDelay: 300000
+      } as mongoose.ConnectOptions);
+
+      console.log('MongoDB connected successfully');
+      return; // Connection successful, exit the retry loop
+    } catch (err) {
+      console.error(`MongoDB connection attempt ${attempt} failed:`, err);
+      
+      if (attempt === retryAttempts) {
+        console.error('All MongoDB connection attempts failed');
+        process.exit(1);
+      }
+      
+      console.log(`Waiting ${retryDelay}ms before next attempt...`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+    }
   }
 }
 
 // Monitor MongoDB connection
 mongoose.connection.on('connected', () => {
   console.log('MongoDB connection established successfully');
+  
+  // Reset connection backoff on successful connection
+  mongoose.connection.db.admin().ping()
+    .then(() => console.log('MongoDB ping successful'))
+    .catch(err => console.error('MongoDB ping failed:', err));
 });
 
 mongoose.connection.on('error', (err) => {
@@ -244,7 +284,7 @@ mongoose.connection.on('error', (err) => {
 
 mongoose.connection.on('disconnected', () => {
   console.log('MongoDB disconnected. Attempting to reconnect...');
-  connectDB();
+  setTimeout(connectDB, 5000);
 });
 
 // Handle process termination
