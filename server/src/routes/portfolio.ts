@@ -1,13 +1,12 @@
 import express from 'express';
-import { auth } from '../middleware/auth';
-import { AuthRequest } from '../types/express';
+import { authenticateToken } from '../middleware/auth';
+import asyncHandler from 'express-async-handler';
 import prisma from '../lib/prisma';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
 
 const router = express.Router();
 
-// Validation schemas
+// Validation schema
 const portfolioSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
@@ -16,36 +15,52 @@ const portfolioSchema = z.object({
 });
 
 // Get all portfolios for the authenticated user
-const getPortfolios = async (req: AuthRequest, res: any) => {
+router.get('/', authenticateToken, asyncHandler(async (req: any, res) => {
   try {
+    const userId = req.user.id;
+    console.log('Portfolio request received:', {
+      userId,
+      headers: req.headers,
+      timestamp: new Date().toISOString()
+    });
+
     const portfolios = await prisma.portfolio.findMany({
       where: {
-        AND: [
-          { user: { is: { id: req.user.id } } }
-        ]
+        user: {
+          id: userId
+        }
       },
       include: {
         positions: true
       }
     });
+
     res.json(portfolios);
-  } catch (error) {
-    console.error('Get portfolios error:', error);
-    res.status(500).json({ error: 'Failed to retrieve portfolios' });
+  } catch (error: any) {
+    console.error('Get portfolios error:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      timestamp: new Date().toISOString()
+    });
+    res.status(500).json({
+      error: 'Failed to retrieve portfolios',
+      message: error.message
+    });
   }
-};
+}));
 
 // Get a specific portfolio
-const getPortfolio = async (req: AuthRequest, res: any) => {
+router.get('/:id', authenticateToken, asyncHandler(async (req: any, res) => {
   const { id } = req.params;
 
   try {
     const portfolio = await prisma.portfolio.findFirst({
       where: {
-        AND: [
-          { id },
-          { user: { is: { id: req.user.id } } }
-        ]
+        id,
+        user: {
+          id: req.user.id
+        }
       },
       include: {
         positions: true
@@ -57,14 +72,22 @@ const getPortfolio = async (req: AuthRequest, res: any) => {
     }
 
     res.json(portfolio);
-  } catch (error) {
-    console.error('Get portfolio error:', error);
-    res.status(500).json({ error: 'Failed to retrieve portfolio' });
+  } catch (error: any) {
+    console.error('Get portfolio error:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      timestamp: new Date().toISOString()
+    });
+    res.status(500).json({
+      error: 'Failed to retrieve portfolio',
+      message: error.message
+    });
   }
-};
+}));
 
 // Create a new portfolio
-const createPortfolio = async (req: AuthRequest, res: any) => {
+router.post('/', authenticateToken, asyncHandler(async (req: any, res) => {
   try {
     const validatedData = portfolioSchema.parse(req.body);
 
@@ -86,17 +109,25 @@ const createPortfolio = async (req: AuthRequest, res: any) => {
     });
 
     res.status(201).json(portfolio);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error('Create portfolio error:', error);
-    res.status(500).json({ error: 'Failed to create portfolio' });
+    console.error('Create portfolio error:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      timestamp: new Date().toISOString()
+    });
+    res.status(500).json({
+      error: 'Failed to create portfolio',
+      message: error.message
+    });
   }
-};
+}));
 
 // Update a portfolio
-const updatePortfolio = async (req: AuthRequest, res: any) => {
+router.put('/:id', authenticateToken, asyncHandler(async (req: any, res) => {
   const { id } = req.params;
 
   try {
@@ -104,10 +135,10 @@ const updatePortfolio = async (req: AuthRequest, res: any) => {
 
     const portfolio = await prisma.portfolio.findFirst({
       where: {
-        AND: [
-          { id },
-          { user: { is: { id: req.user.id } } }
-        ]
+        id,
+        user: {
+          id: req.user.id
+        }
       }
     });
 
@@ -124,26 +155,34 @@ const updatePortfolio = async (req: AuthRequest, res: any) => {
     });
 
     res.json(updatedPortfolio);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error('Update portfolio error:', error);
-    res.status(500).json({ error: 'Failed to update portfolio' });
+    console.error('Update portfolio error:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      timestamp: new Date().toISOString()
+    });
+    res.status(500).json({
+      error: 'Failed to update portfolio',
+      message: error.message
+    });
   }
-};
+}));
 
 // Delete a portfolio
-const deletePortfolio = async (req: AuthRequest, res: any) => {
+router.delete('/:id', authenticateToken, asyncHandler(async (req: any, res) => {
   const { id } = req.params;
 
   try {
     const portfolio = await prisma.portfolio.findFirst({
       where: {
-        AND: [
-          { id },
-          { user: { is: { id: req.user.id } } }
-        ]
+        id,
+        user: {
+          id: req.user.id
+        }
       }
     });
 
@@ -156,17 +195,18 @@ const deletePortfolio = async (req: AuthRequest, res: any) => {
     });
 
     res.status(204).send();
-  } catch (error) {
-    console.error('Delete portfolio error:', error);
-    res.status(500).json({ error: 'Failed to delete portfolio' });
+  } catch (error: any) {
+    console.error('Delete portfolio error:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      timestamp: new Date().toISOString()
+    });
+    res.status(500).json({
+      error: 'Failed to delete portfolio',
+      message: error.message
+    });
   }
-};
+}));
 
-// Routes
-router.get('/', auth, getPortfolios);
-router.get('/:id', auth, getPortfolio);
-router.post('/', auth, createPortfolio);
-router.put('/:id', auth, updatePortfolio);
-router.delete('/:id', auth, deletePortfolio);
-
-export { router as portfolioRouter };
+export default router;
