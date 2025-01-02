@@ -7,7 +7,8 @@ services:
     buildCommand: |
       cd server
       npm install
-      bash build-schema.sh
+      mkdir -p dist/prisma
+      cp prisma/schema.prisma dist/prisma/
       npx prisma generate
       npm run build
       cd dist
