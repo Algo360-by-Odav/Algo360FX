@@ -96,7 +96,7 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Index for faster queries
-userSchema.index({ createdAt: -1 });
+// Create compound index for better query performance
+userSchema.index({ email: 1, username: 1 });
 
 export const User = mongoose.model<IUser>('User', userSchema);

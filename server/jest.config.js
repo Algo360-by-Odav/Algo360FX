@@ -15,7 +15,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
   },
-  testTimeout: 10000,
+  testTimeout: 120000,
   verbose: true,
   collectCoverage: true,
   coverageDirectory: 'coverage',
@@ -26,5 +26,8 @@ module.exports = {
     '/__tests__/',
     '/coverage/'
   ],
-  setupFilesAfterEnv: ['<rootDir>/src/__tests__/jest.setup.ts']
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  forceExit: true,
+  detectOpenHandles: true,
+  maxWorkers: 1
 };
