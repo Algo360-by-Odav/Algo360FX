@@ -42,6 +42,12 @@ interface CustomResponse extends Response {
 }
 
 // Initialize global variables
+declare global {
+  var tradingWsServer: any;
+  var optimizationWsServer: any;
+  var mongooseConnection: any;
+}
+
 globalThis.tradingWsServer = null;
 globalThis.optimizationWsServer = null;
 globalThis.mongooseConnection = null;
@@ -273,9 +279,14 @@ mongoose.connection.on('connected', () => {
   console.log('MongoDB connection established successfully');
   
   // Reset connection backoff on successful connection
-  mongoose.connection.db.admin().ping()
-    .then(() => console.log('MongoDB ping successful'))
-    .catch(err => console.error('MongoDB ping failed:', err));
+  const db = mongoose.connection.db;
+  if (db) {
+    db.admin().ping()
+      .then(() => console.log('MongoDB ping successful'))
+      .catch(err => console.error('MongoDB ping failed:', err));
+  } else {
+    console.error('MongoDB connection not fully established');
+  }
 });
 
 mongoose.connection.on('error', (err) => {

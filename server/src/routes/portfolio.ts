@@ -1,81 +1,62 @@
-import express from 'express';
+import express, { Request, Response, NextFunction, RequestHandler } from 'express';
 import mongoose from 'mongoose';
 import { auth } from '../middleware/auth';
 import { Portfolio } from '../models/Portfolio';
 import { Position } from '../models/Position';
-import { AsyncRequestHandler } from '../types/express';
+import { AuthRequest } from '../types/express';
 import { validateRequest } from '../middleware/validateRequest';
-import { createPortfolioSchema, updatePortfolioSchema } from '../schemas/portfolio.schema';
-
-const router = express.Router();
+import { createPortfolioSchema } from '../schemas/portfolio.schema';
+import { RouteBuilder } from '../utils/routeBuilder';
+import { handleError } from '../utils/routeHandler';
 
 // Get portfolio overview
-const getPortfolioOverview: AsyncRequestHandler = async (req, res) => {
+const getPortfolioOverview: RequestHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user._id;
     
     // Get all portfolios for the user
     const portfolios = await Portfolio.find({ user: userId })
-      .populate('strategies')
+      .populate('positions')
       .lean();
 
-    // Get all open positions
-    const positions = await Position.find({
-      user: userId,
-      status: 'open'
-    }).lean();
-
-    // Calculate totals
-    const totalBalance = portfolios.reduce((sum, p) => sum + (p.balance || 0), 0);
-    const totalEquity = portfolios.reduce((sum, p) => sum + (p.equity || 0), 0);
-    const totalPnL = positions.reduce((sum, p) => sum + (p.profitLoss || 0), 0);
+    // Get positions
+    const positions = await Position.find({ user: userId }).lean();
+    const openPositions = positions.filter(pos => !pos.closedAt);
+    const closedPositions = positions.filter(pos => pos.closedAt);
 
     // Calculate metrics
-    const closedPositions = await Position.find({
-      user: userId,
-      status: 'closed'
-    }).lean();
-
-    const winningTrades = closedPositions.filter(p => (p.profitLoss || 0) > 0).length;
+    const totalPnL = closedPositions.reduce((sum, pos) => sum + (pos.profitLoss || 0), 0);
+    const winningTrades = closedPositions.filter(pos => (pos.profitLoss || 0) > 0).length;
     const totalTrades = closedPositions.length;
     const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
-    const profits = closedPositions.filter(p => (p.profitLoss || 0) > 0)
-      .reduce((sum, p) => sum + (p.profitLoss || 0), 0);
-    const losses = Math.abs(closedPositions.filter(p => (p.profitLoss || 0) < 0)
-      .reduce((sum, p) => sum + (p.profitLoss || 0), 0));
-    const profitFactor = losses > 0 ? profits / losses : profits > 0 ? Infinity : 0;
-
     res.json({
-      portfolios,
-      totalBalance,
-      totalEquity,
-      openPositions: positions,
-      metrics: {
+      overview: {
+        totalPnL,
+        openPositions: openPositions.length,
+        closedPositions: closedPositions.length,
         winRate,
-        profitFactor,
-        totalTrades,
-        openTrades: positions.length,
-        totalPnL
+        winningTrades,
+        totalTrades
       },
       lastUpdated: new Date()
     });
-  } catch (error) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error('An unknown error occurred');
     console.error('Portfolio overview error:', error);
     res.status(500).json({ 
-      status: 'error',
-      message: 'Error fetching portfolio overview',
-      error: error.message
+      success: false, 
+      message: 'Failed to get portfolio overview',
+      error: error.message 
     });
   }
 };
 
 // Get portfolio history
-const getPortfolioHistory: AsyncRequestHandler = async (req, res) => {
+const getPortfolioHistory: RequestHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user._id;
     const { days = 30 } = req.query;
-
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - Number(days));
 
@@ -85,7 +66,17 @@ const getPortfolioHistory: AsyncRequestHandler = async (req, res) => {
     }).sort({ closedAt: 1 }).lean();
 
     // Group by day
-    const history = positions.reduce((acc, pos) => {
+    interface DailyHistory {
+      [key: string]: {
+        date: string;
+        pnl: number;
+        trades: number;
+      };
+    }
+
+    const history = positions.reduce<DailyHistory>((acc, pos) => {
+      if (!pos.closedAt) return acc;
+      
       const date = pos.closedAt.toISOString().split('T')[0];
       if (!acc[date]) {
         acc[date] = {
@@ -100,40 +91,43 @@ const getPortfolioHistory: AsyncRequestHandler = async (req, res) => {
     }, {});
 
     res.json(Object.values(history));
-  } catch (error) {
-    console.error('Portfolio history error:', error);
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error('An unknown error occurred');
+    console.error('Error getting portfolio history:', error);
     res.status(500).json({ 
-      status: 'error',
-      message: 'Error fetching portfolio history',
-      error: error.message
+      success: false, 
+      message: 'Failed to get portfolio history',
+      error: error.message 
     });
   }
 };
 
 // Create portfolio
-const createPortfolio: AsyncRequestHandler = async (req, res) => {
+const createPortfolio: RequestHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+    const userId = req.user._id;
     const portfolio = new Portfolio({
       ...req.body,
-      user: req.user._id
+      user: userId
     });
     await portfolio.save();
     res.status(201).json(portfolio);
-  } catch (error) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error('An unknown error occurred');
     console.error('Create portfolio error:', error);
     res.status(500).json({ 
-      status: 'error',
-      message: 'Error creating portfolio',
-      error: error.message
+      success: false, 
+      message: 'Failed to create portfolio',
+      error: error.message 
     });
   }
 };
 
-// Register routes
-router.use(auth);
-
-router.get('/', getPortfolioOverview);
-router.get('/history', getPortfolioHistory);
-router.post('/', validateRequest(createPortfolioSchema), createPortfolio);
+// Create router with RouteBuilder
+const router = new RouteBuilder()
+  .get('/', auth, getPortfolioOverview)
+  .get('/history', auth, getPortfolioHistory)
+  .post('/', auth, validateRequest(createPortfolioSchema), createPortfolio)
+  .build();
 
 export { router as portfolioRouter };

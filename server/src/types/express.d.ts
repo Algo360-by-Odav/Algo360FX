@@ -28,26 +28,19 @@ export interface AuthRequest extends Request {
   query: any;
 }
 
-export type AsyncRequestHandler<
-  P = ParamsDictionary,
-  ResBody = any,
-  ReqBody = any,
-  ReqQuery = ParsedQs,
-  Locals extends Record<string, any> = Record<string, any>
-> = (
-  req: Request<P, ResBody, ReqBody, ReqQuery>,
-  res: Response<ResBody, Locals>,
+export type AsyncHandler = (
+  req: AuthRequest,
+  res: Response,
   next: NextFunction
-) => Promise<void | Response<ResBody, Locals>>;
+) => Promise<void>;
 
-export type RequestHandler<
-  P = ParamsDictionary,
-  ResBody = any,
-  ReqBody = any,
-  ReqQuery = ParsedQs,
-  Locals extends Record<string, any> = Record<string, any>
-> = (
-  req: Request<P, ResBody, ReqBody, ReqQuery>,
-  res: Response<ResBody, Locals>,
+export type RequestHandlerWithAuth = (
+  req: AuthRequest,
+  res: Response,
   next: NextFunction
-) => void | Promise<void> | Response<ResBody, Locals> | Promise<Response<ResBody, Locals>>;
+) => Promise<void | Response>;
+
+export interface ApiError extends Error {
+  status?: number;
+  code?: string;
+}

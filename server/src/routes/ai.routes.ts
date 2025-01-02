@@ -1,5 +1,5 @@
-import express from 'express';
-import { Router, Request, Response } from 'express';
+import express, { Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router } from 'express';
 import { TechnicalAnalysis } from '../services/TechnicalAnalysis';
 import { MarketDataService } from '../services/MarketData';
 import { RiskManagement } from '../services/RiskManagement';
@@ -7,11 +7,13 @@ import { validateRequest } from '../middleware/validateRequest';
 import { analyzeSchema, generateSignalSchema, riskAssessmentSchema } from '../schemas/ai.schema';
 import { OpenAI } from 'openai';
 import { config } from '../config/config';
-import { AsyncRequestHandler } from '../types/express';
+import { AuthRequest } from '../types/express';
 import { auth } from '../middleware/auth';
 import { apiLimiter } from '../middleware/rateLimiter';
+import { AsyncHandler } from '../types/express';
+import { RouteBuilder } from '../utils/routeBuilder';
+import { handleError } from '../utils/routeHandler';
 
-const router = Router();
 const technicalAnalysis = new TechnicalAnalysis();
 const marketData = new MarketDataService();
 const riskManagement = new RiskManagement();
@@ -20,94 +22,71 @@ const openai = new OpenAI({
 });
 
 // Analyze market data
-router.post('/analyze', validateRequest(analyzeSchema), (async (req: Request, res: Response) => {
+const analyzeMarket: AsyncHandler = async (req, res) => {
   try {
-    const { symbol, timeframe, indicators } = req.body;
+    const authReq = req as AuthRequest;
+    const { symbol, timeframe, indicators } = authReq.body;
 
-    // Get market data
     const data = await marketData.getMarketData(symbol);
     if (!data) {
       res.status(404).json({ error: 'Market data not found' });
       return;
     }
 
-    // Perform technical analysis
     const analysis = await technicalAnalysis.analyze(symbol, timeframe, indicators);
-
-    res.json({
-      symbol,
-      timeframe,
-      analysis
-    });
+    res.json({ symbol, timeframe, analysis });
   } catch (error) {
-    console.error('Error in analysis:', error);
-    res.status(500).json({ error: 'Failed to analyze market data' });
+    handleError(error);
   }
-}) as AsyncRequestHandler);
+};
 
 // Get AI predictions
-router.get('/predict/:symbol', (async (req: Request, res: Response) => {
+const getPredictions: AsyncHandler = async (req, res) => {
   try {
+    const authReq = req as AuthRequest;
     const { symbol } = req.params;
     const { timeframe = '1h' } = req.query;
 
-    // Get market data
     const data = await marketData.getMarketData(symbol);
     if (!data) {
       res.status(404).json({ error: 'Market data not found' });
       return;
     }
 
-    // Generate prediction
     const prediction = await technicalAnalysis.predict(symbol, timeframe as string);
-
-    res.json({
-      symbol,
-      timeframe,
-      prediction
-    });
+    res.json({ symbol, timeframe, prediction });
   } catch (error) {
-    console.error('Error in prediction:', error);
-    res.status(500).json({ error: 'Failed to generate prediction' });
+    handleError(error);
   }
-}) as AsyncRequestHandler);
+};
 
 // Get trading signals
-router.get('/signals/:symbol', (async (req: Request, res: Response) => {
+const getSignals: AsyncHandler = async (req, res) => {
   try {
+    const authReq = req as AuthRequest;
     const { symbol } = req.params;
     const { timeframe = '1h' } = req.query;
 
-    // Get market data
     const data = await marketData.getMarketData(symbol);
     if (!data) {
       res.status(404).json({ error: 'Market data not found' });
       return;
     }
 
-    // Generate signals
     const signals = await technicalAnalysis.generateSignals(symbol, timeframe as string);
-
-    res.json({
-      symbol,
-      timeframe,
-      signals
-    });
+    res.json({ symbol, timeframe, signals });
   } catch (error) {
-    console.error('Error in signals:', error);
-    res.status(500).json({ error: 'Failed to generate signals' });
+    handleError(error);
   }
-}) as AsyncRequestHandler);
+};
 
 // Risk assessment
-router.post('/risk', validateRequest(riskAssessmentSchema), (async (req: Request, res: Response) => {
+const riskAssessment: AsyncHandler = async (req, res) => {
   try {
-    const { position } = req.body;
-
-    // Analyze risk
+    const authReq = req as AuthRequest;
+    const { position } = authReq.body;
     const riskAnalysis = await riskManagement.analyzeRisk(position);
 
-    // Generate AI risk assessment
     const prompt = `
       Analyze the risk for this trading position:
       Position Details: ${JSON.stringify(position)}
@@ -142,107 +121,97 @@ router.post('/risk', validateRequest(riskAssessmentSchema), (async (req: Request
       }
     });
   } catch (error) {
-    console.error('Error in risk assessment:', error);
-    res.status(500).json({ error: 'Failed to generate risk assessment' });
+    handleError(error);
   }
-}) as AsyncRequestHandler);
+};
 
 // Generate trading strategy
-const generateStrategy: AsyncRequestHandler = async (req, res) => {
+const generateStrategy: AsyncHandler = async (req, res) => {
   try {
-    const { market, timeframe, riskLevel } = req.body;
-
-    const prompt = `Generate a trading strategy for ${market} market with ${timeframe} timeframe and ${riskLevel} risk level. Include entry/exit rules, risk management, and technical indicators.`;
-
+    const authReq = req as AuthRequest;
+    const { market, timeframe, riskLevel } = authReq.body;
+    const prompt = `Generate a trading strategy for ${market} on ${timeframe} timeframe with ${riskLevel} risk level.`;
+    
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        { role: "system", content: "You are a professional forex trading expert." },
+        { role: "system", content: "You are an expert trading strategy developer." },
         { role: "user", content: prompt }
-      ]
+      ],
+      temperature: 0.7,
     });
 
-    const strategy = completion.choices[0].message.content;
-
-    res.json({
-      success: true,
-      strategy
-    });
+    res.json({ strategy: completion.choices[0].message.content });
   } catch (error) {
-    console.error('Error generating strategy:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error generating trading strategy'
-    });
+    handleError(error);
   }
 };
 
 // Analyze market conditions
-const analyzeMarket: AsyncRequestHandler = async (req, res) => {
+const analyzeMarketConditions: AsyncHandler = async (req, res) => {
   try {
-    const { market, data } = req.body;
+    const authReq = req as AuthRequest;
+    const { market, data } = authReq.body;
 
-    const prompt = `Analyze the current market conditions for ${market} using the following data: ${JSON.stringify(data)}. Provide insights on trend, support/resistance levels, and potential trading opportunities.`;
-
+    const prompt = `Analyze market conditions for ${market} with the following data: ${JSON.stringify(data)}`;
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
-      messages: [
-        { role: "system", content: "You are a professional market analyst." },
-        { role: "user", content: prompt }
-      ]
+      messages: [{ role: "user", content: prompt }],
     });
 
-    const analysis = completion.choices[0].message.content;
+    const analysis = completion.choices[0]?.message?.content || '';
 
     res.json({
       success: true,
-      analysis
+      analysis,
+      metadata: {
+        market,
+        timestamp: new Date()
+      }
     });
   } catch (error) {
-    console.error('Error analyzing market:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error analyzing market conditions'
-    });
+    handleError(error);
   }
 };
 
 // Optimize trading parameters
-const optimizeParameters: AsyncRequestHandler = async (req, res) => {
+const optimizeParameters: AsyncHandler = async (req, res) => {
   try {
-    const { strategy, historicalData } = req.body;
+    const authReq = req as AuthRequest;
+    const { strategy, historicalData } = authReq.body;
 
-    const prompt = `Optimize the parameters for the following trading strategy: ${strategy} using this historical data: ${JSON.stringify(historicalData)}. Provide optimized values for all parameters.`;
-
+    const prompt = `Optimize trading parameters for strategy: ${strategy} using historical data: ${JSON.stringify(historicalData)}`;
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
-      messages: [
-        { role: "system", content: "You are a trading system optimization expert." },
-        { role: "user", content: prompt }
-      ]
+      messages: [{ role: "user", content: prompt }],
     });
 
-    const optimization = completion.choices[0].message.content;
+    const optimization = completion.choices[0]?.message?.content || '';
 
     res.json({
       success: true,
-      optimization
+      optimization,
+      metadata: {
+        strategy,
+        timestamp: new Date()
+      }
     });
   } catch (error) {
-    console.error('Error optimizing parameters:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error optimizing trading parameters'
-    });
+    handleError(error);
   }
 };
 
-// Register routes
-router.use(auth);
-router.use(apiLimiter);
-
-router.post('/generate-strategy', generateStrategy);
-router.post('/analyze-market', analyzeMarket);
-router.post('/optimize-parameters', optimizeParameters);
+// Create router with RouteBuilder
+const router = new RouteBuilder()
+  .use(auth)
+  .use(apiLimiter)
+  .post('/analyze', analyzeSchema, analyzeMarket)
+  .get('/predict/:symbol', getPredictions)
+  .get('/signals/:symbol', getSignals)
+  .post('/risk', riskAssessmentSchema, riskAssessment)
+  .post('/generate-strategy', generateSignalSchema, generateStrategy)
+  .post('/analyze-market', analyzeSchema, analyzeMarketConditions)
+  .post('/optimize-parameters', riskAssessmentSchema, optimizeParameters)
+  .build();
 
 export { router as aiRouter };

@@ -1,64 +1,65 @@
-import express from 'express';
+import express, { Request, Response, NextFunction, RequestHandler } from 'express';
 import { auth } from '../middleware/auth';
 import { UserService } from '../services/User';
-import { AsyncRequestHandler } from '../types/express';
+import { AuthRequest } from '../types/express';
 import { validateRequest } from '../middleware/validateRequest';
 import { updateUserSchema } from '../schemas/user.schema';
-
-const router = express.Router();
+import { RouteBuilder } from '../utils/routeBuilder';
+import { handleError } from '../utils/routeHandler';
 
 // Get user profile
-const getProfile: AsyncRequestHandler = async (req, res) => {
+const getProfile: RequestHandler = async (req, res, next) => {
   try {
     const userId = req.user?._id;
     const user = await UserService.getUserById(userId);
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching user profile' });
+    handleError(error);
   }
 };
 
 // Update user profile
-const updateProfile: AsyncRequestHandler = async (req, res) => {
+const updateProfile: RequestHandler = async (req, res, next) => {
   try {
     const userId = req.user?._id;
     const updates = req.body;
     const user = await UserService.updateUser(userId, updates);
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating user profile' });
+    handleError(error);
   }
 };
 
 // Update user preferences
-const updatePreferences: AsyncRequestHandler = async (req, res) => {
+const updatePreferences: RequestHandler = async (req, res, next) => {
   try {
     const userId = req.user?._id;
     const preferences = req.body;
     const user = await UserService.updatePreferences(userId, preferences);
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating user preferences' });
+    handleError(error);
   }
 };
 
 // Delete user account
-const deleteAccount: AsyncRequestHandler = async (req, res) => {
+const deleteAccount: RequestHandler = async (req, res, next) => {
   try {
     const userId = req.user?._id;
     await UserService.deleteUser(userId);
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting user account' });
+    handleError(error);
   }
 };
 
-// Register routes
-router.use(auth);
-
-router.get('/profile', getProfile);
-router.put('/profile', validateRequest(updateUserSchema), updateProfile);
-router.put('/preferences', updatePreferences);
-router.delete('/account', deleteAccount);
+// Create router with RouteBuilder
+const router = new RouteBuilder()
+  .use(auth)
+  .get('/profile', getProfile)
+  .put('/profile', validateRequest(updateUserSchema), updateProfile)
+  .put('/preferences', updatePreferences)
+  .delete('/account', deleteAccount)
+  .build();
 
 export { router as userRouter };

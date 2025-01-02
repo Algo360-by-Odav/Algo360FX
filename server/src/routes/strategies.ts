@@ -1,128 +1,147 @@
-import express from 'express';
+import express, { Request, Response, NextFunction, RequestHandler } from 'express';
 import { auth } from '../middleware/auth';
 import { Strategy } from '../models/Strategy';
-import { AsyncRequestHandler } from '../types/express';
+import { AuthRequest } from '../types/express';
 import { validateRequest } from '../middleware/validateRequest';
-import { createStrategySchema, updateStrategySchema } from '../schemas/strategy.schema';
+import { strategySchema } from '../schemas/strategy.schema';
+import { AsyncHandler } from '../types/express';
+import { RouteBuilder } from '../utils/routeBuilder';
+import { handleError } from '../utils/routeHandler';
 
-const router = express.Router();
-
-// Get all strategies
-const getStrategies: AsyncRequestHandler = async (req, res) => {
+// Get all strategies for a user
+const getStrategies: AsyncHandler = async (req, res) => {
   try {
-    const strategies = await Strategy.find({ user: req.user?._id });
+    const strategies = await Strategy.find({ user: (req as AuthRequest).user?._id });
     res.json(strategies);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching strategies' });
+    handleError(error);
   }
 };
 
-// Get strategy by ID
-const getStrategyById: AsyncRequestHandler = async (req, res) => {
+// Get a specific strategy
+const getStrategy: AsyncHandler = async (req, res) => {
   try {
     const strategy = await Strategy.findOne({
       _id: req.params.id,
-      user: req.user?._id
+      user: (req as AuthRequest).user?._id
     });
 
     if (!strategy) {
-      return res.status(404).json({ message: 'Strategy not found' });
+      res.status(404).json({ error: 'Strategy not found' });
+      return;
     }
 
     res.json(strategy);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching strategy' });
+    handleError(error);
   }
 };
 
-// Create strategy
-const createStrategy: AsyncRequestHandler = async (req, res) => {
+// Create a new strategy
+const createStrategy: AsyncHandler = async (req, res) => {
   try {
     const strategy = new Strategy({
       ...req.body,
-      user: req.user?._id
+      user: (req as AuthRequest).user?._id
     });
 
     await strategy.save();
     res.status(201).json(strategy);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating strategy' });
+    handleError(error);
   }
 };
 
-// Update strategy
-const updateStrategy: AsyncRequestHandler = async (req, res) => {
+// Update a strategy
+const updateStrategy: AsyncHandler = async (req, res) => {
   try {
     const strategy = await Strategy.findOneAndUpdate(
-      { _id: req.params.id, user: req.user?._id },
+      { _id: req.params.id, user: (req as AuthRequest).user?._id },
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!strategy) {
-      return res.status(404).json({ message: 'Strategy not found' });
+      res.status(404).json({ error: 'Strategy not found' });
+      return;
     }
 
     res.json(strategy);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating strategy' });
+    handleError(error);
   }
 };
 
-// Delete strategy
-const deleteStrategy: AsyncRequestHandler = async (req, res) => {
+// Delete a strategy
+const deleteStrategy: AsyncHandler = async (req, res) => {
   try {
     const strategy = await Strategy.findOneAndDelete({
       _id: req.params.id,
-      user: req.user?._id
+      user: (req as AuthRequest).user?._id
     });
 
     if (!strategy) {
-      return res.status(404).json({ message: 'Strategy not found' });
+      res.status(404).json({ error: 'Strategy not found' });
+      return;
     }
 
-    res.json({ message: 'Strategy deleted successfully' });
+    res.status(204).send();
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting strategy' });
+    handleError(error);
   }
 };
 
-// Backtest strategy
-const backtestStrategy: AsyncRequestHandler = async (req, res) => {
+// Get strategy performance metrics
+const getPerformance: AsyncHandler = async (req, res) => {
   try {
     const strategy = await Strategy.findOne({
       _id: req.params.id,
-      user: req.user?._id
+      user: (req as AuthRequest).user?._id
     });
 
     if (!strategy) {
-      return res.status(404).json({ message: 'Strategy not found' });
+      res.status(404).json({ error: 'Strategy not found' });
+      return;
     }
 
-    // TODO: Implement backtesting logic
-    const backtestResults = {
-      strategyId: strategy._id,
-      profitLoss: 0,
-      winRate: 0,
-      trades: [],
-      startDate: new Date(),
-      endDate: new Date()
-    };
-
-    res.json(backtestResults);
+    const performance = await strategy.calculatePerformance();
+    res.json(performance);
   } catch (error) {
-    res.status(500).json({ message: 'Error backtesting strategy' });
+    handleError(error);
   }
 };
 
-// Register routes
-router.use(auth);
+// Backtest a strategy
+const backtestStrategy: AsyncHandler = async (req, res) => {
+  try {
+    const strategy = await Strategy.findOne({
+      _id: req.params.id,
+      user: (req as AuthRequest).user?._id
+    });
 
-router.get('/', getStrategies);
-router.get('/:id', getStrategyById);
-router.post('/', validateRequest(createStrategySchema), createStrategy);
-router.put('/:id', validateRequest(updateStrategySchema), updateStrategy);
-router.delete('/:id', deleteStrategy);
-router.post('/:id/backtest', backtestStrategy);
+    if (!strategy) {
+      res.status(404).json({ error: 'Strategy not found' });
+      return;
+    }
+
+    const { startDate, endDate, symbol } = req.body;
+    const results = await strategy.runBacktest(startDate, endDate, symbol);
+    res.json(results);
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+// Create router with RouteBuilder
+const router = new RouteBuilder()
+  .use(auth)
+  .get('/', getStrategies)
+  .get('/:id', getStrategy)
+  .post('/', validateRequest(strategySchema), createStrategy)
+  .put('/:id', validateRequest(strategySchema), updateStrategy)
+  .delete('/:id', deleteStrategy)
+  .get('/:id/performance', getPerformance)
+  .post('/:id/backtest', backtestStrategy)
+  .build();
 
 export { router as strategyRouter };

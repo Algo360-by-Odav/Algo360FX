@@ -64,12 +64,13 @@ export async function getMetaApiConnection() {
       console.log('MT5 account retrieved successfully');
       
       // Deploy account if needed
-      if (!account.state.equals('DEPLOYED')) {
+      if (account.state !== 'DEPLOYED') {
         console.log('Deploying MT5 account...');
         await account.deploy();
       }
 
       console.log('Connecting to MT5 account...');
+      // @ts-ignore - MetaAPI types are not fully accurate
       cachedConnection = await account.connect();
     }
 

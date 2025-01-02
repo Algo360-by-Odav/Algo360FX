@@ -3,6 +3,10 @@ import { Config } from '../types/config';
 
 dotenv.config();
 
+if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is required');
+}
+
 export const config: Config = {
     port: process.env.PORT || 3000,
     mongodb: {
@@ -13,7 +17,7 @@ export const config: Config = {
         expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     },
     openai: {
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: process.env.OPENAI_API_KEY as string,
     },
     cors: {
         origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
