@@ -1,7 +1,7 @@
 import express, { Response, RequestHandler } from 'express';
 import { auth } from '../middleware/auth';
 import { AuthRequest } from '../types/express';
-import prisma from '../lib/prisma';
+import prisma from '../config/database';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -125,7 +125,7 @@ const updateUserProfile: RequestHandler = async (req, res) => {
       message: 'Failed to update user profile'
     });
   }
-});
+};
 
 // Update user preferences
 const updateUserPreferences: RequestHandler = async (req, res) => {

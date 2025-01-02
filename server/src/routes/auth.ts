@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { validateRequest } from '../middleware/validateRequest';
 import { loginSchema, registerSchema } from '../schemas/auth.schema';
-import prisma from '../lib/prisma';
+import prisma from '../config/database';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 

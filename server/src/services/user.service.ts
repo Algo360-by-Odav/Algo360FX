@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import prisma from '../lib/prisma';
+import prisma from '../config/database';
 import { ApiError } from '../types/express';
 
 export class UserService {

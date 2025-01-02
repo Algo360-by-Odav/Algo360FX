@@ -1,7 +1,7 @@
 import express, { Response, RequestHandler } from 'express';
 import { auth } from '../middleware/auth';
 import { AuthRequest } from '../types/express';
-import prisma from '../lib/prisma';
+import prisma from '../config/database';
 import Joi from 'joi';
 
 const router = express.Router();
