@@ -1,32 +1,32 @@
-import { z } from 'zod';
+import Joi from 'joi';
 
-export const createStrategySchema = z.object({
-  name: z.string().min(3),
-  description: z.string(),
-  type: z.enum(['manual', 'automated']),
-  timeframe: z.enum(['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M']),
-  symbols: z.array(z.string()),
-  parameters: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
-  entryRules: z.array(z.string()),
-  exitRules: z.array(z.string()),
-  riskManagement: z.object({
-    maxLotSize: z.number(),
-    maxRiskPerTrade: z.number(),
-    maxOpenTrades: z.number()
-  })
+export const createStrategySchema = Joi.object({
+  name: Joi.string().required(),
+  description: Joi.string().optional(),
+  type: Joi.string().valid('manual', 'automated', 'hybrid').required(),
+  timeframe: Joi.string().valid('M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN').required(),
+  symbols: Joi.array().items(Joi.string()).required(),
+  parameters: Joi.object().required(),
+  entryRules: Joi.array().items(Joi.string()).required(),
+  exitRules: Joi.array().items(Joi.string()).required(),
+  riskManagement: Joi.object({
+    maxLotSize: Joi.number().required(),
+    maxRiskPerTrade: Joi.number().required(),
+    maxOpenTrades: Joi.number().required()
+  }).required()
 });
 
-export const updateStrategySchema = z.object({
-  name: z.string().min(3).optional(),
-  description: z.string().optional(),
-  timeframe: z.enum(['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M']).optional(),
-  symbols: z.array(z.string()).optional(),
-  parameters: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
-  entryRules: z.array(z.string()).optional(),
-  exitRules: z.array(z.string()).optional(),
-  riskManagement: z.object({
-    maxLotSize: z.number(),
-    maxRiskPerTrade: z.number(),
-    maxOpenTrades: z.number()
+export const updateStrategySchema = Joi.object({
+  name: Joi.string().optional(),
+  description: Joi.string().optional(),
+  timeframe: Joi.string().valid('M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN').optional(),
+  symbols: Joi.array().items(Joi.string()).optional(),
+  parameters: Joi.object().optional(),
+  entryRules: Joi.array().items(Joi.string()).optional(),
+  exitRules: Joi.array().items(Joi.string()).optional(),
+  riskManagement: Joi.object({
+    maxLotSize: Joi.number().optional(),
+    maxRiskPerTrade: Joi.number().optional(),
+    maxOpenTrades: Joi.number().optional()
   }).optional()
 });

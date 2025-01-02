@@ -1,44 +1,30 @@
 import { Request, Response, NextFunction } from 'express';
-import { User } from '../models/User';
-import { ParamsDictionary } from 'express-serve-static-core';
-import { ParsedQs } from 'qs';
+import { User } from '@prisma/client';
+import { RequestHandler } from 'express-serve-static-core';
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    user?: User;
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
   }
-}
-
-export interface AuthenticatedRequest extends Request {
-  user: User;
-}
-
-export interface TypedRequest<T = any> extends Request {
-  body: T;
-}
-
-export interface TypedResponse<T = any> extends Response {
-  json: (body: T) => Response;
 }
 
 export interface AuthRequest extends Request {
   user: User;
-  body: any;
-  params: any;
-  query: any;
 }
 
+export type AsyncRequestHandler = RequestHandler<any, any, any, any, Record<string, any>>;
+
 export type AsyncHandler = (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => Promise<void>;
+  handler: (req: AuthRequest, res: Response, next: NextFunction) => Promise<any>
+) => RequestHandler;
 
 export type RequestHandlerWithAuth = (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-) => Promise<void | Response>;
+) => Promise<void>;
 
 export interface ApiError extends Error {
   status?: number;

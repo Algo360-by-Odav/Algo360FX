@@ -1,21 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
-import { AnyZodObject } from 'zod';
+import { Schema } from 'joi';
+import { ApiError } from '../types/express';
 
-export const validateRequest = (schema: AnyZodObject) => async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    console.log('Validating request body:', req.body);
-    await schema.parseAsync(req.body);
-    console.log('Request validation successful');
-    return next();
-  } catch (error) {
-    console.error('Request validation failed:', error);
-    return res.status(400).json({ 
-      error: 'Validation failed',
-      details: error.errors || error.message || error
+export const validateRequest = (schema: Schema) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const { error } = schema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
     });
-  }
+
+    if (error) {
+      const validationError: ApiError = new Error('Validation failed');
+      validationError.status = 400;
+      validationError.code = 'VALIDATION_ERROR';
+      validationError.message = error.details
+        .map((detail) => detail.message)
+        .join(', ');
+      return next(validationError);
+    }
+
+    next();
+  };
 };

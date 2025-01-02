@@ -1,14 +1,13 @@
 import { auth } from './auth';
-import { apiLimiter } from './rateLimiter';
-import { validateRequest } from './validateRequest';
-import { RequestHandler } from 'express';
+import { errorHandler } from './errorHandler';
+import { sanitizer } from './sanitizer';
+import { generalLimiter, authLimiter, apiLimiter } from './rateLimit';
 
-export const commonMiddleware = [
+export {
   auth,
+  errorHandler,
+  sanitizer,
+  generalLimiter,
+  authLimiter,
   apiLimiter
-];
-
-export const validateBody = (schema: any): RequestHandler[] => [
-  ...commonMiddleware,
-  validateRequest(schema)
-];
+};

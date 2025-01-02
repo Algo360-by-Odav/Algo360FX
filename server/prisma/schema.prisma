@@ -24,6 +24,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   trades        Trade[]
   signals       Signal[]
+  portfolios    Portfolio[]
 }
 
 enum Role {
@@ -64,6 +65,21 @@ model Signal {
   updatedAt   DateTime  @updatedAt
 }
 
+model Portfolio {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  isPublic    Boolean   @default(false)
+  config      Json?     @default("{}")
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  positions   Position[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+}
+
 model Position {
   id          String    @id @default(uuid())
   symbol      String
@@ -72,6 +88,8 @@ model Position {
   openPrice   Float
   currentPrice Float
   profit      Float
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -98,15 +116,6 @@ model Documentation {
   title       String
   content     String
   category    String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Portfolio {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  assets      Json
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }

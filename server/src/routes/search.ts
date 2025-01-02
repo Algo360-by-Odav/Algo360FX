@@ -1,40 +1,98 @@
-import express from 'express';
-import { Request, Response } from 'express';
-import { AsyncRequestHandler } from '../types/express';
-import { validateRequest } from '../middleware/validateRequest';
-import { searchSchema } from '../schemas/search.schema';
-import { apiLimiter } from '../middleware/rateLimiter';
-import { SearchService } from '../services/Search';
+import express, { Response, RequestHandler } from 'express';
+import { auth } from '../middleware/auth';
+import { AuthRequest } from '../types/express';
+import prisma from '../lib/prisma';
+import Joi from 'joi';
 
 const router = express.Router();
-const searchService = new SearchService();
+
+// Validation schemas
+const searchSchema = Joi.object({
+  query: Joi.string().required().min(1).max(100),
+  type: Joi.string().valid('strategy', 'position', 'portfolio').required()
+});
 
 // Search endpoint
-router.get(
-  '/',
-  apiLimiter,
-  validateRequest(searchSchema),
-  (async (req: Request, res: Response) => {
-    try {
-      const { query, type, limit = 10, page = 1 } = req.query;
-      const results = await searchService.search({
-        query: query as string,
-        type: type as string,
-        limit: Number(limit),
-        page: Number(page)
-      });
-      return res.status(200).json({
-        success: true,
-        data: results
-      });
-    } catch (error) {
-      console.error('Search error:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Search failed'
-      });
+const searchItems: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const { error, value } = searchSchema.validate(req.query);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
     }
-  }) as AsyncRequestHandler
-);
 
-export default router;
+    const { query, type } = value;
+
+    let results;
+    switch (type) {
+      case 'strategy':
+        results = await prisma.strategy.findMany({
+          where: {
+            OR: [
+              { name: { contains: query, mode: 'insensitive' } },
+              { description: { contains: query, mode: 'insensitive' } }
+            ],
+            userId: authReq.user.id
+          },
+          include: {
+            positions: true
+          }
+        });
+        break;
+
+      case 'position':
+        results = await prisma.position.findMany({
+          where: {
+            OR: [
+              { symbol: { contains: query, mode: 'insensitive' } },
+              { notes: { contains: query, mode: 'insensitive' } }
+            ],
+            userId: authReq.user.id
+          },
+          include: {
+            strategy: true,
+            portfolio: true
+          }
+        });
+        break;
+
+      case 'portfolio':
+        results = await prisma.portfolio.findMany({
+          where: {
+            OR: [
+              { name: { contains: query, mode: 'insensitive' } },
+              { description: { contains: query, mode: 'insensitive' } }
+            ],
+            userId: authReq.user.id
+          },
+          include: {
+            positions: {
+              include: {
+                strategy: true
+              }
+            }
+          }
+        });
+        break;
+
+      default:
+        return res.status(400).json({ error: 'Invalid search type' });
+    }
+
+    return res.json({
+      type,
+      query,
+      results,
+      count: results.length
+    });
+
+  } catch (error) {
+    console.error('Search error:', error);
+    return res.status(500).json({ error: 'Failed to perform search' });
+  }
+};
+
+// Routes
+router.get('/', auth, searchItems);
+
+export { router as searchRouter };

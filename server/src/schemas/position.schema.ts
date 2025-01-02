@@ -1,39 +1,31 @@
-import { z } from 'zod';
+import Joi from 'joi';
 
-export const createPositionSchema = z.object({
-  symbol: z.string().min(1, 'Symbol is required'),
-  type: z.enum(['buy', 'sell'], {
-    required_error: 'Position type must be either buy or sell'
-  }),
-  lotSize: z.number()
-    .min(0.01, 'Lot size must be at least 0.01')
-    .max(100, 'Lot size cannot exceed 100'),
-  openPrice: z.number()
-    .positive('Open price must be positive'),
-  stopLoss: z.number()
-    .positive('Stop loss must be positive')
-    .optional(),
-  takeProfit: z.number()
-    .positive('Take profit must be positive')
-    .optional(),
-  strategy: z.string()
-    .min(1, 'Strategy name is required')
-    .optional(),
-  portfolio: z.string()
-    .min(1, 'Portfolio is required'),
-  timestamp: z.date()
-    .default(() => new Date()),
-  status: z.enum(['open', 'closed', 'pending'])
-    .default('open')
+export const createPositionSchema = Joi.object({
+  symbol: Joi.string().required(),
+  type: Joi.string().valid('buy', 'sell').required(),
+  lotSize: Joi.number().min(0.01).max(100).required(),
+  openPrice: Joi.number().positive().required(),
+  stopLoss: Joi.number().positive().optional(),
+  takeProfit: Joi.number().positive().optional(),
+  strategy: Joi.string().optional(),
+  portfolio: Joi.string().required(),
+  timestamp: Joi.date().default(() => new Date()),
+  status: Joi.string().valid('open', 'closed', 'pending').default('open')
 });
 
-export const updatePositionSchema = z.object({
-  stopLoss: z.number()
-    .positive('Stop loss must be positive')
-    .optional(),
-  takeProfit: z.number()
-    .positive('Take profit must be positive')
-    .optional(),
-  status: z.enum(['open', 'closed', 'pending'])
-    .optional()
+export const updatePositionSchema = Joi.object({
+  stopLoss: Joi.number().positive().optional(),
+  takeProfit: Joi.number().positive().optional(),
+  status: Joi.string().valid('open', 'closed', 'pending').optional(),
+  notes: Joi.string().optional(),
+  closePrice: Joi.number().positive().when('status', {
+    is: 'closed',
+    then: Joi.required(),
+    otherwise: Joi.optional()
+  }),
+  closedAt: Joi.date().when('status', {
+    is: 'closed',
+    then: Joi.required(),
+    otherwise: Joi.optional()
+  })
 });

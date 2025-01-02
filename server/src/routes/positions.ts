@@ -1,164 +1,181 @@
-import express, { Request, Response, NextFunction, RequestHandler } from 'express';
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
 import { auth } from '../middleware/auth';
-import { Position } from '../models/Position';
 import { AuthRequest } from '../types/express';
-import { validateRequest } from '../middleware/validateRequest';
-import { createPositionSchema, updatePositionSchema } from '../schemas/position.schema';
+import Joi from 'joi';
 
 const router = express.Router();
+const prisma = new PrismaClient();
+
+// Position validation schema
+const positionSchema = Joi.object({
+  symbol: Joi.string().required(),
+  type: Joi.string().valid('BUY', 'SELL').required(),
+  entryPrice: Joi.number().required(),
+  stopLoss: Joi.number(),
+  takeProfit: Joi.number(),
+  size: Joi.number().required(),
+  strategyId: Joi.string().required()
+});
 
 // Get all positions
-const getPositions: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', auth, async (req: AuthRequest, res) => {
   try {
-    const positions = await Position.find({ user: req.user?._id });
+    const positions = await prisma.position.findMany({
+      where: { userId: req.user.id },
+      include: {
+        strategy: true
+      }
+    });
     res.json(positions);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching positions' });
+    console.error('Get positions error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-};
+});
 
-// Get position by ID
-const getPositionById: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// Get position by id
+router.get('/:id', auth, async (req: AuthRequest, res) => {
   try {
-    const position = await Position.findOne({
-      _id: req.params.id,
-      user: req.user?._id
+    const position = await prisma.position.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.id
+      },
+      include: {
+        strategy: true
+      }
     });
 
     if (!position) {
-      return res.status(404).json({ message: 'Position not found' });
+      return res.status(404).json({ error: 'Position not found' });
     }
 
     res.json(position);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching position' });
+    console.error('Get position error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-};
+});
 
 // Create position
-const createPosition: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', auth, async (req: AuthRequest, res) => {
   try {
-    const position = new Position({
-      ...req.body,
-      user: req.user?._id
+    const { error, value } = positionSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    // Verify strategy belongs to user
+    const strategy = await prisma.strategy.findFirst({
+      where: {
+        id: value.strategyId,
+        userId: req.user.id
+      }
     });
 
-    await position.save();
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+
+    const position = await prisma.position.create({
+      data: {
+        ...value,
+        userId: req.user.id,
+        status: 'OPEN'
+      }
+    });
+
     res.status(201).json(position);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating position' });
+    console.error('Create position error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-};
+});
 
 // Update position
-const updatePosition: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', auth, async (req: AuthRequest, res) => {
   try {
-    const position = await Position.findOneAndUpdate(
-      { _id: req.params.id, user: req.user?._id },
-      req.body,
-      { new: true }
-    );
-
-    if (!position) {
-      return res.status(404).json({ message: 'Position not found' });
+    const { error, value } = positionSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
     }
 
-    res.json(position);
+    const position = await prisma.position.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.id
+      }
+    });
+
+    if (!position) {
+      return res.status(404).json({ error: 'Position not found' });
+    }
+
+    // Verify strategy belongs to user
+    const strategy = await prisma.strategy.findFirst({
+      where: {
+        id: value.strategyId,
+        userId: req.user.id
+      }
+    });
+
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+
+    const updatedPosition = await prisma.position.update({
+      where: { id: req.params.id },
+      data: value
+    });
+
+    res.json(updatedPosition);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating position' });
+    console.error('Update position error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-};
+});
 
 // Close position
-const closePosition: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+router.post('/:id/close', auth, async (req: AuthRequest, res) => {
   try {
-    const position = await Position.findOne({
-      _id: req.params.id,
-      user: req.user?._id
+    const { exitPrice } = req.body;
+
+    if (!exitPrice || typeof exitPrice !== 'number') {
+      return res.status(400).json({ error: 'Exit price is required' });
+    }
+
+    const position = await prisma.position.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.id,
+        status: 'OPEN'
+      }
     });
 
     if (!position) {
-      return res.status(404).json({ message: 'Position not found' });
+      return res.status(404).json({ error: 'Open position not found' });
     }
 
-    position.status = 'closed';
-    position.closedAt = new Date();
-    position.closePrice = req.body.closePrice;
-    await position.save();
+    const profit = position.type === 'BUY'
+      ? (exitPrice - position.entryPrice) * position.size
+      : (position.entryPrice - exitPrice) * position.size;
 
-    res.json(position);
-  } catch (error) {
-    res.status(500).json({ message: 'Error closing position' });
-  }
-};
-
-// Get position history
-const getPositionHistory: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    // Placeholder - replace with actual history from database
-    res.json({
-      history: [
-        {
-          id: '1',
-          symbol: 'EUR/USD',
-          type: 'BUY',
-          volume: 0.1,
-          openPrice: 1.2000,
-          closePrice: 1.2050,
-          takeProfit: 1.2100,
-          stopLoss: 1.1950,
-          profit: 50,
-          swap: -2,
-          commission: -1,
-          openTime: new Date(Date.now() - 86400000),
-          closeTime: new Date()
-        }
-      ]
+    const closedPosition = await prisma.position.update({
+      where: { id: req.params.id },
+      data: {
+        exitPrice,
+        profit,
+        status: 'CLOSED',
+        closedAt: new Date()
+      }
     });
+
+    res.json(closedPosition);
   } catch (error) {
-    console.error('Error fetching position history:', error);
-    res.status(500).json({ error: 'Failed to fetch position history' });
+    console.error('Close position error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-};
-
-// Register routes
-router.use(auth);
-
-const getPositionsHandler: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  const authReq = req as AuthRequest;
-  return getPositions(authReq, res, next);
-};
-
-const getPositionByIdHandler: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  const authReq = req as AuthRequest;
-  return getPositionById(authReq, res, next);
-};
-
-const createPositionHandler: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  const authReq = req as AuthRequest;
-  return createPosition(authReq, res, next);
-};
-
-const updatePositionHandler: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  const authReq = req as AuthRequest;
-  return updatePosition(authReq, res, next);
-};
-
-const closePositionHandler: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  const authReq = req as AuthRequest;
-  return closePosition(authReq, res, next);
-};
-
-const getPositionHistoryHandler: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
-  const authReq = req as AuthRequest;
-  return getPositionHistory(authReq, res, next);
-};
-
-router.get('/', getPositionsHandler);
-router.get('/:id', getPositionByIdHandler);
-router.post('/', validateRequest(createPositionSchema), createPositionHandler);
-router.put('/:id', validateRequest(updatePositionSchema), updatePositionHandler);
-router.post('/:id/close', closePositionHandler);
-router.get('/history', getPositionHistoryHandler);
+});
 
 export { router as positionRouter };
