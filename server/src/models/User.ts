@@ -1,102 +1,68 @@
-import mongoose from 'mongoose';
-import { IUser } from '../types/User';
+import prisma from '../config/database';
+import { User as PrismaUser, Role } from '@prisma/client';
 
-const userSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true,
-    index: true
+export interface IUser {
+  id: string;
+  email: string;
+  password: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  emailVerified: boolean;
+  tokenVersion: number;
+  role: Role;
+  preferences?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Export type-safe database operations
+export const User = {
+  create: async (data: Omit<IUser, 'id' | 'createdAt' | 'updatedAt'>) => {
+    return prisma.user.create({
+      data
+    });
   },
-  password: {
-    type: String,
-    required: true,
-    select: false
+
+  findById: (id: string) => {
+    return prisma.user.findUnique({
+      where: { id }
+    });
   },
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    index: true
+
+  findByEmail: (email: string) => {
+    return prisma.user.findUnique({
+      where: { email }
+    });
   },
-  firstName: {
-    type: String,
-    trim: true
+
+  findByUsername: (username: string) => {
+    return prisma.user.findUnique({
+      where: { username }
+    });
   },
-  lastName: {
-    type: String,
-    trim: true
+
+  update: (id: string, data: Partial<Omit<IUser, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    return prisma.user.update({
+      where: { id },
+      data
+    });
   },
-  emailVerified: {
-    type: Boolean,
-    default: false
+
+  updateTokenVersion: (id: string) => {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        tokenVersion: {
+          increment: 1
+        }
+      }
+    });
   },
-  tokenVersion: {
-    type: Number,
-    default: 0
-  },
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-  },
-  preferences: {
-    theme: {
-      type: String,
-      enum: ['light', 'dark'],
-      default: 'light'
-    },
-    notifications: {
-      type: Boolean,
-      default: true
-    },
-    language: {
-      type: String,
-      enum: ['en', 'es', 'fr', 'de', 'zh'],
-      default: 'en'
-    },
-    riskLevel: {
-      type: String,
-      enum: ['low', 'medium', 'high'],
-      default: 'medium'
-    },
-    defaultLotSize: {
-      type: Number,
-      default: 0.01,
-      min: 0.01,
-      max: 100
-    },
-    tradingPairs: {
-      type: [String],
-      default: ['EUR/USD', 'GBP/USD', 'USD/JPY']
-    }
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-    index: -1
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+
+  delete: (id: string) => {
+    return prisma.user.delete({
+      where: { id }
+    });
   }
-}, {
-  timestamps: true,
-  toJSON: {
-    transform: function(doc, ret) {
-      delete ret.password;
-      delete ret.__v;
-      ret.id = ret._id;
-      delete ret._id;
-      return ret;
-    }
-  }
-});
-
-// Create compound index for better query performance
-userSchema.index({ email: 1, username: 1 });
-
-export const User = mongoose.model<IUser>('User', userSchema);
+};

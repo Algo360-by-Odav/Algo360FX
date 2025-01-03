@@ -1,73 +1,46 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import prisma from '../config/database';
+import { Portfolio as PrismaPortfolio } from '@prisma/client';
 
-export interface IPortfolio extends Document {
-  user: mongoose.Types.ObjectId;
+export interface IPortfolio {
+  id: string;
+  userId: string;
   name: string;
-  description: string;
-  category: string;
-  strategies: mongoose.Types.ObjectId[];
-  allocation: {
-    strategyId: mongoose.Types.ObjectId;
-    weight: number;
-  }[];
   balance: number;
-  equity: number;
+  currency: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const PortfolioSchema = new Schema({
-  user: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true
+// Export type-safe database operations
+export const Portfolio = {
+  create: (data: Omit<IPortfolio, 'id' | 'createdAt' | 'updatedAt'>) => {
+    return prisma.portfolio.create({
+      data
+    });
   },
-  name: {
-    type: String,
-    required: true,
-    index: true,
+
+  findById: (id: string) => {
+    return prisma.portfolio.findUnique({
+      where: { id }
+    });
   },
-  description: {
-    type: String,
-    required: true,
+
+  findByUserId: (userId: string) => {
+    return prisma.portfolio.findMany({
+      where: { userId }
+    });
   },
-  category: {
-    type: String,
-    required: true,
-    index: true,
+
+  update: (id: string, data: Partial<Omit<IPortfolio, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    return prisma.portfolio.update({
+      where: { id },
+      data
+    });
   },
-  strategies: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Strategy',
-  }],
-  allocation: [{
-    strategyId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Strategy',
-      required: true,
-    },
-    weight: {
-      type: Number,
-      required: true,
-      min: 0,
-      max: 100,
-    },
-  }],
-  balance: {
-    type: Number,
-    default: 0
-  },
-  equity: {
-    type: Number,
-    default: 0
+
+  delete: (id: string) => {
+    return prisma.portfolio.delete({
+      where: { id }
+    });
   }
-}, {
-  timestamps: true,
-});
-
-// Indexes
-PortfolioSchema.index({ user: 1, name: 1 }, { unique: true });
-PortfolioSchema.index({ user: 1, category: 1 });
-
-export const Portfolio = mongoose.model<IPortfolio>('Portfolio', PortfolioSchema);
+};

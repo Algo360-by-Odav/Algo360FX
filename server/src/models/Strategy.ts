@@ -1,52 +1,51 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import prisma from '../config/database';
+import { Strategy as PrismaStrategy } from '@prisma/client';
 
-export interface IStrategy extends Document {
+export interface IStrategy {
+  id: string;
   name: string;
-  description: string;
-  type: string;
-  category: string;
+  description?: string;
+  config: any;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const strategySchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-    index: true
+// Export type-safe database operations
+export const Strategy = {
+  create: (data: Omit<IStrategy, 'id' | 'createdAt' | 'updatedAt'>) => {
+    return prisma.strategy.create({
+      data
+    });
   },
-  description: {
-    type: String,
-    required: true
+
+  findById: (id: string) => {
+    return prisma.strategy.findUnique({
+      where: { id }
+    });
   },
-  type: {
-    type: String,
-    required: true,
-    index: true
+
+  findByName: (name: string) => {
+    return prisma.strategy.findUnique({
+      where: { name }
+    });
   },
-  category: {
-    type: String,
-    required: true,
-    index: true
+
+  findMany: (where = {}) => {
+    return prisma.strategy.findMany({
+      where
+    });
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+
+  update: (id: string, data: Partial<Omit<IStrategy, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    return prisma.strategy.update({
+      where: { id },
+      data
+    });
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+
+  delete: (id: string) => {
+    return prisma.strategy.delete({
+      where: { id }
+    });
   }
-}, {
-  timestamps: true
-});
-
-// Create text index for search
-strategySchema.index({ 
-  name: 'text', 
-  description: 'text', 
-  type: 'text',
-  category: 'text'
-});
-
-export const Strategy = mongoose.model<IStrategy>('Strategy', strategySchema);
+};

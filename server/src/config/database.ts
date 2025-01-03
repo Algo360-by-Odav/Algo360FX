@@ -1,48 +1,23 @@
 import { PrismaClient } from '@prisma/client';
 
-declare global {
-  var prisma: PrismaClient | undefined;
-}
-
-const prisma = global.prisma || new PrismaClient({
+const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
-if (process.env.NODE_ENV !== 'production') {
-  global.prisma = prisma;
-}
-
-export async function connectToDatabase() {
+export async function connectDB() {
   try {
     await prisma.$connect();
-    console.log('Connected to database successfully');
-    return prisma;
-  } catch (error: any) {
-    console.error('Database connection error:', {
-      error: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString()
+    console.log('Database connected successfully');
+
+    // Handle process termination
+    process.on('beforeExit', async () => {
+      await prisma.$disconnect();
     });
-    throw error;
+
+  } catch (error) {
+    console.error('Database connection error:', error);
+    process.exit(1);
   }
 }
-
-export async function disconnectFromDatabase() {
-  try {
-    await prisma.$disconnect();
-    console.log('Disconnected from database successfully');
-  } catch (error: any) {
-    console.error('Database disconnection error:', {
-      error: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString()
-    });
-    throw error;
-  }
-}
-
-process.on('beforeExit', async () => {
-  await disconnectFromDatabase();
-});
 
 export default prisma;
