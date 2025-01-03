@@ -4,7 +4,9 @@ dotenv.config();
 export interface Config {
   env: string;
   port: number;
-  databaseUrl: string;
+  database: {
+    url: string;
+  };
   jwt: {
     secret: string;
     refreshSecret: string;
@@ -33,10 +35,20 @@ export interface Config {
   metaApiRetryDelay: number;
 }
 
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is required');
+}
+
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('OPENAI_API_KEY is required');
+}
+
 export const config: Config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '10000', 10),
-  databaseUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/algo360fx',
+  database: {
+    url: process.env.DATABASE_URL
+  },
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
@@ -44,7 +56,7 @@ export const config: Config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
   },
   openai: {
-    apiKey: process.env.OPENAI_API_KEY || ''
+    apiKey: process.env.OPENAI_API_KEY
   },
   rateLimits: {
     windowMs: parseInt(process.env.RATE_LIMITING_WINDOW_MS || '900000', 10),

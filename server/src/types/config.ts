@@ -1,7 +1,7 @@
 export interface Config {
     port: number | string;
-    mongodb: {
-        uri: string;
+    database: {
+        url: string;
     };
     jwt: {
         secret: string;

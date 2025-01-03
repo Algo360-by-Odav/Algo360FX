@@ -7,10 +7,14 @@ if (!process.env.OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY is required');
 }
 
+if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is required');
+}
+
 export const config: Config = {
     port: process.env.PORT || 3000,
-    mongodb: {
-        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/algo360fx',
+    database: {
+        url: process.env.DATABASE_URL,
     },
     jwt: {
         secret: process.env.JWT_SECRET || 'your-secret-key',
