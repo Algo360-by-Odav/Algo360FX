@@ -1,9 +1,22 @@
 import { TradingWebSocketServer } from '../websocket/trading';
 import { OptimizationWebSocketServer } from '../websocket/optimization';
 import { Connection } from 'mongoose';
+import { Config } from '../config';
 
 declare global {
-  var tradingWsServer: TradingWebSocketServer | undefined;
-  var optimizationWsServer: OptimizationWebSocketServer | undefined;
-  var mongoose: { connection: Connection } | undefined;
+  let globalThis: {
+    tradingWsServer: TradingWebSocketServer | undefined;
+    optimizationWsServer: OptimizationWebSocketServer | undefined;
+    mongooseConnection: Connection | undefined;
+  } & typeof globalThis;
+
+  namespace NodeJS {
+    interface Global {
+      io: any;
+      sockets: any;
+      marketDataService: any;
+    }
+  }
 }
+
+export {};

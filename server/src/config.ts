@@ -2,7 +2,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const config = {
+export interface Config {
+  metaApiToken: string;
+  mt5AccountId: string;
+  metaApiRetryAttempts: number;
+  metaApiRetryDelay: number;
+  port: number;
+  mongoUri: string;
+  jwtSecret: string;
+  corsOrigin: string;
+}
+
+export const config: Config = {
   metaApiToken: process.env.META_API_TOKEN || '',
   mt5AccountId: process.env.MT5_ACCOUNT_ID || '',
   metaApiRetryAttempts: parseInt(process.env.META_API_RETRY_ATTEMPTS || '3'),

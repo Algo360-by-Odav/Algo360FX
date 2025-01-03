@@ -1,50 +1,98 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { validateRequest } from '../middleware/validateRequest';
-import { searchSchema } from '../schemas/search.schema';
-import { searchAnalytics } from '../services/analyticsService';
-import { searchDocumentation } from '../services/documentationService';
-import { searchPortfolios } from '../services/portfolioService';
-import { searchStrategies } from '../services/strategyService';
-import { SearchResult } from '../types/search';
-import { asyncHandler } from '../middleware/asyncHandler';
+import express, { Response, RequestHandler } from 'express';
+import { auth } from '../middleware/auth';
+import { AuthRequest } from '../types/express';
+import prisma from '../config/database';
+import Joi from 'joi';
 
-const router = Router();
+const router = express.Router();
 
-// Search across all resources
-router.post('/', validateRequest(searchSchema), asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { query, type } = req.body;
-  let results: SearchResult[] = [];
+// Validation schemas
+const searchSchema = Joi.object({
+  query: Joi.string().required().min(1).max(100),
+  type: Joi.string().valid('strategy', 'position', 'portfolio').required()
+});
 
-  // Search based on type
-  switch (type) {
-    case 'analytics':
-      results = await searchAnalytics(query);
-      break;
-    case 'documentation':
-      results = await searchDocumentation(query);
-      break;
-    case 'portfolios':
-      results = await searchPortfolios(query);
-      break;
-    case 'strategies':
-      results = await searchStrategies(query);
-      break;
-    case 'all':
-      // Search across all types
-      const [analytics, docs, portfolios, strategies] = await Promise.all([
-        searchAnalytics(query),
-        searchDocumentation(query),
-        searchPortfolios(query),
-        searchStrategies(query)
-      ]);
-      results = [...analytics, ...docs, ...portfolios, ...strategies];
-      break;
-    default:
-      res.status(400).json({ error: 'Invalid search type' });
-      return;
+// Search endpoint
+const searchItems: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const { error, value } = searchSchema.validate(req.query);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { query, type } = value;
+
+    let results;
+    switch (type) {
+      case 'strategy':
+        results = await prisma.strategy.findMany({
+          where: {
+            OR: [
+              { name: { contains: query, mode: 'insensitive' } },
+              { description: { contains: query, mode: 'insensitive' } }
+            ],
+            userId: authReq.user.id
+          },
+          include: {
+            positions: true
+          }
+        });
+        break;
+
+      case 'position':
+        results = await prisma.position.findMany({
+          where: {
+            OR: [
+              { symbol: { contains: query, mode: 'insensitive' } },
+              { notes: { contains: query, mode: 'insensitive' } }
+            ],
+            userId: authReq.user.id
+          },
+          include: {
+            strategy: true,
+            portfolio: true
+          }
+        });
+        break;
+
+      case 'portfolio':
+        results = await prisma.portfolio.findMany({
+          where: {
+            OR: [
+              { name: { contains: query, mode: 'insensitive' } },
+              { description: { contains: query, mode: 'insensitive' } }
+            ],
+            userId: authReq.user.id
+          },
+          include: {
+            positions: {
+              include: {
+                strategy: true
+              }
+            }
+          }
+        });
+        break;
+
+      default:
+        return res.status(400).json({ error: 'Invalid search type' });
+    }
+
+    return res.json({
+      type,
+      query,
+      results,
+      count: results.length
+    });
+
+  } catch (error) {
+    console.error('Search error:', error);
+    return res.status(500).json({ error: 'Failed to perform search' });
   }
+};
 
-  res.json({ results });
-}));
+// Routes
+router.get('/', auth, searchItems);
 
-export default router;
+export { router as searchRouter };

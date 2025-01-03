@@ -1,119 +1,230 @@
-import express, { Request, Response } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import { asyncHandler } from '../middleware/asyncHandler';
+import express, { Response, RequestHandler } from 'express';
+import { auth } from '../middleware/auth';
+import { AuthRequest } from '../types/express';
+import prisma from '../lib/prisma';
+import Joi from 'joi';
 
 const router = express.Router();
 
+// Validation schemas
+const strategySchema = Joi.object({
+  name: Joi.string().required().min(1).max(100),
+  description: Joi.string().allow('').max(500),
+  config: Joi.object().required(),
+  isPublic: Joi.boolean().default(false)
+});
+
+const updateStrategySchema = Joi.object({
+  name: Joi.string().min(1).max(100),
+  description: Joi.string().allow('').max(500),
+  config: Joi.object(),
+  isPublic: Joi.boolean()
+}).min(1);
+
 // Get all strategies
-router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+const getStrategies: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
   try {
-    // For now, return mock strategies data
-    res.json({
-      strategies: [
-        {
-          id: '1',
-          name: 'Trend Following EMA',
-          description: 'Uses exponential moving averages to identify and follow trends',
-          status: 'active',
-          performance: {
-            winRate: 65,
-            profitFactor: 1.8,
-            totalTrades: 150
-          }
-        }
-      ]
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
-  }
-}));
-
-// Get strategy by ID
-router.get('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    res.json({
-      id,
-      name: 'Trend Following EMA',
-      description: 'Uses exponential moving averages to identify and follow trends',
-      status: 'active',
-      performance: {
-        winRate: 65,
-        profitFactor: 1.8,
-        totalTrades: 150,
-        averageProfit: 25.5,
-        sharpeRatio: 1.2
+    const strategies = await prisma.strategy.findMany({
+      where: {
+        userId: authReq.user.id
       },
-      parameters: {
-        fastEMA: 12,
-        slowEMA: 26,
-        signalEMA: 9,
-        timeframe: '1h',
-        symbols: ['EUR/USD', 'GBP/USD']
-      },
-      backtest: {
-        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        endDate: new Date().toISOString(),
-        initialBalance: 10000,
-        finalBalance: 12500,
-        maxDrawdown: 8.5,
-        totalTrades: 150,
-        profitableTrades: 98,
-        unprofitableTrades: 52
-      },
-      lastModified: new Date().toISOString()
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
-  }
-}));
-
-// Get strategy performance
-router.get('/:id/performance', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    res.json({
-      performance: {
-        winRate: 65,
-        profitFactor: 1.8,
-        totalTrades: 150,
-        averageProfit: 25.5,
-        maxDrawdown: 10,
-        sharpeRatio: 1.5,
-        monthlyReturns: [
-          { month: '2024-01', return: 5.2 },
-          { month: '2024-02', return: 3.8 }
-        ]
+      include: {
+        positions: true
       }
     });
+
+    return res.json(strategies);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    console.error('Get strategies error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve strategies' });
   }
-}));
+};
+
+// Get strategy by ID
+const getStrategyById: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const strategy = await prisma.strategy.findUnique({
+      where: {
+        id: req.params.id,
+        userId: authReq.user.id
+      },
+      include: {
+        positions: true
+      }
+    });
+
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+
+    return res.json(strategy);
+  } catch (error) {
+    console.error('Get strategy error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve strategy' });
+  }
+};
+
+// Create strategy
+const createStrategy: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const { error, value } = strategySchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const strategy = await prisma.strategy.create({
+      data: {
+        ...value,
+        userId: authReq.user.id
+      }
+    });
+
+    return res.status(201).json(strategy);
+  } catch (error) {
+    console.error('Create strategy error:', error);
+    return res.status(500).json({ error: 'Failed to create strategy' });
+  }
+};
 
 // Update strategy
-router.put('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+const updateStrategy: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
   try {
-    const { id } = req.params;
-    res.json({ message: `Strategy ${id} updated successfully` });
+    const { error, value } = updateStrategySchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const strategy = await prisma.strategy.findUnique({
+      where: {
+        id: req.params.id,
+        userId: authReq.user.id
+      }
+    });
+
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+
+    const updatedStrategy = await prisma.strategy.update({
+      where: {
+        id: req.params.id
+      },
+      data: value
+    });
+
+    return res.json(updatedStrategy);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    console.error('Update strategy error:', error);
+    return res.status(500).json({ error: 'Failed to update strategy' });
   }
-}));
+};
 
 // Delete strategy
-router.delete('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+const deleteStrategy: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
   try {
-    const { id } = req.params;
-    res.json({ message: `Strategy ${id} deleted successfully` });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
-  }
-}));
+    const strategy = await prisma.strategy.findUnique({
+      where: {
+        id: req.params.id,
+        userId: authReq.user.id
+      }
+    });
 
-export default router;
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+
+    await prisma.strategy.delete({
+      where: {
+        id: req.params.id
+      }
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Delete strategy error:', error);
+    return res.status(500).json({ error: 'Failed to delete strategy' });
+  }
+};
+
+// Duplicate strategy
+const duplicateStrategy: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const strategy = await prisma.strategy.findUnique({
+      where: {
+        id: req.params.id,
+        userId: authReq.user.id
+      }
+    });
+
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+
+    const { id, createdAt, updatedAt, ...strategyData } = strategy;
+    const duplicatedStrategy = await prisma.strategy.create({
+      data: {
+        ...strategyData,
+        name: `${strategyData.name} (Copy)`,
+        userId: authReq.user.id
+      }
+    });
+
+    return res.status(201).json(duplicatedStrategy);
+  } catch (error) {
+    console.error('Duplicate strategy error:', error);
+    return res.status(500).json({ error: 'Failed to duplicate strategy' });
+  }
+};
+
+// Get strategy performance metrics
+const getStrategyPerformance: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const strategy = await prisma.strategy.findUnique({
+      where: {
+        id: req.params.id,
+        userId: authReq.user.id
+      },
+      include: {
+        positions: true
+      }
+    });
+
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+
+    // Calculate performance metrics
+    const metrics = {
+      totalTrades: strategy.positions.length,
+      winningTrades: strategy.positions.filter(p => p.profit > 0).length,
+      losingTrades: strategy.positions.filter(p => p.profit < 0).length,
+      totalProfit: strategy.positions.reduce((sum, p) => sum + (p.profit || 0), 0),
+      averageProfit: strategy.positions.length > 0 
+        ? strategy.positions.reduce((sum, p) => sum + (p.profit || 0), 0) / strategy.positions.length 
+        : 0
+    };
+
+    return res.json(metrics);
+  } catch (error) {
+    console.error('Get strategy performance error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve strategy performance' });
+  }
+};
+
+// Routes
+router.get('/', auth, getStrategies);
+router.get('/:id', auth, getStrategyById);
+router.post('/', auth, createStrategy);
+router.put('/:id', auth, updateStrategy);
+router.delete('/:id', auth, deleteStrategy);
+router.post('/:id/duplicate', auth, duplicateStrategy);
+router.get('/:id/performance', auth, getStrategyPerformance);
+
+export { router as strategyRouter };

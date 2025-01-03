@@ -1,60 +1,46 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import { prisma } from '../config/database';
+import { Portfolio as PrismaPortfolio } from '@prisma/client';
 
-export interface IPortfolio extends Document {
+export interface IPortfolio {
+  id: string;
+  userId: string;
   name: string;
-  description: string;
-  category: string;
-  strategies: mongoose.Types.ObjectId[];
-  allocation: {
-    strategyId: mongoose.Types.ObjectId;
-    weight: number;
-  }[];
+  balance: number;
+  currency: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const PortfolioSchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-    index: true,
+// Export type-safe database operations
+export const Portfolio = {
+  create: (data: Omit<IPortfolio, 'id' | 'createdAt' | 'updatedAt'>) => {
+    return prisma.portfolio.create({
+      data
+    });
   },
-  description: {
-    type: String,
-    required: true,
-  },
-  category: {
-    type: String,
-    required: true,
-    index: true,
-  },
-  strategies: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Strategy',
-  }],
-  allocation: [{
-    strategyId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Strategy',
-      required: true,
-    },
-    weight: {
-      type: Number,
-      required: true,
-      min: 0,
-      max: 100,
-    },
-  }],
-}, {
-  timestamps: true,
-});
 
-// Create text indexes for search
-PortfolioSchema.index({
-  name: 'text',
-  description: 'text',
-  category: 'text',
-});
+  findById: (id: string) => {
+    return prisma.portfolio.findUnique({
+      where: { id }
+    });
+  },
 
-export const Portfolio = mongoose.model<IPortfolio>('Portfolio', PortfolioSchema);
-export default Portfolio;
+  findByUserId: (userId: string) => {
+    return prisma.portfolio.findMany({
+      where: { userId }
+    });
+  },
+
+  update: (id: string, data: Partial<Omit<IPortfolio, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    return prisma.portfolio.update({
+      where: { id },
+      data
+    });
+  },
+
+  delete: (id: string) => {
+    return prisma.portfolio.delete({
+      where: { id }
+    });
+  }
+};

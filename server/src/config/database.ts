@@ -1,60 +1,49 @@
-import mongoose, { ConnectOptions } from 'mongoose';
-import { config } from './config';
+import { PrismaClient } from '@prisma/client';
 
-export const connectToDatabase = async (): Promise<void> => {
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  }
+});
+
+export async function connectDB() {
   try {
-    const options: ConnectOptions = {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
-      maxPoolSize: 10,
-      retryWrites: true,
-      retryReads: true
-    };
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY = 5000; // 5 seconds
+    let retries = 0;
 
-    await mongoose.connect(config.mongoUri || config.databaseUrl, options);
-    console.log('Connected to MongoDB');
-    
-    // Create indexes for all models
-    await Promise.all([
-      mongoose.model('Strategy').createIndexes(),
-      mongoose.model('Portfolio').createIndexes(),
-      mongoose.model('Documentation').createIndexes(),
-      mongoose.model('Analytics').createIndexes(),
-    ]);
-    console.log('Database indexes created successfully');
+    while (retries < MAX_RETRIES) {
+      try {
+        await prisma.$connect();
+        console.log('Database connected successfully');
+
+        // Handle process termination
+        process.on('beforeExit', async () => {
+          await prisma.$disconnect();
+        });
+
+        // Connection successful, exit the retry loop
+        return;
+      } catch (error) {
+        retries++;
+        console.error(`Database connection attempt ${retries} failed:`, error);
+        
+        if (retries === MAX_RETRIES) {
+          throw error;
+        }
+
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      }
+    }
   } catch (error) {
-    console.error('Error connecting to database:', error);
+    console.error('Database connection error after all retries:', error);
+    console.error('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not Set');
     process.exit(1);
   }
-};
+}
 
-export const disconnectDatabase = async () => {
-  try {
-    await mongoose.disconnect();
-  } catch (error) {
-    console.error('Error disconnecting from database:', error);
-    process.exit(1);
-  }
-};
-
-// Handle database connection events
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB error:', err);
-});
-
-// Gracefully close the connection when the app is shutting down
-process.on('SIGINT', async () => {
-  try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed through app termination');
-    process.exit(0);
-  } catch (err) {
-    console.error('Error closing MongoDB connection:', err);
-    process.exit(1);
-  }
-});
+export { prisma };

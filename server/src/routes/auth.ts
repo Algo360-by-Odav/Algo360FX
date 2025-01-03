@@ -1,11 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { User } from '../models/User';
+import { asyncHandler } from '../middleware/asyncHandler';
+import { validateRequest } from '../middleware/validateRequest';
+import { loginSchema, registerSchema } from '../schemas/auth.schema';
+import { prisma } from '../config/database';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { config } from '../config/config';
-import { validateRequest } from '../middleware/validateRequest';
-import { registerSchema, loginSchema } from '../schemas/auth.schema';
-import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
@@ -13,74 +12,75 @@ const router = Router();
 router.post('/register', 
   validateRequest(registerSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, username, firstName, lastName } = req.body;
 
     try {
-      console.log('Registration attempt:', { email, firstName, lastName });
+      // Check if user already exists
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email },
+            { username }
+          ]
+        }
+      });
 
-      // Check for existing user
-      const existingUser = await User.findOne({ email });
       if (existingUser) {
-        console.log('User already exists:', email);
-        return res.status(409).json({ 
+        return res.status(400).json({ 
           status: 'error',
-          code: 'USER_EXISTS',
-          message: 'This email is already registered. Please login or use a different email.'
+          code: existingUser.email === email ? 'EMAIL_EXISTS' : 'USERNAME_EXISTS',
+          message: existingUser.email === email 
+            ? 'This email is already registered. Please login or use a different email.'
+            : 'This username is already taken. Please choose a different username.'
         });
       }
 
       // Hash password
-      console.log('Hashing password...');
-      const hashedPassword = await bcrypt.hash(password, 10);
-      
-      console.log('Creating new user...');
-      const user = new User({
-        email,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        emailVerified: true, // Set to true by default for development
-        preferences: {
-          theme: 'light',
-          notifications: true,
-          language: 'en',
-          riskLevel: 'medium',
-          defaultLotSize: 0.01,
-          tradingPairs: ['EUR/USD', 'GBP/USD', 'USD/JPY']
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      // Create user
+      const user = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          username,
+          firstName,
+          lastName,
+          emailVerified: true, // For now, auto-verify email
+          role: 'USER'
         }
       });
 
-      console.log('Saving user to database...');
-      await user.save();
+      // Generate token
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '24h' }
+      );
 
-      console.log('Registration successful:', email);
-      return res.status(201).json({
+      // Return success
+      res.status(201).json({
         status: 'success',
         message: 'Registration successful',
         data: {
           user: {
-            id: user._id,
+            id: user.id,
             email: user.email,
+            username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
-            emailVerified: true
-          }
+            role: user.role
+          },
+          token
         }
       });
-
-    } catch (error: any) {
-      console.error('Registration error details:', {
-        error: error.message,
-        stack: error.stack,
-        code: error.code,
-        name: error.name
-      });
-      
-      return res.status(500).json({
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({
         status: 'error',
         code: 'REGISTRATION_FAILED',
-        message: 'Registration failed. Please try again later.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Failed to register user. Please try again.'
       });
     }
   })
@@ -93,67 +93,58 @@ router.post('/login',
     const { email, password } = req.body;
 
     try {
-      console.log('Login attempt:', email);
-
       // Find user
-      const user = await User.findOne({ email }).select('+password');
+      const user = await prisma.user.findUnique({
+        where: { email }
+      });
+
       if (!user) {
-        console.log('User not found:', email);
-        return res.status(401).json({ 
+        return res.status(401).json({
           status: 'error',
           code: 'INVALID_CREDENTIALS',
           message: 'Invalid email or password'
         });
       }
 
-      // Verify password
-      console.log('Verifying password...');
+      // Check password
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
-        console.log('Invalid password for user:', email);
-        return res.status(401).json({ 
+        return res.status(401).json({
           status: 'error',
           code: 'INVALID_CREDENTIALS',
           message: 'Invalid email or password'
         });
       }
 
-      // Generate JWT token
-      console.log('Generating JWT token...');
+      // Generate token
       const token = jwt.sign(
-        { userId: user._id, email: user.email },
-        config.jwtSecret,
-        { expiresIn: '7d' }
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '24h' }
       );
 
-      console.log('Login successful:', email);
-      return res.status(200).json({
+      // Return success
+      res.json({
         status: 'success',
         message: 'Login successful',
         data: {
           user: {
-            id: user._id,
+            id: user.id,
             email: user.email,
+            username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
-            emailVerified: user.emailVerified
+            role: user.role
           },
           token
         }
       });
-    } catch (error: any) {
-      console.error('Login error details:', {
-        error: error.message,
-        stack: error.stack,
-        code: error.code,
-        name: error.name
-      });
-      
-      return res.status(500).json({
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({
         status: 'error',
         code: 'LOGIN_FAILED',
-        message: 'Login failed. Please try again later.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Failed to login. Please try again.'
       });
     }
   })

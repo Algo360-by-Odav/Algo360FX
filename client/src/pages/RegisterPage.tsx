@@ -18,6 +18,7 @@ const RegisterPage: React.FC = () => {
     firstName: '',
     lastName: '',
     email: '',
+    username: '',
     password: '',
     confirmPassword: '',
   });
@@ -55,13 +56,14 @@ const RegisterPage: React.FC = () => {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
+          username: formData.username,
           password: formData.password,
         }),
       });
 
       const registerData = await registerResponse.json();
       if (!registerResponse.ok) {
-        throw new Error(registerData.error || registerData.message || 'Registration failed');
+        throw new Error(registerData.message || 'Registration failed');
       }
 
       dispatch({
@@ -149,8 +151,20 @@ const RegisterPage: React.FC = () => {
               id="email"
               label="Email Address"
               name="email"
+              type="email"
               value={formData.email}
               onChange={handleChange}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="username"
+              label="Username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              helperText="Choose a unique username for your account"
             />
             <TextField
               margin="normal"
@@ -180,14 +194,13 @@ const RegisterPage: React.FC = () => {
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
             >
-              Register
+              CREATE ACCOUNT
             </Button>
-            <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-              Already have an account?{' '}
+            <Box sx={{ textAlign: 'center' }}>
               <Link component={RouterLink} to="/auth/login" variant="body2">
-                Sign in
+                Already have an account? Sign in
               </Link>
-            </Typography>
+            </Box>
           </Box>
         </Paper>
       </Box>

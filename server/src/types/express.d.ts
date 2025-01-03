@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { User } from '../models/User';
+import { User } from '@prisma/client';
+import { RequestHandler } from 'express-serve-static-core';
 
 declare global {
   namespace Express {
@@ -9,33 +10,23 @@ declare global {
   }
 }
 
-declare module 'express-serve-static-core' {
-  interface RequestHandler {
-    (req: Request, res: Response, next: NextFunction): Promise<any> | any;
-  }
+export interface AuthRequest extends Request {
+  user: User;
 }
 
-export type AsyncRequestHandler = (
-  req: Request,
+export type AsyncRequestHandler = RequestHandler<any, any, any, any, Record<string, any>>;
+
+export type AsyncHandler = (
+  handler: (req: AuthRequest, res: Response, next: NextFunction) => Promise<any>
+) => RequestHandler;
+
+export type RequestHandlerWithAuth = (
+  req: AuthRequest,
   res: Response,
   next: NextFunction
-) => Promise<void | Response> | void | Response;
+) => Promise<void>;
 
-export interface AuthenticatedRequest extends Express.Request {
-  user: User;
-}
-
-export interface TypedRequest<T = any> extends Express.Request {
-  body: T;
-}
-
-export interface TypedResponse<T = any> extends Express.Response {
-  json: (body: T) => Express.Response;
-}
-
-export interface AuthRequest extends Express.Request {
-  user: User;
-  body: any;
-  params: any;
-  query: any;
+export interface ApiError extends Error {
+  status?: number;
+  code?: string;
 }

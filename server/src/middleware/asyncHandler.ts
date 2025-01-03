@@ -1,12 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
+import { AsyncRequestHandler, AuthRequest } from '../types/express';
 
-type AsyncRequestHandler = (
-  req: Request,
+type AsyncAuthHandler = (
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => Promise<any>;
 
-export const asyncHandler = (fn: AsyncRequestHandler) => 
-  (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
+export const asyncHandler = (fn: AsyncAuthHandler): AsyncRequestHandler => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await fn(req as AuthRequest, res, next);
+    } catch (error) {
+      next(error);
+    }
   };
+};

@@ -136,7 +136,7 @@ export class RiskManagement {
   public async calculateCorrelation(data: MarketData[]): Promise<number> {
     // Implement correlation calculation using the data
     const prices = data.map(d => d.close);
-    let correlation = 0;
+    const correlation = 0;
     // Add correlation calculation logic here
     return correlation;
   }

@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import Joi from 'joi';
 
-export const searchSchema = z.object({
-  query: z.string(),
-  type: z.enum(['analytics', 'documentation', 'portfolios', 'strategies', 'all']).optional()
+export const searchSchema = Joi.object({
+  query: Joi.string().required(),
+  type: Joi.string().valid('analytics', 'documentation', 'portfolios', 'strategies', 'all').default('all')
 });

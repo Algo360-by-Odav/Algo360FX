@@ -1,19 +1,15 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+# exit on error
+set -o errexit
 
-echo "Installing dependencies..."
-npm install --production=false
+# Install ALL dependencies (including devDependencies)
+npm install
 
-echo "Installing TypeScript globally..."
-npm install -g typescript
+# Ensure TypeScript is available
+npm install typescript@5.3.3
 
-echo "Building TypeScript..."
-tsc -p tsconfig.json
+# Build the project
+npm run build
 
-echo "Copying package files..."
-cp package*.json dist/
-
-echo "Installing production dependencies in dist..."
-cd dist && npm install --production
-
-echo "Build completed successfully!"
+# Clean up dev dependencies
+npm prune --production

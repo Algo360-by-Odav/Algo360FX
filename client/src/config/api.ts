@@ -53,12 +53,13 @@ export const authHeaders = () => ({
 export const handleApiError = async (response: Response) => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.error || errorData.message || 'An error occurred';
+    const errorMessage = errorData.message || 'An error occurred';
     
     // Handle specific error cases
     switch (response.status) {
       case 401:
         localStorage.removeItem('token'); // Clear invalid token
+        localStorage.removeItem('user'); // Clear user data
         window.location.href = '/login'; // Redirect to login
         throw new Error('Session expired. Please login again.');
       case 429:
@@ -67,39 +68,41 @@ export const handleApiError = async (response: Response) => {
         throw new Error(errorMessage);
     }
   }
-  return response.json();
-};
 
-// Base API request function
-export const apiRequest = async (
-  url: string,
-  options: RequestInit = {},
-  requiresAuth: boolean = true
-): Promise<any> => {
-  try {
-    const headers = requiresAuth ? authHeaders() : defaultHeaders;
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...headers,
-        ...options.headers,
-      },
-    });
-    
-    return handleApiError(response);
-  } catch (error: any) {
-    console.error('API Request Error:', error);
-    throw error;
+  const data = await response.json();
+  
+  // Check for success status in response
+  if (data.status === 'error') {
+    throw new Error(data.message || 'An error occurred');
   }
+  
+  return data;
 };
 
-// Authenticated API requests
-export const authenticatedRequest = async (url: string, options: RequestInit = {}) => {
-  return apiRequest(url, options, true);
-};
-
-// Public API requests
+// Public API request (no auth required)
 export const publicRequest = async (url: string, options: RequestInit = {}) => {
-  return apiRequest(url, options, false);
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  });
+  
+  return handleApiError(response);
+};
+
+// Authenticated API request
+export const authenticatedRequest = async (url: string, options: RequestInit = {}) => {
+  const token = getAuthToken();
+  
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...authHeaders(),
+      ...options.headers,
+    },
+  });
+  
+  return handleApiError(response);
 };
