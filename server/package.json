@@ -12,7 +12,7 @@
     "dev": "nodemon src/index.ts",
     "clean": "rimraf dist",
     "copy-files": "echo 'No files to copy'",
-    "build": "npm run clean && tsc",
+    "build": "tsc --skipLibCheck --noEmit false",
     "test": "jest --config jest.config.js",
     "postinstall": "prisma generate",
     "lint": "eslint . --ext .ts",
