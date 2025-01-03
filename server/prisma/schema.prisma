@@ -10,18 +10,18 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
+  id            String      @id @default(uuid())
+  email         String      @unique
   password      String
-  username      String    @unique
+  username      String      @unique
   firstName     String?
   lastName      String?
-  emailVerified Boolean   @default(false)
-  tokenVersion  Int       @default(0)
-  role          Role      @default(USER)
-  preferences   Json?     @default("{\"theme\": \"light\"}")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  emailVerified Boolean     @default(false)
+  tokenVersion  Int         @default(0)
+  role          Role        @default(USER)
+  preferences   Json?       @default("{\"theme\": \"light\"}")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   trades        Trade[]
   signals       Signal[]
   portfolios    Portfolio[]
@@ -39,12 +39,10 @@ model Trade {
   symbol      String
   type        String
   volume      Float
-  openTime    DateTime
-  closeTime   DateTime?
   openPrice   Float
   closePrice  Float?
-  takeProfit  Float?
-  stopLoss    Float?
+  openTime    DateTime
+  closeTime   DateTime?
   profit      Float?
   status      String
   createdAt   DateTime  @default(now())
@@ -57,9 +55,10 @@ model Signal {
   user        User      @relation(fields: [userId], references: [id])
   symbol      String
   type        String
-  price       Float
-  takeProfit  Float?
-  stopLoss    Float?
+  openPrice   Float
+  closePrice  Float?
+  openTime    DateTime
+  closeTime   DateTime?
   status      String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -67,17 +66,22 @@ model Signal {
 
 model Portfolio {
   id          String    @id @default(uuid())
-  name        String
-  description String?
-  isPublic    Boolean   @default(false)
-  config      Json?     @default("{}")
   userId      String
   user        User      @relation(fields: [userId], references: [id])
-  positions   Position[]
+  name        String
+  balance     Float     @default(0)
+  currency    String    @default("USD")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
 
-  @@index([userId])
+model Strategy {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  config      Json
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Position {
@@ -86,36 +90,11 @@ model Position {
   type        String
   volume      Float
   openPrice   Float
-  currentPrice Float
-  profit      Float
-  portfolioId String
-  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Strategy {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  parameters  Json?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Analytics {
-  id          String    @id @default(uuid())
-  type        String
-  data        Json
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Documentation {
-  id          String    @id @default(uuid())
-  title       String
-  content     String
-  category    String
+  closePrice  Float?
+  openTime    DateTime
+  closeTime   DateTime?
+  profit      Float?
+  status      String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
