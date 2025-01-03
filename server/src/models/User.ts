@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import { prisma } from '../config/database';
 import { User as PrismaUser, Role } from '@prisma/client';
 
 export interface IUser {

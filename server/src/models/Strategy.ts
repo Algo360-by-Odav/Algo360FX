@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import { prisma } from '../config/database';
 import { Strategy as PrismaStrategy } from '@prisma/client';
 
 export interface IStrategy {

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { validateRequest } from '../middleware/validateRequest';
 import { loginSchema, registerSchema } from '../schemas/auth.schema';
-import prisma from '../config/database';
+import { prisma } from '../config/database';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -12,65 +12,54 @@ const router = Router();
 router.post('/register', 
   validateRequest(registerSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, username, firstName, lastName } = req.body;
 
     try {
-      console.log('Registration attempt:', { email, firstName, lastName });
-
       // Check if user already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { email }
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email },
+            { username }
+          ]
+        }
       });
 
       if (existingUser) {
-        console.log('User already exists:', email);
         return res.status(400).json({ 
           status: 'error',
-          code: 'USER_EXISTS',
-          message: 'This email is already registered. Please login or use a different email.'
+          code: existingUser.email === email ? 'EMAIL_EXISTS' : 'USERNAME_EXISTS',
+          message: existingUser.email === email 
+            ? 'This email is already registered. Please login or use a different email.'
+            : 'This username is already taken. Please choose a different username.'
         });
       }
 
       // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
 
-      // Create new user
+      // Create user
       const user = await prisma.user.create({
         data: {
           email,
           password: hashedPassword,
+          username,
           firstName,
           lastName,
-          username: email.split('@')[0], // Default username from email
-          role: 'USER',
-          emailVerified: false,
-          tokenVersion: 0,
-          preferences: {}
+          emailVerified: true, // For now, auto-verify email
+          role: 'USER'
         }
       });
 
-      // Generate tokens
-      const accessToken = jwt.sign(
-        { id: user.id },
-        process.env.JWT_SECRET as string,
-        { expiresIn: '15m' }
+      // Generate token
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '24h' }
       );
 
-      const refreshToken = jwt.sign(
-        { id: user.id, version: user.tokenVersion },
-        process.env.JWT_SECRET as string,
-        { expiresIn: '7d' }
-      );
-
-      // Set refresh token cookie
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-      });
-
-      console.log('Registration successful:', email);
+      // Return success
       res.status(201).json({
         status: 'success',
         message: 'Registration successful',
@@ -78,26 +67,20 @@ router.post('/register',
           user: {
             id: user.id,
             email: user.email,
+            username: user.username,
             firstName: user.firstName,
-            lastName: user.lastName
+            lastName: user.lastName,
+            role: user.role
           },
-          accessToken
+          token
         }
       });
-
-    } catch (error: any) {
-      console.error('Registration error details:', {
-        error: error.message,
-        stack: error.stack,
-        code: error.code,
-        name: error.name
-      });
-      
+    } catch (error) {
+      console.error('Registration error:', error);
       res.status(500).json({
         status: 'error',
         code: 'REGISTRATION_FAILED',
-        message: 'Registration failed. Please try again later.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Failed to register user. Please try again.'
       });
     }
   })
@@ -110,81 +93,58 @@ router.post('/login',
     const { email, password } = req.body;
 
     try {
-      console.log('Login attempt:', email);
-
       // Find user
       const user = await prisma.user.findUnique({
         where: { email }
       });
 
       if (!user) {
-        console.log('User not found:', email);
-        return res.status(401).json({ 
+        return res.status(401).json({
           status: 'error',
           code: 'INVALID_CREDENTIALS',
           message: 'Invalid email or password'
         });
       }
 
-      // Verify password
-      const validPassword = await bcrypt.compare(password, user.password);
-      if (!validPassword) {
-        console.log('Invalid password:', email);
-        return res.status(401).json({ 
+      // Check password
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({
           status: 'error',
           code: 'INVALID_CREDENTIALS',
           message: 'Invalid email or password'
         });
       }
 
-      // Generate tokens
-      const accessToken = jwt.sign(
-        { id: user.id },
-        process.env.JWT_SECRET as string,
-        { expiresIn: '15m' }
+      // Generate token
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '24h' }
       );
 
-      const refreshToken = jwt.sign(
-        { id: user.id, version: user.tokenVersion },
-        process.env.JWT_SECRET as string,
-        { expiresIn: '7d' }
-      );
-
-      // Set refresh token cookie
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-      });
-
-      console.log('Login successful:', email);
-      res.status(200).json({
+      // Return success
+      res.json({
         status: 'success',
         message: 'Login successful',
         data: {
           user: {
             id: user.id,
             email: user.email,
+            username: user.username,
             firstName: user.firstName,
-            lastName: user.lastName
+            lastName: user.lastName,
+            role: user.role
           },
-          accessToken
+          token
         }
       });
-    } catch (error: any) {
-      console.error('Login error details:', {
-        error: error.message,
-        stack: error.stack,
-        code: error.code,
-        name: error.name
-      });
-      
+    } catch (error) {
+      console.error('Login error:', error);
       res.status(500).json({
         status: 'error',
         code: 'LOGIN_FAILED',
-        message: 'Login failed. Please try again later.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Failed to login. Please try again.'
       });
     }
   })

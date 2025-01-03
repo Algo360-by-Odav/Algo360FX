@@ -1,5 +1,3 @@
-// This is your Prisma schema file
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -22,79 +20,101 @@ model User {
   preferences   Json?       @default("{\"theme\": \"light\"}")
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  trades        Trade[]
-  signals       Signal[]
   portfolios    Portfolio[]
+  signals       Signal[]
+  trades        Trade[]
+}
+
+model Trade {
+  id         String    @id @default(uuid())
+  userId     String
+  symbol     String
+  type       String
+  volume     Float
+  openPrice  Float
+  closePrice Float?
+  openTime   DateTime
+  closeTime  DateTime?
+  profit     Float?
+  status     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id])
+}
+
+model Signal {
+  id         String    @id @default(uuid())
+  userId     String
+  symbol     String
+  type       String
+  openPrice  Float
+  closePrice Float?
+  openTime   DateTime
+  closeTime  DateTime?
+  status     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id])
+}
+
+model Portfolio {
+  id          String     @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  isPublic    Boolean    @default(false)
+  config      Json?
+  balance     Float      @default(0)
+  currency    String     @default("USD")
+  positions   Position[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  user        User       @relation(fields: [userId], references: [id])
+}
+
+model Position {
+  id          String    @id @default(uuid())
+  portfolioId String
+  symbol      String
+  type        String
+  size        Float
+  entryPrice  Float
+  exitPrice   Float?
+  status      String    @default("OPEN")
+  metadata    Json?
+  openTime    DateTime  @default(now())
+  closeTime   DateTime?
+  profit      Float?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
+}
+
+model Strategy {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  config      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model migrations {
+  id        Int    @id(map: "PK_8c82d7f526340ab734260ea46be") @default(autoincrement())
+  timestamp BigInt
+  name      String @db.VarChar
+}
+
+model users {
+  id        String   @id(map: "PK_a3ffb1c0c8416b9fc6f907b7433") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email     String   @unique(map: "UQ_97672ac88f789774dd47f7c8be3") @db.VarChar
+  password  String   @db.VarChar
+  name      String?  @db.VarChar
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @default(now()) @db.Timestamp(6)
 }
 
 enum Role {
   USER
   ADMIN
-}
-
-model Trade {
-  id          String    @id @default(uuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  symbol      String
-  type        String
-  volume      Float
-  openPrice   Float
-  closePrice  Float?
-  openTime    DateTime
-  closeTime   DateTime?
-  profit      Float?
-  status      String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Signal {
-  id          String    @id @default(uuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  symbol      String
-  type        String
-  openPrice   Float
-  closePrice  Float?
-  openTime    DateTime
-  closeTime   DateTime?
-  status      String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Portfolio {
-  id          String    @id @default(uuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  name        String
-  balance     Float     @default(0)
-  currency    String    @default("USD")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Strategy {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  description String?
-  config      Json
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Position {
-  id          String    @id @default(uuid())
-  symbol      String
-  type        String
-  volume      Float
-  openPrice   Float
-  closePrice  Float?
-  openTime    DateTime
-  closeTime   DateTime?
-  profit      Float?
-  status      String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
 }

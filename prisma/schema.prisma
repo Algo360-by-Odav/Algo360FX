@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  username      String      @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  emailVerified Boolean     @default(false)
+  role          Role        @default(USER)
+  preferences   Json?
+  tokenVersion  Int         @default(0)
+  portfolios    Portfolio[] // Relation to portfolios
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Portfolio {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  isPublic    Boolean    @default(false)
+  config      Json?
+  userId      String     // Foreign key to User
+  user        User       @relation(fields: [userId], references: [id])
+  positions   Position[] // Relation to positions
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Position {
+  id          String    @id @default(uuid())
+  symbol      String
+  size        Float
+  entryPrice  Float
+  exitPrice   Float?
+  status      String    @default("OPEN")
+  metadata    Json?
+  portfolioId String    // Foreign key to Portfolio
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+}

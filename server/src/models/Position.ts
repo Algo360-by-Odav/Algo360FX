@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import { prisma } from '../config/database';
 import { Position as PrismaPosition } from '@prisma/client';
 
 export interface IPosition {

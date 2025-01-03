@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import { prisma } from '../config/database';
 import { Portfolio as PrismaPortfolio } from '@prisma/client';
 
 export interface IPortfolio {

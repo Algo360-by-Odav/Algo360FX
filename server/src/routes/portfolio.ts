@@ -1,8 +1,10 @@
-import express from 'express';
-import { authenticateToken } from '../middleware/auth';
-import asyncHandler from 'express-async-handler';
-import prisma from '../lib/prisma';
+import express, { Request, Response } from 'express';
+import { auth } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
+import { prisma } from '../config/database';
 import { z } from 'zod';
+import { AuthRequest } from '../types/express';
+import { Prisma } from '@prisma/client';
 
 const router = express.Router();
 
@@ -11,202 +13,174 @@ const portfolioSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   isPublic: z.boolean(),
-  config: z.record(z.unknown())
+  config: z.record(z.unknown()).optional(),
+  balance: z.number().default(0),
+  currency: z.string().default('USD')
 });
 
 // Get all portfolios for the authenticated user
-router.get('/', authenticateToken, asyncHandler(async (req: any, res) => {
-  try {
-    const userId = req.user.id;
-    console.log('Portfolio request received:', {
-      userId,
-      headers: req.headers,
-      timestamp: new Date().toISOString()
-    });
-
-    const portfolios = await prisma.portfolio.findMany({
-      where: {
-        user: {
-          id: userId
-        }
-      },
-      include: {
-        positions: true
-      }
-    });
-
-    res.json(portfolios);
-  } catch (error: any) {
-    console.error('Get portfolios error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id,
-      timestamp: new Date().toISOString()
-    });
-    res.status(500).json({
-      error: 'Failed to retrieve portfolios',
-      message: error.message
-    });
+router.get('/', auth, asyncHandler(async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  const userId = authReq.user.id;
+  console.log('Portfolio request received:', {
+    userId,
+    headers: req.headers,
+    timestamp: new Date().toISOString()
+  });
+
+  const portfolios = await prisma.portfolio.findMany({
+    where: {
+      userId
+    },
+    include: {
+      positions: true,
+      user: {
+        select: {
+          id: true,
+          username: true
+        }
+      }
+    }
+  } satisfies Prisma.PortfolioFindManyArgs);
+
+  return res.json(portfolios);
 }));
 
 // Get a specific portfolio
-router.get('/:id', authenticateToken, asyncHandler(async (req: any, res) => {
+router.get('/:id', auth, asyncHandler(async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const { id } = req.params;
 
-  try {
-    const portfolio = await prisma.portfolio.findFirst({
-      where: {
-        id,
-        user: {
-          id: req.user.id
+  const portfolio = await prisma.portfolio.findFirst({
+    where: {
+      id,
+      userId: authReq.user.id
+    },
+    include: {
+      positions: true,
+      user: {
+        select: {
+          id: true,
+          username: true
         }
-      },
-      include: {
-        positions: true
       }
-    });
-
-    if (!portfolio) {
-      return res.status(404).json({ error: 'Portfolio not found' });
     }
+  } satisfies Prisma.PortfolioFindFirstArgs);
 
-    res.json(portfolio);
-  } catch (error: any) {
-    console.error('Get portfolio error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id,
-      timestamp: new Date().toISOString()
-    });
-    res.status(500).json({
-      error: 'Failed to retrieve portfolio',
-      message: error.message
-    });
+  if (!portfolio) {
+    return res.status(404).json({ error: 'Portfolio not found' });
   }
+
+  return res.json(portfolio);
 }));
 
 // Create a new portfolio
-router.post('/', authenticateToken, asyncHandler(async (req: any, res) => {
-  try {
-    const validatedData = portfolioSchema.parse(req.body);
-
-    const portfolio = await prisma.portfolio.create({
-      data: {
-        ...validatedData,
-        user: {
-          connect: {
-            id: req.user.id
-          }
-        },
-        positions: {
-          create: []
-        }
-      },
-      include: {
-        positions: true
-      }
-    });
-
-    res.status(201).json(portfolio);
-  } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
-    }
-    console.error('Create portfolio error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id,
-      timestamp: new Date().toISOString()
-    });
-    res.status(500).json({
-      error: 'Failed to create portfolio',
-      message: error.message
-    });
+router.post('/', auth, asyncHandler(async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  const validatedData = portfolioSchema.parse(req.body);
+
+  const portfolio = await prisma.portfolio.create({
+    data: {
+      ...validatedData,
+      userId: authReq.user.id
+    },
+    include: {
+      positions: true,
+      user: {
+        select: {
+          id: true,
+          username: true
+        }
+      }
+    }
+  } satisfies Prisma.PortfolioCreateArgs);
+
+  return res.status(201).json(portfolio);
 }));
 
 // Update a portfolio
-router.put('/:id', authenticateToken, asyncHandler(async (req: any, res) => {
+router.put('/:id', auth, asyncHandler(async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const { id } = req.params;
+  const validatedData = portfolioSchema.parse(req.body);
 
-  try {
-    const validatedData = portfolioSchema.parse(req.body);
+  const portfolio = await prisma.portfolio.findFirst({
+    where: {
+      id,
+      userId: authReq.user.id
+    }
+  } satisfies Prisma.PortfolioFindFirstArgs);
 
-    const portfolio = await prisma.portfolio.findFirst({
-      where: {
-        id,
-        user: {
-          id: req.user.id
+  if (!portfolio) {
+    return res.status(404).json({ error: 'Portfolio not found' });
+  }
+
+  const updatedPortfolio = await prisma.portfolio.update({
+    where: { id },
+    data: validatedData,
+    include: {
+      positions: true,
+      user: {
+        select: {
+          id: true,
+          username: true
         }
       }
-    });
-
-    if (!portfolio) {
-      return res.status(404).json({ error: 'Portfolio not found' });
     }
+  } satisfies Prisma.PortfolioUpdateArgs);
 
-    const updatedPortfolio = await prisma.portfolio.update({
-      where: { id },
-      data: validatedData,
-      include: {
-        positions: true
-      }
-    });
-
-    res.json(updatedPortfolio);
-  } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
-    }
-    console.error('Update portfolio error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id,
-      timestamp: new Date().toISOString()
-    });
-    res.status(500).json({
-      error: 'Failed to update portfolio',
-      message: error.message
-    });
-  }
+  return res.json(updatedPortfolio);
 }));
 
 // Delete a portfolio
-router.delete('/:id', authenticateToken, asyncHandler(async (req: any, res) => {
+router.delete('/:id', auth, asyncHandler(async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const { id } = req.params;
 
-  try {
-    const portfolio = await prisma.portfolio.findFirst({
-      where: {
-        id,
-        user: {
-          id: req.user.id
-        }
-      }
-    });
-
-    if (!portfolio) {
-      return res.status(404).json({ error: 'Portfolio not found' });
+  const portfolio = await prisma.portfolio.findFirst({
+    where: {
+      id,
+      userId: authReq.user.id
     }
+  } satisfies Prisma.PortfolioFindFirstArgs);
 
-    await prisma.portfolio.delete({
-      where: { id }
-    });
-
-    res.status(204).send();
-  } catch (error: any) {
-    console.error('Delete portfolio error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id,
-      timestamp: new Date().toISOString()
-    });
-    res.status(500).json({
-      error: 'Failed to delete portfolio',
-      message: error.message
-    });
+  if (!portfolio) {
+    return res.status(404).json({ error: 'Portfolio not found' });
   }
+
+  // Delete all positions first
+  await prisma.position.deleteMany({
+    where: {
+      portfolioId: id
+    }
+  } satisfies Prisma.PositionDeleteManyArgs);
+
+  // Then delete the portfolio
+  await prisma.portfolio.delete({
+    where: { id }
+  } satisfies Prisma.PortfolioDeleteArgs);
+
+  return res.status(204).send();
 }));
 
 export default router;

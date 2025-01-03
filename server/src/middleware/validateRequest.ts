@@ -1,24 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
-import { Schema } from 'joi';
+import { ZodSchema } from 'zod';
 import { ApiError } from '../types/express';
 
-export const validateRequest = (schema: Schema) => {
+export const validateRequest = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const { error } = schema.validate(req.body, {
-      abortEarly: false,
-      stripUnknown: true,
-    });
-
-    if (error) {
+    try {
+      schema.parse(req.body);
+      next();
+    } catch (error: any) {
       const validationError: ApiError = new Error('Validation failed');
       validationError.status = 400;
       validationError.code = 'VALIDATION_ERROR';
-      validationError.message = error.details
-        .map((detail) => detail.message)
+      validationError.message = error.errors
+        .map((err: any) => err.message)
         .join(', ');
       return next(validationError);
     }
-
-    next();
   };
 };

@@ -1,7 +1,8 @@
-import express, { Response, RequestHandler } from 'express';
+import express, { Response, Request, RequestHandler } from 'express';
 import { auth } from '../middleware/auth';
 import { AuthRequest } from '../types/express';
-import prisma from '../config/database';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../config/database';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -10,7 +11,7 @@ const router = express.Router();
 const updateUserSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
-  preferences: z.record(z.unknown()).optional(),
+  preferences: z.any().optional(), // Using any for now since it's JSON
 });
 
 const updatePasswordSchema = z.object({
@@ -19,211 +20,148 @@ const updatePasswordSchema = z.object({
 });
 
 // Get user profile
-const getUserProfile: RequestHandler = async (req, res) => {
-  const authReq = req as AuthRequest;
+const getUserProfile: RequestHandler = async (req: Request, res: Response) => {
   try {
-    const userId = authReq.user.id;
-    console.log('Fetching profile for user:', userId);
+    const authReq = req as AuthRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: authReq.user.id },
       select: {
         id: true,
         email: true,
         username: true,
         firstName: true,
         lastName: true,
-        emailVerified: true,
-        role: true,
         preferences: true,
-        createdAt: true,
-        updatedAt: true
-      }
+      },
     });
 
     if (!user) {
-      console.log('User not found:', userId);
-      return res.status(404).json({
-        status: 'error',
-        code: 'USER_NOT_FOUND',
-        message: 'User not found'
-      });
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    console.log('Profile fetched successfully for user:', userId);
-    res.json({
-      status: 'success',
-      data: { user }
-    });
-
-  } catch (error: any) {
-    console.error('Profile fetch error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id
-    });
-    res.status(500).json({
-      status: 'error',
-      code: 'PROFILE_FETCH_ERROR',
-      message: 'Failed to fetch user profile'
-    });
+    return res.json(user);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return res.status(500).json({ error: 'Failed to fetch user profile' });
   }
 };
 
 // Update user profile
-const updateUserProfile: RequestHandler = async (req, res) => {
-  const authReq = req as AuthRequest;
+const updateUserProfile: RequestHandler = async (req: Request, res: Response) => {
   try {
-    const userId = authReq.user.id;
-    console.log('Updating profile for user:', userId);
+    const authReq = req as AuthRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const validatedData = updateUserSchema.parse(req.body);
-
+    
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: validatedData,
+      where: { id: authReq.user.id },
+      data: {
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
+        preferences: validatedData.preferences as Prisma.InputJsonValue,
+      },
       select: {
         id: true,
         email: true,
         username: true,
         firstName: true,
         lastName: true,
-        emailVerified: true,
-        role: true,
         preferences: true,
-        createdAt: true,
-        updatedAt: true
-      }
+      },
     });
 
-    console.log('Profile updated successfully for user:', userId);
-    res.json({
+    return res.json({
       status: 'success',
       message: 'Profile updated successfully',
       data: { user: updatedUser }
     });
-
-  } catch (error: any) {
-    console.error('Profile update error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id
-    });
-    
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        status: 'error',
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid input data',
-        errors: error.errors
-      });
-    }
-
-    res.status(500).json({
-      status: 'error',
-      code: 'PROFILE_UPDATE_ERROR',
-      message: 'Failed to update user profile'
-    });
-  }
-};
-
-// Update user preferences
-const updateUserPreferences: RequestHandler = async (req, res) => {
-  const authReq = req as AuthRequest;
-  try {
-    const userId = authReq.user.id;
-    const preferences = req.body;
-    console.log('Updating preferences for user:', userId);
-
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        preferences: preferences
-      },
-      select: {
-        id: true,
-        preferences: true
-      }
-    });
-
-    console.log('Preferences updated successfully for user:', userId);
-    res.json({
-      status: 'success',
-      message: 'Preferences updated successfully',
-      data: { preferences: updatedUser.preferences }
-    });
-
-  } catch (error: any) {
-    console.error('Preferences update error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id
-    });
-    res.status(500).json({
-      status: 'error',
-      code: 'PREFERENCES_UPDATE_ERROR',
-      message: 'Failed to update user preferences'
-    });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    return res.status(500).json({ error: 'Failed to update user profile' });
   }
 };
 
 // Get user preferences
-const getUserPreferences: RequestHandler = async (req, res) => {
-  const authReq = req as AuthRequest;
+const getUserPreferences: RequestHandler = async (req: Request, res: Response) => {
   try {
-    const userId = authReq.user.id;
-    console.log('Fetching preferences for user:', userId);
+    const authReq = req as AuthRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: authReq.user.id },
+      select: {
+        preferences: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json(user.preferences);
+  } catch (error) {
+    console.error('Error fetching user preferences:', error);
+    return res.status(500).json({ error: 'Failed to fetch user preferences' });
+  }
+};
+
+// Delete user account
+const deleteUserAccount: RequestHandler = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    await prisma.user.delete({
+      where: { id: authReq.user.id }
+    });
+
+    return res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    return res.status(500).json({ error: 'Failed to delete account' });
+  }
+};
+
+// Update user preferences
+const updateUserPreferences: RequestHandler = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const preferences = req.body;
+    console.log('Updating preferences for user:', authReq.user.id);
+
+    const updatedUser = await prisma.user.update({
+      where: { id: authReq.user.id },
+      data: {
+        preferences: preferences as Prisma.InputJsonValue
+      },
       select: {
         preferences: true
       }
     });
 
-    if (!user) {
-      console.log('User not found:', userId);
-      return res.status(404).json({
-        status: 'error',
-        code: 'USER_NOT_FOUND',
-        message: 'User not found'
-      });
-    }
-
-    console.log('Preferences fetched successfully for user:', userId);
-    res.json({
+    return res.json({
       status: 'success',
-      data: { preferences: user.preferences }
+      message: 'Preferences updated successfully',
+      data: { preferences: updatedUser.preferences }
     });
-
-  } catch (error: any) {
-    console.error('Preferences fetch error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id
-    });
-    res.status(500).json({
-      status: 'error',
-      code: 'PREFERENCES_FETCH_ERROR',
-      message: 'Failed to fetch user preferences'
-    });
-  }
-};
-
-// Delete user account
-const deleteUserAccount: RequestHandler = async (req, res) => {
-  const authReq = req as AuthRequest;
-  try {
-    await prisma.user.delete({
-      where: {
-        id: authReq.user.id
-      }
-    });
-
-    return res.status(204).send();
   } catch (error) {
-    console.error('Delete user account error:', error);
-    return res.status(500).json({ error: 'Failed to delete user account' });
+    console.error('Error updating preferences:', error);
+    return res.status(500).json({ error: 'Failed to update preferences' });
   }
 };
 
@@ -234,4 +172,4 @@ router.put('/preferences', auth, updateUserPreferences);
 router.get('/preferences', auth, getUserPreferences);
 router.delete('/account', auth, deleteUserAccount);
 
-export { router as userRouter };
+export default router;

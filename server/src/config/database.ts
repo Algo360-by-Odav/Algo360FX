@@ -20,4 +20,4 @@ export async function connectDB() {
   }
 }
 
-export default prisma;
+export { prisma };
