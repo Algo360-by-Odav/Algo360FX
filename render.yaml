@@ -7,194 +7,147 @@ services:
     buildCommand: |
       cd server
       npm install
-      node -e "
-        const fs=require('fs');
-        const path=require('path');
-        const schema = \`generator client {
-          provider = \"prisma-client-js\"
-        }
+      echo 'generator client {
+        provider = "prisma-client-js"
+      }
 
-        datasource db {
-          provider = \"postgresql\"
-          url      = env(\"DATABASE_URL\")
-        }
+      datasource db {
+        provider = "postgresql"
+        url      = env("DATABASE_URL")
+      }
 
-        model User {
-          id            String    @id @default(uuid())
-          email         String    @unique
-          password      String
-          username      String    @unique
-          firstName     String?
-          lastName      String?
-          emailVerified Boolean   @default(false)
-          tokenVersion  Int       @default(0)
-          role          Role      @default(USER)
-          preferences   Json?     @default(\"{\\\"theme\\\": \\\"light\\\"}\")
-          createdAt     DateTime  @default(now())
-          updatedAt     DateTime  @updatedAt
-          trades        Trade[]
-          signals       Signal[]
-          portfolios    Portfolio[]
-        }
+      model User {
+        id            String      @id @default(uuid())
+        email         String      @unique
+        password      String
+        username      String      @unique
+        firstName     String?
+        lastName      String?
+        emailVerified Boolean     @default(false)
+        tokenVersion  Int         @default(0)
+        role          Role        @default(USER)
+        preferences   Json?       @default("{\"theme\": \"light\"}")
+        createdAt     DateTime    @default(now())
+        updatedAt     DateTime    @updatedAt
+        trades        Trade[]
+        signals       Signal[]
+        portfolios    Portfolio[]
+      }
 
-        enum Role {
-          USER
-          ADMIN
-        }
+      enum Role {
+        USER
+        ADMIN
+      }
 
-        model Trade {
-          id          String   @id @default(uuid())
-          userId      String
-          user        User     @relation(fields: [userId], references: [id])
-          symbol      String
-          type        String
-          volume      Float
-          openPrice   Float
-          closePrice  Float?
-          openTime    DateTime
-          closeTime   DateTime?
-          profit      Float?
-          status      String
-          createdAt   DateTime @default(now())
-          updatedAt   DateTime @updatedAt
-        }
+      model Trade {
+        id          String    @id @default(uuid())
+        userId      String
+        user        User      @relation(fields: [userId], references: [id])
+        symbol      String
+        type        String
+        volume      Float
+        openPrice   Float
+        closePrice  Float?
+        openTime    DateTime
+        closeTime   DateTime?
+        profit      Float?
+        status      String
+        createdAt   DateTime  @default(now())
+        updatedAt   DateTime  @updatedAt
+      }
 
-        model Signal {
-          id          String   @id @default(uuid())
-          userId      String
-          user        User     @relation(fields: [userId], references: [id])
-          symbol      String
-          type        String
-          openPrice   Float
-          closePrice  Float?
-          openTime    DateTime
-          closeTime   DateTime?
-          status      String
-          createdAt   DateTime @default(now())
-          updatedAt   DateTime @updatedAt
-        }
+      model Signal {
+        id          String    @id @default(uuid())
+        userId      String
+        user        User      @relation(fields: [userId], references: [id])
+        symbol      String
+        type        String
+        openPrice   Float
+        closePrice  Float?
+        openTime    DateTime
+        closeTime   DateTime?
+        status      String
+        createdAt   DateTime  @default(now())
+        updatedAt   DateTime  @updatedAt
+      }
 
-        model Portfolio {
-          id          String   @id @default(uuid())
-          userId      String
-          user        User     @relation(fields: [userId], references: [id])
-          name        String
-          balance     Float    @default(0)
-          currency    String   @default(\"USD\")
-          createdAt   DateTime @default(now())
-          updatedAt   DateTime @updatedAt
-        }
+      model Portfolio {
+        id          String    @id @default(uuid())
+        userId      String
+        user        User      @relation(fields: [userId], references: [id])
+        name        String
+        balance     Float     @default(0)
+        currency    String    @default("USD")
+        createdAt   DateTime  @default(now())
+        updatedAt   DateTime  @updatedAt
+      }
 
-        model Strategy {
-          id          String   @id @default(uuid())
-          name        String   @unique
-          description String?
-          config      Json
-          createdAt   DateTime @default(now())
-          updatedAt   DateTime @updatedAt
-        }
+      model Strategy {
+        id          String    @id @default(uuid())
+        name        String    @unique
+        description String?
+        config      Json
+        createdAt   DateTime  @default(now())
+        updatedAt   DateTime  @updatedAt
+      }
 
-        model Position {
-          id          String   @id @default(uuid())
-          symbol      String
-          type        String
-          volume      Float
-          openPrice   Float
-          closePrice  Float?
-          openTime    DateTime
-          closeTime   DateTime?
-          profit      Float?
-          status      String
-          createdAt   DateTime @default(now())
-          updatedAt   DateTime @updatedAt
-        }\`;
-        ['prisma', 'dist/prisma'].forEach(dir => {
-          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-          fs.writeFileSync(path.join(dir, 'schema.prisma'), schema);
-        });
-      "
+      model Position {
+        id          String    @id @default(uuid())
+        symbol      String
+        type        String
+        volume      Float
+        openPrice   Float
+        closePrice  Float?
+        openTime    DateTime
+        closeTime   DateTime?
+        profit      Float?
+        status      String
+        createdAt   DateTime  @default(now())
+        updatedAt   DateTime  @updatedAt
+      }' > prisma/schema.prisma
+      mkdir -p dist/prisma
+      cp prisma/schema.prisma dist/prisma/
       npx prisma generate
       npm run build
       cd dist
       npm install --production
-    startCommand: cd server && npm run start:prod
-    healthCheckPath: /api/health
-    healthCheckTimeout: 300
-    autoDeploy: true
-    scaling:
-      minInstances: 1
-      maxInstances: 1
-      targetMemoryPercent: 90
-      targetCPUPercent: 90
+    startCommand: node src/index.js
     envVars:
-      - key: NODE_VERSION
-        value: 18.x
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: "8080"
       - key: DATABASE_URL
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: MT5_ACCOUNT_ID
-        sync: false
-      - key: META_API_TOKEN
-        sync: false
-      - key: MT5_WS_PORT
-        value: "6780"
-      - key: CORS_ORIGIN
-        value: "https://algo360fx-client.onrender.com"
-
-  - type: web
-    name: algo360fx-client
-    env: node
-    region: singapore
-    plan: starter
-    buildCommand: |
-      cd client
-      npm install
-      npm run build
-    startCommand: cd client && npm run serve
-    healthCheckPath: /
-    healthCheckTimeout: 300
-    autoDeploy: true
-    scaling:
-      minInstances: 1
-      maxInstances: 1
-      targetMemoryPercent: 90
-      targetCPUPercent: 90
-    envVars:
-      - key: NODE_VERSION
-        value: 18.x
-      - key: NODE_ENV
-        value: production
-      - key: REACT_APP_API_URL
-        value: https://algo360fx-server.onrender.com
+        fromDatabase:
+          name: algo360fx-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: algo360fx-redis
+          type: redis
+          property: connectionString
+      - key: PORT
+        value: 8080
 
   - type: redis
     name: algo360fx-redis
     region: singapore
     plan: starter
     maxmemoryPolicy: allkeys-lru
-    maxmemoryMB: 256
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: everywhere
 
-  - type: redis
-    name: algo360fx-cache
+  - type: web
+    name: algo360fx-client
+    env: node
     region: singapore
     plan: starter
-    maxmemoryPolicy: allkeys-lru
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: everywhere
+    buildCommand: cd client && npm install && npm run build
+    startCommand: cd client && npm run preview
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        value: https://algo360fx-server.onrender.com
 
 databases:
   - name: algo360fx-db
     plan: starter
     region: singapore
-    ipAllowList: 
-      - source: 0.0.0.0/0
-        description: everywhere
+    ipAllowList: []
