@@ -13,6 +13,9 @@ services:
       cd dist
       npm install --production
     startCommand: node src/index.js
+    healthCheckPath: /api/health
+    healthCheckTimeout: 300
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
@@ -27,12 +30,23 @@ services:
           property: connectionString
       - key: PORT
         value: 8080
+      - key: CORS_ORIGIN
+        value: https://algo360fx-client.onrender.com
+      - key: JWT_SECRET
+        sync: false
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 1000
 
   - type: redis
     name: algo360fx-redis
     region: singapore
     plan: starter
     maxmemoryPolicy: allkeys-lru
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
 
   - type: web
     name: algo360fx-client
@@ -41,6 +55,9 @@ services:
     plan: starter
     buildCommand: cd client && npm install && npm run build
     startCommand: cd client && npm run preview
+    healthCheckPath: /
+    healthCheckTimeout: 300
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
@@ -51,4 +68,6 @@ databases:
   - name: algo360fx-db
     plan: starter
     region: singapore
-    ipAllowList: []
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
