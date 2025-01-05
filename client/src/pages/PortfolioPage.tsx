@@ -1,150 +1,319 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Container,
-  Paper,
   Typography,
   Grid,
-  Alert,
+  Paper,
+  Box,
+  Button
 } from '@mui/material';
-import apiService from '../services/apiService';
-import websocketService from '../services/websocketService';
-import { useApp } from '../context/AppContext';
+import { useApp } from '@/context/AppContext';
+import { privateApi } from '@/config/api';
 
-interface Portfolio {
-  totalBalance: number;
-  equity: number;
-  openPositions: number;
-  dailyPnL: number;
+interface Asset {
+  symbol: string;
+  allocation: number;
+  currentPrice: number;
+  averagePrice: number;
+  quantity: number;
+  pnl: number;
+  pnlPercentage: number;
+}
+
+interface PortfolioSummary {
+  totalValue: number;
+  totalPnl: number;
+  totalPnlPercentage: number;
+  cashBalance: number;
+  investedAmount: number;
+  numberOfAssets: number;
 }
 
 const PortfolioPage: React.FC = () => {
-  const { state, dispatch } = useApp();
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const { showNotification } = useApp();
+  const [loading, setLoading] = React.useState(true);
+  const [assets, setAssets] = React.useState<Asset[]>([]);
+  const [summary, setSummary] = React.useState<PortfolioSummary | null>(null);
+  const [currentPage, setCurrentPage] = React.useState(0);
+  const [itemsPerPage, setItemsPerPage] = React.useState(10);
 
-  const fetchPortfolio = async () => {
+  const fetchPortfolioData = async () => {
     try {
-      dispatch({ 
-        type: 'SET_LOADING', 
-        payload: { 
-          isLoading: true, 
-          message: 'Loading portfolio data...' 
-        } 
-      });
+      setLoading(true);
+      const [assetsResponse, summaryResponse] = await Promise.all([
+        privateApi.get('/portfolio/assets'),
+        privateApi.get('/portfolio/summary')
+      ]);
 
-      const data = await apiService.get<Portfolio>('/api/portfolio');
-      setPortfolio(data);
-      
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          message: 'Portfolio data updated',
-          type: 'success'
-        }
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch portfolio data';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          message: errorMessage,
-          type: 'error'
-        }
-      });
+      setAssets(assetsResponse.data);
+      setSummary(summaryResponse.data);
+    } catch (error: any) {
+      showNotification(
+        error.response?.data?.message || 'Failed to fetch portfolio data',
+        'error'
+      );
     } finally {
-      dispatch({ 
-        type: 'SET_LOADING', 
-        payload: { isLoading: false } 
-      });
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchPortfolio();
+  React.useEffect(() => {
+    fetchPortfolioData();
+  }, []);
 
-    // Subscribe to real-time portfolio updates
-    const unsubscribe = websocketService.subscribe<Portfolio>('portfolio-update', (data) => {
-      setPortfolio(data);
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          message: 'Portfolio updated in real-time',
-          type: 'info'
-        }
-      });
-    });
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(value);
+  };
 
-    return () => {
-      unsubscribe();
-    };
-  }, [dispatch]);
+  const formatPercentage = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'percent',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value / 100);
+  };
 
-  if (state.lastError) {
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(0);
+  };
+
+  if (loading && !summary) {
     return (
-      <Container sx={{ mt: 4 }}>
-        <Alert 
-          severity="error" 
-          onClose={() => dispatch({ type: 'SET_ERROR', payload: null })}
-        >
-          {state.lastError}
-        </Alert>
-      </Container>
+      <Grid container sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <Grid item>
+          <Typography variant="h4" component="div">
+            Loading...
+          </Typography>
+        </Grid>
+      </Grid>
     );
   }
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Portfolio Overview
-      </Typography>
-      
-      {portfolio && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Balance
-              </Typography>
-              <Typography variant="h4">
-                ${portfolio.totalBalance.toLocaleString()}
-              </Typography>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4" component="h1">
+          Portfolio Overview
+        </Typography>
+      </Box>
+
+      {summary && (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper>
+              <Box sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="h6" component="div">
+                    Total Value
+                  </Typography>
+                </Box>
+                <Typography variant="h4" component="div" sx={{ mb: 1 }}>
+                  {formatCurrency(summary.totalValue)}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Cash: {formatCurrency(summary.cashBalance)}
+                </Typography>
+              </Box>
             </Paper>
           </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Equity
-              </Typography>
-              <Typography variant="h4">
-                ${portfolio.equity.toLocaleString()}
-              </Typography>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper>
+              <Box sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="h6" component="div">
+                    Total P&L
+                  </Typography>
+                </Box>
+                <Typography 
+                  variant="h4" 
+                  component="div" 
+                  sx={{ 
+                    mb: 1,
+                    color: summary.totalPnl >= 0 
+                      ? 'green' 
+                      : 'red'
+                  }}
+                >
+                  {formatCurrency(summary.totalPnl)}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {formatPercentage(summary.totalPnlPercentage)}
+                </Typography>
+              </Box>
             </Paper>
           </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Open Positions
-              </Typography>
-              <Typography variant="h4">
-                {portfolio.openPositions}
-              </Typography>
-            </Paper>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Daily P&L
-              </Typography>
-              <Typography variant="h4" color={portfolio.dailyPnL >= 0 ? 'success.main' : 'error.main'}>
-                ${portfolio.dailyPnL.toLocaleString()}
-              </Typography>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper>
+              <Box sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="h6" component="div">
+                    Invested Amount
+                  </Typography>
+                </Box>
+                <Typography variant="h4" component="div" sx={{ mb: 1 }}>
+                  {formatCurrency(summary.investedAmount)}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {summary.numberOfAssets} Assets
+                </Typography>
+              </Box>
             </Paper>
           </Grid>
         </Grid>
       )}
+
+      <Paper sx={{ width: '100%', mb: 2 }}>
+        <Box sx={{ p: 2 }}>
+          <Grid container>
+            <Grid item xs={12}>
+              <Typography variant="h6" component="div">
+                Assets
+              </Typography>
+            </Grid>
+          </Grid>
+          <Grid container>
+            <Grid item xs={12}>
+              <Grid container>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body1" component="div">
+                    Symbol
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body1" component="div">
+                    Allocation
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body1" component="div">
+                    Current Price
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body1" component="div">
+                    Average Price
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body1" component="div">
+                    Quantity
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body1" component="div">
+                    P&L
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body1" component="div">
+                    P&L %
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Grid>
+            {assets
+              .slice(currentPage * itemsPerPage, currentPage * itemsPerPage + itemsPerPage)
+              .map((asset) => (
+                <Grid container key={asset.symbol}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography variant="body1" component="div">
+                      {asset.symbol}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography variant="body1" component="div">
+                      {formatPercentage(asset.allocation)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography variant="body1" component="div">
+                      {formatCurrency(asset.currentPrice)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography variant="body1" component="div">
+                      {formatCurrency(asset.averagePrice)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography variant="body1" component="div">
+                      {asset.quantity}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography 
+                      variant="body1" 
+                      component="div"
+                      sx={{ 
+                        color: asset.pnl >= 0 
+                          ? 'green' 
+                          : 'red' 
+                      }}
+                    >
+                      {formatCurrency(asset.pnl)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography 
+                      variant="body1" 
+                      component="div"
+                      sx={{ 
+                        color: asset.pnlPercentage >= 0 
+                          ? 'green' 
+                          : 'red' 
+                      }}
+                    >
+                      {formatPercentage(asset.pnlPercentage)}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              ))}
+          </Grid>
+        </Box>
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="body2">
+              Rows per page:
+              <select
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                style={{ marginLeft: '8px' }}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+              </select>
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                disabled={currentPage === 0}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
+                Previous
+              </Button>
+              <Typography variant="body2" sx={{ alignSelf: 'center' }}>
+                Page {currentPage + 1} of {Math.ceil(assets.length / itemsPerPage)}
+              </Typography>
+              <Button
+                disabled={currentPage >= Math.ceil(assets.length / itemsPerPage) - 1}
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
+                Next
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+      </Paper>
     </Container>
   );
 };

@@ -1,136 +1,150 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { API_ENDPOINTS, publicRequest, authenticatedRequest } from '../config/api';
+import {
+  Container,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Paper,
+  Link,
+  Divider,
+  FormControlLabel,
+  Checkbox,
+  CircularProgress,
+} from '@mui/material';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useStore } from '@/context/StoreContext';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [error, setError] = useState('');
+  const { authStore } = useStore();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
-
+    setError(null);
+    
     try {
-      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to login');
-      }
-
-      // Check for success status and token
-      if (data.status === 'success' && data.data?.token) {
-        localStorage.setItem('token', data.data.token);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-        
-        // Verify the token works by making an authenticated request
-        try {
-          await authenticatedRequest(API_ENDPOINTS.USER.PREFERENCES);
-          navigate('/dashboard');
-        } catch (verifyError) {
-          console.error('Token verification failed:', verifyError);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setError('Authentication failed. Please try logging in again.');
-        }
-      } else {
-        setError(data.message || 'Invalid response from server');
-      }
-    } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'Failed to login');
+      await authStore.login(email);
+      navigate('/dashboard');
+    } catch (err) {
+      setError('Invalid email or password');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const handleDemoLogin = async () => {
+    try {
+      await authStore.login('demo@example.com');
+      navigate('/dashboard');
+    } catch (error) {
+      // Error is handled by the store
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
-          </h2>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">Email address</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={formData.email}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </div>
-          </div>
+    <Container maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+          <Typography component="h1" variant="h5" align="center" gutterBottom>
+            Sign in
+          </Typography>
+          
+          <Divider sx={{ width: '100%', mb: 3 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Sign in with email
+            </Typography>
+          </Divider>
 
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    {error}
-                  </h3>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div>
-            <button
-              type="submit"
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Email Address"
+              name="email"
+              autoComplete="email"
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={!!error}
               disabled={loading}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
-                loading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={!!error}
+              helperText={error}
+              disabled={loading}
+            />
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  value="remember"
+                  color="primary"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={loading}
+                />
+              }
+              label="Remember me"
+            />
+            
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
             >
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              {loading ? <CircularProgress size={24} /> : 'Sign In'}
+            </Button>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+              <Link component={RouterLink} to="/register" variant="body2">
+                {"Don't have an account? Sign Up"}
+              </Link>
+              <Link component={RouterLink} to="/forgot-password" variant="body2">
+                {"Forgot password?"}
+              </Link>
+            </Box>
+          </Box>
+        </Paper>
+        <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={handleDemoLogin}
+            fullWidth
+          >
+            Try Demo Account
+          </Button>
+        </Box>
+      </Box>
+    </Container>
   );
 };
 
