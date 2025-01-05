@@ -88,7 +88,7 @@ databases:
   # PostgreSQL Database
   - name: algo360fx-db
     region: singapore
-    plan: small
+    plan: pro-2
     databaseName: algo360fx
     user: algo360fx
     ipAllowList:
