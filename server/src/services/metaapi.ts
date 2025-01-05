@@ -1,14 +1,14 @@
-import MetaApi from 'metaapi.cloud-sdk';
+import MetaApi, { MetatraderAccount } from 'metaapi.cloud-sdk';
 import { config } from '../config/config';
 
 let api: MetaApi | null = null;
 let isMetaApiEnabled = false;
 
 // Initialize MetaAPI with retry mechanism and validation
-if (config.metaApiToken && config.mt5AccountId) {
+if (config.mt5.apiToken && config.mt5.accountId) {
   try {
     console.log('Initializing MetaApi...');
-    api = new MetaApi(config.metaApiToken);
+    api = new MetaApi(config.mt5.apiToken);
     isMetaApiEnabled = true;
     console.log('MetaAPI initialized successfully');
   } catch (error) {
@@ -39,39 +39,41 @@ export async function getMetaApiConnection() {
       console.log('Initializing MetaAPI connection...');
       
       // Create MT5 account instance with retries
-      let account = null;
+      let account: MetatraderAccount | null = null;
       let retryCount = 0;
-      while (!account && retryCount < config.metaApiRetryAttempts) {
+      while (!account && retryCount < config.mt5.retryAttempts) {
         try {
           console.log(`Attempt ${retryCount + 1} to get MT5 account...`);
-          account = await api.metatraderAccountApi.getAccount(config.mt5AccountId);
+          account = await api.metatraderAccountApi.getAccount(config.mt5.accountId);
           if (!account) {
             throw new Error('MT5 account not found');
           }
         } catch (error) {
-          console.error(`Attempt ${retryCount + 1} failed:`, error);
+          console.error(`Failed to get MT5 account (attempt ${retryCount + 1}):`, error);
           retryCount++;
-          if (retryCount < config.metaApiRetryAttempts) {
-            await new Promise(resolve => setTimeout(resolve, config.metaApiRetryDelay));
+          if (retryCount < config.mt5.retryAttempts) {
+            await new Promise(resolve => setTimeout(resolve, config.mt5.retryDelay));
           }
         }
       }
 
       if (!account) {
-        throw new Error(`Failed to get MT5 account after ${config.metaApiRetryAttempts} attempts`);
+        throw new Error(`Failed to get MT5 account after ${config.mt5.retryAttempts} attempts`);
       }
 
-      console.log('MT5 account retrieved successfully');
-      
       // Deploy account if needed
-      if (account.state !== 'DEPLOYED') {
+      const status = await account.waitConnected();
+      if (!status) {
         console.log('Deploying MT5 account...');
         await account.deploy();
+        await account.waitDeployed();
       }
 
+      // Connect to account
       console.log('Connecting to MT5 account...');
-      // @ts-ignore - MetaAPI types are not fully accurate
-      cachedConnection = await account.connect();
+      const connection = account.getRPCConnection();
+      await connection.connect();
+      cachedConnection = connection;
     }
 
     return cachedConnection;
@@ -83,21 +85,16 @@ export async function getMetaApiConnection() {
 }
 
 // Add a health check function
-export async function checkMetaApiHealth() {
-  if (!isMetaApiEnabled) {
-    return { status: 'disabled', message: 'MetaAPI is not enabled' };
-  }
-
+export async function checkMetaApiHealth(): Promise<boolean> {
   try {
     const connection = await getMetaApiConnection();
-    return connection 
-      ? { status: 'healthy', message: 'MetaAPI connection established' }
-      : { status: 'error', message: 'Failed to establish MetaAPI connection' };
+    return connection !== null;
   } catch (error) {
-    return { status: 'error', message: String(error) };
+    console.error('MetaAPI health check failed:', error);
+    return false;
   }
 }
 
-export function isMetaApiServiceEnabled() {
+export function isMetaApiServiceEnabled(): boolean {
   return isMetaApiEnabled;
 }

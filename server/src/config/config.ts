@@ -27,6 +27,8 @@ const env = cleanEnv(process.env, {
   MT5_ACCOUNT_ID: str(),
   META_API_TOKEN: str(),
   META_API_URL: url({ default: 'https://mt-manager-api.metaapi.cloud/v1' }),
+  META_API_RETRY_ATTEMPTS: num({ default: 3 }),
+  META_API_RETRY_DELAY: num({ default: 5000 }),
 
   // Market Data API
   MARKET_API_KEY: str(),
@@ -131,6 +133,8 @@ export interface Config {
     accountId: string;
     apiToken: string;
     apiUrl: string;
+    retryAttempts: number;
+    retryDelay: number;
   };
   marketData: {
     apiKey: string;
@@ -208,6 +212,10 @@ export interface Config {
     enableSocialTrading: boolean;
     enableDemoMode: boolean;
   };
+  metaApi: {
+    retryAttempts: number;
+    retryDelay: number;
+  };
 }
 
 export const config: Config = {
@@ -234,6 +242,8 @@ export const config: Config = {
     accountId: env.MT5_ACCOUNT_ID,
     apiToken: env.META_API_TOKEN,
     apiUrl: env.META_API_URL,
+    retryAttempts: env.META_API_RETRY_ATTEMPTS,
+    retryDelay: env.META_API_RETRY_DELAY,
   },
   marketData: {
     apiKey: env.MARKET_API_KEY,
@@ -310,5 +320,9 @@ export const config: Config = {
     enableAiPredictions: env.ENABLE_AI_PREDICTIONS,
     enableSocialTrading: env.ENABLE_SOCIAL_TRADING,
     enableDemoMode: env.ENABLE_DEMO_MODE,
+  },
+  metaApi: {
+    retryAttempts: env.META_API_RETRY_ATTEMPTS,
+    retryDelay: env.META_API_RETRY_DELAY,
   },
 };
