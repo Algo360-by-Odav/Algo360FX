@@ -3,8 +3,8 @@ services:
   - type: web
     name: algo360fx-frontend
     env: static
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: ./client/dist
     pullRequestPreviewsEnabled: true
     headers:
       - path: /*
@@ -40,7 +40,7 @@ services:
     name: algo360fx-api
     env: node
     region: singapore
-    plan: standard
+    plan: starter
     buildCommand: cd server && npm install && npm run build
     startCommand: cd server && npm run start:prod
     healthCheckPath: /api/health
@@ -78,7 +78,7 @@ services:
   - type: redis
     name: algo360fx-redis
     region: singapore
-    plan: standard
+    plan: starter
     maxmemoryPolicy: noeviction
     ipAllowList:
       - source: 0.0.0.0/0
@@ -88,7 +88,7 @@ databases:
   # PostgreSQL Database
   - name: algo360fx-db
     region: singapore
-    plan: free
+    plan: starter
     databaseName: algo360fx
     user: algo360fx
     ipAllowList:
