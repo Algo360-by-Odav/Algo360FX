@@ -8,65 +8,43 @@ interface MarketData {
   low: number;
   open: number;
   timestamp: number;
+  volume: number; // Add volume property
 }
 
 export class TechnicalAnalysis {
   private async getHistoricalData(symbol: string, timeframe: string): Promise<MarketData[]> {
-    // Replace with your actual market data provider
     const response = await axios.get(`${process.env.MARKET_DATA_API}/historical`, {
       params: { symbol, timeframe }
     });
     return response.data;
   }
 
-  public async analyze(symbol: string, timeframe: string, indicators: string[] = []): Promise<Record<string, any>> {
+  public async analyze(symbol: string, timeframe: string): Promise<Record<string, unknown>> {
     try {
       const historicalData = await this.getHistoricalData(symbol, timeframe);
-      const analysis: Record<string, any> = {};
+      const analysis: Record<string, unknown> = {};
 
-      // Default indicators if none specified
-      if (indicators.length === 0) {
-        indicators = ['sma', 'ema', 'rsi', 'macd', 'bollinger'];
-      }
-
-      for (const indicator of indicators) {
-        switch (indicator.toLowerCase()) {
-          case 'sma':
-            analysis.sma = await this.calculateSMA(historicalData.map((d: MarketData) => d.close));
-            break;
-          case 'ema':
-            analysis.ema = await this.calculateEMA(historicalData.map((d: MarketData) => d.close));
-            break;
-          case 'rsi':
-            analysis.rsi = await this.calculateRSI(historicalData.map((d: MarketData) => d.close));
-            break;
-          case 'macd':
-            analysis.macd = await this.calculateMACD(historicalData.map((d: MarketData) => d.close));
-            break;
-          case 'bollinger':
-            analysis.bollinger = await this.calculateBollingerBands(historicalData.map((d: MarketData) => d.close));
-            break;
-          case 'atr':
-            analysis.atr = await this.calculateATR(historicalData);
-            break;
-          case 'stochastic':
-            analysis.stochastic = await this.calculateStochastic(historicalData);
-            break;
-          case 'adx':
-            analysis.adx = await this.calculateADX(historicalData);
-            break;
-          // Add more indicators as needed
-        }
-      }
+      // Calculate core indicators
+      analysis.sma = await this.calculateSMA(historicalData.map(d => d.close));
+      analysis.ema = await this.calculateEMA(historicalData.map(d => d.close));
+      analysis.rsi = await this.calculateRSI(historicalData.map(d => d.close));
+      analysis.macd = await this.calculateMACD(historicalData.map(d => d.close));
+      analysis.bollinger = await this.calculateBollingerBands(historicalData.map(d => d.close));
+      analysis.atr = await this.calculateATR(historicalData);
+      analysis.stochastic = await this.calculateStochastic(historicalData);
+      analysis.adx = await this.calculateADX(historicalData);
 
       // Add trend analysis
-      analysis.trend = await this.analyzeTrend(historicalData, analysis);
+      analysis.trend = await this.analyzeTrend(historicalData);
       
       // Add support/resistance levels
       analysis.levels = await this.findKeyLevels(historicalData);
 
       // Add pattern recognition
       analysis.patterns = await this.detectPatterns(historicalData);
+
+      // Add volume analysis
+      analysis.volume = await this.analyzeVolume(historicalData);
 
       return analysis;
     } catch (error) {
@@ -87,7 +65,7 @@ export class TechnicalAnalysis {
     return technicalIndicators.RSI.calculate({ period, values: data });
   }
 
-  public async calculateMACD(data: number[]): Promise<any> {
+  public async calculateMACD(data: number[]): Promise<{ histogram: number; signal: number; MACD: number }[]> {
     const macdInput: MACDInput = {
       values: data,
       fastPeriod: 12,
@@ -99,7 +77,11 @@ export class TechnicalAnalysis {
     return technicalIndicators.MACD.calculate(macdInput);
   }
 
-  public async calculateBollingerBands(data: number[], period: number = 20, stdDev: number = 2): Promise<any> {
+  public async calculateBollingerBands(data: number[], period: number = 20, stdDev: number = 2): Promise<{
+    upper: number[];
+    middle: number[];
+    lower: number[];
+  }> {
     return technicalIndicators.BollingerBands.calculate({
       period,
       values: data,
@@ -117,45 +99,98 @@ export class TechnicalAnalysis {
   }
 
   public async findSupportLevels(data: MarketData[]): Promise<number[]> {
-    // Implement support level detection logic
-    return [];
+    const lows = data.map(d => d.low);
+    const supportLevels = new Set<number>();
+    
+    for (let i = 1; i < lows.length - 1; i++) {
+      if (lows[i] < lows[i - 1] && lows[i] < lows[i + 1]) {
+        supportLevels.add(lows[i]);
+      }
+    }
+    
+    return Array.from(supportLevels).sort((a, b) => a - b);
   }
 
   public async findResistanceLevels(data: MarketData[]): Promise<number[]> {
-    // Implement resistance level detection logic
-    return [];
+    const highs = data.map(d => d.high);
+    const resistanceLevels = new Set<number>();
+    
+    for (let i = 1; i < highs.length - 1; i++) {
+      if (highs[i] > highs[i - 1] && highs[i] > highs[i + 1]) {
+        resistanceLevels.add(highs[i]);
+      }
+    }
+    
+    return Array.from(resistanceLevels).sort((a, b) => a - b);
   }
 
   public async findCandlePatterns(data: MarketData[]): Promise<string[]> {
-    // Implement candlestick pattern recognition
-    return [];
+    const patterns: string[] = [];
+    const lastThreeCandles = data.slice(-3);
+    
+    // Simple pattern detection example
+    if (lastThreeCandles.length === 3) {
+      const [c1, c2, c3] = lastThreeCandles;
+      
+      // Bullish engulfing
+      if (c2.close < c2.open && c3.close > c3.open && c3.close > c2.open && c3.open < c2.close) {
+        patterns.push('bullish engulfing');
+      }
+      
+      // Bearish engulfing
+      if (c2.close > c2.open && c3.close < c3.open && c3.close < c2.open && c3.open > c2.close) {
+        patterns.push('bearish engulfing');
+      }
+    }
+    
+    return patterns;
   }
 
-  public async analyzeVolume(data: MarketData[]): Promise<any> {
-    // Implement volume analysis
-    return {};
+  public async analyzeVolume(data: MarketData[]): Promise<{
+    trend: 'increasing' | 'decreasing' | 'stable';
+    strength: number;
+  }> {
+    const volumes = data.map(d => d.volume);
+    const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+    const recentVolume = volumes.slice(-5).reduce((a, b) => a + b, 0) / 5;
+    
+    let trend: 'increasing' | 'decreasing' | 'stable';
+    if (recentVolume > avgVolume * 1.1) {
+      trend = 'increasing';
+    } else if (recentVolume < avgVolume * 0.9) {
+      trend = 'decreasing';
+    } else {
+      trend = 'stable';
+    }
+    
+    const strength = recentVolume / avgVolume;
+    
+    return { trend, strength };
   }
 
-  private async calculateStochastic(data: MarketData[], period: number = 14): Promise<any> {
-    const stochastic = technicalIndicators.stochastic({
+  private async calculateStochastic(data: MarketData[], period: number = 14): Promise<{
+    k: number[];
+    d: number[];
+  }> {
+    return technicalIndicators.Stochastic.calculate({
       high: data.map(d => d.high),
       low: data.map(d => d.low),
       close: data.map(d => d.close),
       period,
       signalPeriod: 3
     });
-    
-    return {
-      k: stochastic.map(s => s.k),
-      d: stochastic.map(s => s.d)
-    };
   }
 
-  private async analyzeTrend(data: MarketData[], indicators: Record<string, any>): Promise<Record<string, string>> {
+  private async analyzeTrend(data: MarketData[]): Promise<{
+    shortTerm: string;
+    mediumTerm: string;
+    longTerm: string;
+    strength: string;
+  }> {
     const closes = data.map(d => d.close);
-    const sma20 = await this.calculateSMA(data.map(d => d.close), 20);
-    const sma50 = await this.calculateSMA(data.map(d => d.close), 50);
-    const sma200 = await this.calculateSMA(data.map(d => d.close), 200);
+    const sma20 = await this.calculateSMA(closes, 20);
+    const sma50 = await this.calculateSMA(closes, 50);
+    const sma200 = await this.calculateSMA(closes, 200);
     
     return {
       shortTerm: closes[closes.length - 1] > sma20[sma20.length - 1] ? 'bullish' : 'bearish',
@@ -166,129 +201,34 @@ export class TechnicalAnalysis {
   }
 
   private async calculateTrendStrength(data: MarketData[]): Promise<string> {
-    // Implement trend strength calculation
-    // Could use ADX or other trend strength indicators
-    return 'moderate'; // placeholder
+    const adx = await this.calculateADX(data);
+    const lastADX = adx[adx.length - 1];
+    
+    if (lastADX > 40) return 'strong';
+    if (lastADX > 25) return 'moderate';
+    return 'weak';
   }
 
-  private async findKeyLevels(data: MarketData[]): Promise<Record<string, number[]>> {
-    // Implement support/resistance level detection
+  private async findKeyLevels(data: MarketData[]): Promise<{
+    support: number[];
+    resistance: number[];
+  }> {
     return {
-      support: [],
-      resistance: [],
+      support: await this.findSupportLevels(data),
+      resistance: await this.findResistanceLevels(data),
     };
   }
 
-  private async detectPatterns(data: MarketData[]): Promise<any[]> {
-    // Implement chart pattern recognition
-    return [];
+  private async detectPatterns(data: MarketData[]): Promise<string[]> {
+    return this.findCandlePatterns(data);
   }
 
   public async calculateADX(data: MarketData[], period: number = 14): Promise<number[]> {
-    const trueRanges: number[] = [];
-    const plusDM: number[] = [];
-    const minusDM: number[] = [];
-    const adx: number[] = [];
-
-    // Calculate True Range and Directional Movement
-    for (let i = 1; i < data.length; i++) {
-      const high = data[i].high;
-      const low = data[i].low;
-      const prevHigh = data[i - 1].high;
-      const prevLow = data[i - 1].low;
-      const prevClose = data[i - 1].close;
-
-      // True Range
-      trueRanges.push(Math.max(
-        high - low,
-        Math.abs(high - prevClose),
-        Math.abs(low - prevClose)
-      ));
-
-      // Plus Directional Movement
-      const upMove = high - prevHigh;
-      const downMove = prevLow - low;
-      
-      if (upMove > downMove && upMove > 0) {
-        plusDM.push(upMove);
-      } else {
-        plusDM.push(0);
-      }
-
-      // Minus Directional Movement
-      if (downMove > upMove && downMove > 0) {
-        minusDM.push(downMove);
-      } else {
-        minusDM.push(0);
-      }
-    }
-
-    // Calculate smoothed averages
-    const smoothedTR = await this.calculateSmoothedAverage(trueRanges, period);
-    const smoothedPlusDM = await this.calculateSmoothedAverage(plusDM, period);
-    const smoothedMinusDM = await this.calculateSmoothedAverage(minusDM, period);
-
-    // Calculate Plus and Minus Directional Indicators
-    const plusDI: number[] = [];
-    const minusDI: number[] = [];
-
-    for (let i = 0; i < smoothedTR.length; i++) {
-      plusDI.push((smoothedPlusDM[i] / smoothedTR[i]) * 100);
-      minusDI.push((smoothedMinusDM[i] / smoothedTR[i]) * 100);
-    }
-
-    // Calculate ADX
-    const dx: number[] = [];
-    for (let i = 0; i < plusDI.length; i++) {
-      dx.push(Math.abs(plusDI[i] - minusDI[i]) / (plusDI[i] + minusDI[i]) * 100);
-    }
-
-    // Smooth DX to get ADX
-    return await this.calculateSmoothedAverage(dx, period);
-  }
-
-  private async calculateSmoothedAverage(data: number[], period: number): Promise<number[]> {
-    const smoothed: number[] = [];
-    const sum = data.slice(0, period).reduce((a, b) => a + b, 0);
-    smoothed.push(sum / period);
-
-    for (let i = period; i < data.length; i++) {
-      smoothed.push((smoothed[smoothed.length - 1] * (period - 1) + data[i]) / period);
-    }
-    return smoothed;
-  }
-
-  async predict(symbol: string, timeframe: string): Promise<any> {
-    const historicalData = await this.getHistoricalData(symbol, timeframe);
-    // Implement prediction logic here
-    return {
-      symbol,
-      timeframe,
-      prediction: {
-        direction: 'up',
-        probability: 0.75,
-        targetPrice: 1.2300,
-        timeframe: '4h'
-      }
-    };
-  }
-
-  async generateSignals(symbol: string, timeframe: string): Promise<any> {
-    const historicalData = await this.getHistoricalData(symbol, timeframe);
-    // Implement signal generation logic here
-    return {
-      symbol,
-      timeframe,
-      signals: [
-        {
-          type: 'buy',
-          entryPrice: 1.2100,
-          stopLoss: 1.2050,
-          takeProfit: 1.2200,
-          timeframe: '1h',
-          confidence: 0.8
-        }
-      ]
-    };
+    return technicalIndicators.ADX.calculate({
+      high: data.map(d => d.high),
+      low: data.map(d => d.low),
+      close: data.map(d => d.close),
+      period
+    });
   }
 }
