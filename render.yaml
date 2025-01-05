@@ -45,10 +45,6 @@ services:
     startCommand: cd server && npm run start:prod
     healthCheckPath: /api/health
     autoDeploy: true
-    disk:
-      name: trading-data
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: 18.17.0
