@@ -45,34 +45,45 @@ router.post('/register',
           email,
           password: hashedPassword,
           username,
-          firstName,
-          lastName,
-          emailVerified: true, // For now, auto-verify email
-          role: 'USER'
+          firstName: firstName || '',
+          lastName: lastName || '',
+          emailVerified: true, // Auto-verify for testing
+          role: 'USER',
+          preferences: { theme: 'light' }
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          emailVerified: true,
+          preferences: true
         }
       });
 
-      // Generate token
-      const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role },
+      // Generate tokens
+      const accessToken = jwt.sign(
+        { userId: user.id },
         process.env.JWT_SECRET || 'your-secret-key',
-        { expiresIn: '24h' }
+        { expiresIn: '1d' } // Extended for testing
       );
 
-      // Return success
+      const refreshToken = jwt.sign(
+        { userId: user.id },
+        process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
+        { expiresIn: '7d' }
+      );
+
       res.status(201).json({
         status: 'success',
-        message: 'Registration successful',
         data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role
-          },
-          token
+          user,
+          tokens: {
+            accessToken,
+            refreshToken
+          }
         }
       });
     } catch (error) {

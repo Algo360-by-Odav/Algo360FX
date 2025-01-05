@@ -1,23 +1,23 @@
 import rateLimit from 'express-rate-limit';
 import { config } from '../config/config';
 
-// Create a limiter that applies to all routes
+// Create a limiter that applies to all routes (temporarily disabled for testing)
 export const limiter = rateLimit({
-  windowMs: config.rateLimits.windowMs,
-  max: config.rateLimits.maxRequests,
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 100000, // Very high limit for testing
   message: 'Too many requests from this IP, please try again later.'
 });
 
-// Create a more strict limiter for auth routes
+// Create a more strict limiter for auth routes (temporarily disabled for testing)
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 100000, // Very high limit for testing
   message: 'Too many login attempts from this IP, please try again after 15 minutes'
 });
 
-// Create a limiter for API routes
+// Create a limiter for API routes (temporarily disabled for testing)
 export const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 30, // limit each IP to 30 requests per minute
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 100000, // Very high limit for testing
   message: 'Too many API requests from this IP, please try again later'
 });
