@@ -3,7 +3,7 @@ services:
   - type: web
     name: algo360fx-frontend
     env: static
-    buildCommand: cd client && npm install && npx rimraf dist && npm run build
+    buildCommand: cd client && npm install && npm install -g rimraf && npx rimraf dist && npm run build
     staticPublishPath: ./client/dist
     pullRequestPreviewsEnabled: true
     headers:
@@ -41,7 +41,7 @@ services:
     env: node
     region: singapore
     plan: free
-    buildCommand: cd server && npm install && npx rimraf dist && npm run build
+    buildCommand: cd server && npm install && npm install -g rimraf && npm run build
     startCommand: cd server && npm run start:prod
     healthCheckPath: /api/health
     autoDeploy: true
