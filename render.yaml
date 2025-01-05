@@ -74,7 +74,7 @@ services:
   - type: redis
     name: algo360fx-redis
     region: singapore
-    plan: free
+    plan: standard  # Keep as standard since we can't downgrade
     maxmemoryPolicy: noeviction
     ipAllowList:
       - source: 0.0.0.0/0
