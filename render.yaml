@@ -78,7 +78,7 @@ services:
   - type: redis
     name: algo360fx-redis
     region: singapore
-    plan: starter
+    plan: standard
     maxmemoryPolicy: noeviction
     ipAllowList:
       - source: 0.0.0.0/0
@@ -88,7 +88,7 @@ databases:
   # PostgreSQL Database
   - name: algo360fx-db
     region: singapore
-    plan: starter
+    plan: small
     databaseName: algo360fx
     user: algo360fx
     ipAllowList:
