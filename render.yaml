@@ -40,7 +40,7 @@ services:
     name: algo360fx-api
     env: node
     region: singapore
-    plan: starter
+    plan: free
     buildCommand: cd server && npm install && npm run build
     startCommand: cd server && npm run start:prod
     healthCheckPath: /api/health
@@ -48,7 +48,7 @@ services:
     disk:
       name: trading-data
       mountPath: /data
-      sizeGB: 10
+      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: 18.17.0
@@ -78,7 +78,7 @@ services:
   - type: redis
     name: algo360fx-redis
     region: singapore
-    plan: standard
+    plan: free
     maxmemoryPolicy: noeviction
     ipAllowList:
       - source: 0.0.0.0/0
@@ -88,7 +88,7 @@ databases:
   # PostgreSQL Database
   - name: algo360fx-db
     region: singapore
-    plan: pro-2
+    plan: free
     databaseName: algo360fx
     user: algo360fx
     ipAllowList:
