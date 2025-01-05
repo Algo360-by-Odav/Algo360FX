@@ -1,49 +1,71 @@
-import { PrismaClient } from '@prisma/client';
+import { config } from './config';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { logger } from '../utils/logger';
 
-const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined;
+}
+
+const prismaOptions: Prisma.PrismaClientOptions = {
+  log: [
+    { level: 'query', emit: 'event' },
+    { level: 'error', emit: 'stdout' },
+    { level: 'warn', emit: 'stdout' },
+    { level: 'info', emit: 'stdout' }
+  ],
   datasources: {
     db: {
-      url: process.env.DATABASE_URL
+      url: config.database.url
     }
   }
-});
+};
 
-export async function connectDB() {
+// Create a new PrismaClient instance with connection pooling
+export const prisma = global.prisma || new PrismaClient(prismaOptions);
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma;
+}
+
+// Handle process termination
+const handleShutdown = async () => {
   try {
-    const MAX_RETRIES = 5;
-    const RETRY_DELAY = 5000; // 5 seconds
-    let retries = 0;
-
-    while (retries < MAX_RETRIES) {
-      try {
-        await prisma.$connect();
-        console.log('Database connected successfully');
-
-        // Handle process termination
-        process.on('beforeExit', async () => {
-          await prisma.$disconnect();
-        });
-
-        // Connection successful, exit the retry loop
-        return;
-      } catch (error) {
-        retries++;
-        console.error(`Database connection attempt ${retries} failed:`, error);
-        
-        if (retries === MAX_RETRIES) {
-          throw error;
-        }
-
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      }
-    }
+    await prisma.$disconnect();
+    logger.info('Database connection closed gracefully');
   } catch (error) {
-    console.error('Database connection error after all retries:', error);
-    console.error('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not Set');
+    logger.error('Error disconnecting from database:', error);
     process.exit(1);
+  }
+};
+
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);
+process.on('beforeExit', handleShutdown);
+
+export async function connectDB(): Promise<void> {
+  const MAX_RETRIES = 5;
+  const RETRY_DELAY = 5000; // 5 seconds
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      // Test the connection with a simple query
+      await prisma.$queryRaw`SELECT 1`;
+      logger.info('Successfully connected to database');
+      return;
+    } catch (error) {
+      logger.error(`Database connection attempt ${attempt} failed:`, error);
+      
+      if (attempt === MAX_RETRIES) {
+        throw new Error('Failed to connect to database after maximum retries');
+      }
+
+      // Wait before retrying
+      logger.info(`Retrying in ${RETRY_DELAY}ms...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+    }
   }
 }
 
-export { prisma };
+export type { PrismaClient };
+export default prisma;

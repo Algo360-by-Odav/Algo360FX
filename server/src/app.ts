@@ -8,6 +8,9 @@ import { notFoundHandler } from './middleware/notFoundHandler';
 
 const app = express();
 
+// Trust proxy - needed for rate limiting behind reverse proxy
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet());
 app.use(cors({
