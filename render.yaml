@@ -73,11 +73,6 @@ services:
         sync: false
       - key: SENTRY_DSN
         sync: false
-    scaling:
-      minInstances: 1
-      maxInstances: 3
-      targetMemoryPercent: 80
-      targetCPUPercent: 80
 
   # Redis Service
   - type: redis
@@ -93,7 +88,7 @@ databases:
   # PostgreSQL Database
   - name: algo360fx-db
     region: singapore
-    plan: standard
+    plan: free
     databaseName: algo360fx
     user: algo360fx
     ipAllowList:
