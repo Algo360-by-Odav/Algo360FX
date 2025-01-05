@@ -14,8 +14,17 @@ interface MarketData {
 interface StrategyResult {
   signal: 'buy' | 'sell' | 'neutral';
   confidence: number;
-  indicators: Record<string, any>;
+  indicators: Record<string, unknown>;
   timestamp: number;
+}
+
+interface VolumeAnalysis {
+  trend: 'increasing' | 'decreasing' | 'stable';
+  strength: number;
+}
+
+interface MACD {
+  histogram: number;
 }
 
 export class TradingStrategies {
@@ -115,8 +124,8 @@ export class TradingStrategies {
     const lastATR = atr[atr.length - 1];
 
     // Find nearest support and resistance
-    const nearestSupport = Math.max(...supportLevels.filter(s => s < lastPrice));
-    const nearestResistance = Math.min(...resistanceLevels.filter(r => r > lastPrice));
+    const nearestSupport = Math.max(...supportLevels.filter((s: number) => s < lastPrice));
+    const nearestResistance = Math.min(...resistanceLevels.filter((r: number) => r > lastPrice));
 
     let signal: 'buy' | 'sell' | 'neutral' = 'neutral';
     let confidence = 0;
@@ -151,7 +160,7 @@ export class TradingStrategies {
     slowPeriod: number = 26,
     signalPeriod: number = 9
   ): Promise<StrategyResult> {
-    const macd = await this.technicalAnalysis.calculateMACD(historicalData.map(d => d.close));
+    const macd: MACD[] = await this.technicalAnalysis.calculateMACD(historicalData.map(d => d.close));
     const adx = await this.technicalAnalysis.calculateADX(historicalData);
 
     const lastMACD = macd[macd.length - 1];
@@ -182,16 +191,15 @@ export class TradingStrategies {
   public async executePatternRecognitionStrategy(
     historicalData: MarketData[]
   ): Promise<StrategyResult> {
-    const patterns = await this.technicalAnalysis.findCandlePatterns(historicalData);
-    const volume = await this.technicalAnalysis.analyzeVolume(historicalData);
+    const patterns: string[] = await this.technicalAnalysis.findCandlePatterns(historicalData);
+    const volume: VolumeAnalysis = await this.technicalAnalysis.analyzeVolume(historicalData);
 
     let signal: 'buy' | 'sell' | 'neutral' = 'neutral';
     let confidence = 0;
 
     // Analyze patterns and volume to generate signals
-    // This is a placeholder implementation
-    const bullishPatterns = patterns.filter(p => p.includes('bullish')).length;
-    const bearishPatterns = patterns.filter(p => p.includes('bearish')).length;
+    const bullishPatterns = patterns.filter((p: string) => p.includes('bullish')).length;
+    const bearishPatterns = patterns.filter((p: string) => p.includes('bearish')).length;
 
     if (bullishPatterns > bearishPatterns && volume.trend === 'increasing') {
       signal = 'buy';
@@ -205,42 +213,12 @@ export class TradingStrategies {
       signal,
       confidence,
       indicators: {
-        patterns,
-        volume
+        bullishPatterns,
+        bearishPatterns,
+        volumeTrend: volume.trend,
+        volumeStrength: volume.strength
       },
       timestamp: historicalData[historicalData.length - 1].timestamp
-    };
-  }
-
-  public async backtest(
-    strategy: string,
-    historicalData: MarketData[],
-    parameters: Record<string, any>
-  ): Promise<{
-    trades: Array<{
-      type: 'buy' | 'sell';
-      entry: number;
-      exit: number;
-      profit: number;
-      timestamp: number;
-    }>;
-    performance: {
-      totalReturns: number;
-      winRate: number;
-      sharpeRatio: number;
-      maxDrawdown: number;
-    };
-  }> {
-    // Implementation of backtesting logic
-    // This is a placeholder that should be implemented based on your specific requirements
-    return {
-      trades: [],
-      performance: {
-        totalReturns: 0,
-        winRate: 0,
-        sharpeRatio: 0,
-        maxDrawdown: 0
-      }
     };
   }
 }
