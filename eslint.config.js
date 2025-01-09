@@ -14,7 +14,16 @@ const config = {
   rules: {
     // Add any custom rules here
   },
-  ignores: ['node_modules/', 'dist/', 'build/'], // Use ignores property instead of .eslintignore
+  ignores: ['node_modules/', 'dist/', 'build/'], // This is fine
+  overrides: [
+    {
+      files: ['*.ts', '*.tsx'],
+      rules: {
+        '@typescript-eslint/no-unused-vars': 'warn',
+        // Add any specific rules for TypeScript files here
+      },
+    },
+  ],
 };
 
-module.exports = config;
+export default config; // Use export default instead of module.exports
