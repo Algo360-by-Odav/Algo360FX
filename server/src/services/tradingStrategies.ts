@@ -1,6 +1,7 @@
 import { TechnicalAnalysis } from './TechnicalAnalysis';
 import { MarketDataService } from './MarketData';
 import { RiskManagement } from './RiskManagement';
+import { Strategy } from '../types-new/Strategy';
 
 interface MarketData {
   timestamp: number;
@@ -44,9 +45,9 @@ export class TradingStrategies {
     longPeriod: number = 21
   ): Promise<StrategyResult> {
     const prices = historicalData.map(d => d.close);
-    const shortEMA = await this.technicalAnalysis.calculateEMA(prices, shortPeriod);
-    const longEMA = await this.technicalAnalysis.calculateEMA(prices, longPeriod);
-    const rsi = await this.technicalAnalysis.calculateRSI(prices);
+    const shortEMA = TechnicalAnalysis.calculateEMA(prices, shortPeriod);
+    const longEMA = TechnicalAnalysis.calculateEMA(prices, longPeriod);
+    const rsi = TechnicalAnalysis.calculateRSI(prices);
 
     const lastShortEMA = shortEMA[shortEMA.length - 1];
     const lastLongEMA = longEMA[longEMA.length - 1];
@@ -80,8 +81,8 @@ export class TradingStrategies {
     period: number = 20
   ): Promise<StrategyResult> {
     const prices = historicalData.map(d => d.close);
-    const bands = await this.technicalAnalysis.calculateBollingerBands(prices, period);
-    const rsi = await this.technicalAnalysis.calculateRSI(prices);
+    const bands = TechnicalAnalysis.calculateBollingerBands(prices, period);
+    const rsi = TechnicalAnalysis.calculateRSI(prices);
 
     const lastPrice = prices[prices.length - 1];
     const lastBand = bands[bands.length - 1];
@@ -116,9 +117,9 @@ export class TradingStrategies {
     historicalData: MarketData[],
     period: number = 14
   ): Promise<StrategyResult> {
-    const atr = await this.technicalAnalysis.calculateATR(historicalData, period);
-    const supportLevels = await this.technicalAnalysis.findSupportLevels(historicalData);
-    const resistanceLevels = await this.technicalAnalysis.findResistanceLevels(historicalData);
+    const atr = TechnicalAnalysis.calculateATR(historicalData, period);
+    const supportLevels = TechnicalAnalysis.findSupportLevels(historicalData);
+    const resistanceLevels = TechnicalAnalysis.findResistanceLevels(historicalData);
 
     const lastPrice = historicalData[historicalData.length - 1].close;
     const lastATR = atr[atr.length - 1];
@@ -160,8 +161,8 @@ export class TradingStrategies {
     slowPeriod: number = 26,
     signalPeriod: number = 9
   ): Promise<StrategyResult> {
-    const macd: MACD[] = await this.technicalAnalysis.calculateMACD(historicalData.map(d => d.close));
-    const adx = await this.technicalAnalysis.calculateADX(historicalData);
+    const macd: MACD[] = TechnicalAnalysis.calculateMACD(historicalData.map(d => d.close), fastPeriod, slowPeriod, signalPeriod);
+    const adx = TechnicalAnalysis.calculateADX(historicalData);
 
     const lastMACD = macd[macd.length - 1];
     const lastADX = adx[adx.length - 1];
@@ -191,8 +192,8 @@ export class TradingStrategies {
   public async executePatternRecognitionStrategy(
     historicalData: MarketData[]
   ): Promise<StrategyResult> {
-    const patterns: string[] = await this.technicalAnalysis.findCandlePatterns(historicalData);
-    const volume: VolumeAnalysis = await this.technicalAnalysis.analyzeVolume(historicalData);
+    const patterns: string[] = TechnicalAnalysis.findCandlePatterns(historicalData);
+    const volume: VolumeAnalysis = TechnicalAnalysis.analyzeVolume(historicalData);
 
     let signal: 'buy' | 'sell' | 'neutral' = 'neutral';
     let confidence = 0;
@@ -219,6 +220,74 @@ export class TradingStrategies {
         volumeStrength: volume.strength
       },
       timestamp: historicalData[historicalData.length - 1].timestamp
+    };
+  }
+
+  async executeEMAStrategy(symbol: string, timeframe: string): Promise<Strategy> {
+    const data = await this.technicalAnalysis.getHistoricalData(symbol, timeframe);
+    const { close } = TechnicalAnalysis.convertToArray(data);
+
+    const ema12 = TechnicalAnalysis.calculateMACD(close, 12, 26, 9);
+    const ema26 = TechnicalAnalysis.calculateMACD(close, 26, 12, 9);
+    const rsi = TechnicalAnalysis.calculateRSI(close);
+
+    // Strategy logic implementation
+    return {
+      id: '',
+      name: 'EMA Strategy',
+      type: 'EMA',
+      description: 'EMA Crossover Strategy',
+      parameters: {
+        ema12,
+        ema26,
+        rsi
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+
+  async executeBollingerBandsStrategy(symbol: string, timeframe: string): Promise<Strategy> {
+    const data = await this.technicalAnalysis.getHistoricalData(symbol, timeframe);
+    const { close } = TechnicalAnalysis.convertToArray(data);
+
+    const bollinger = TechnicalAnalysis.calculateBollingerBands(close);
+    const rsi = TechnicalAnalysis.calculateRSI(close);
+
+    // Strategy logic implementation
+    return {
+      id: '',
+      name: 'Bollinger Bands Strategy',
+      type: 'BB',
+      description: 'Bollinger Bands Mean Reversion Strategy',
+      parameters: {
+        bollinger,
+        rsi
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+
+  async executeTrendFollowingStrategy(symbol: string, timeframe: string): Promise<Strategy> {
+    const data = await this.technicalAnalysis.getHistoricalData(symbol, timeframe);
+    const { close, high, low } = TechnicalAnalysis.convertToArray(data);
+
+    const macd = TechnicalAnalysis.calculateMACD(close);
+    const adx = TechnicalAnalysis.calculateADX(high, low, close);
+
+    // Strategy logic implementation
+    return {
+      id: '',
+      name: 'Trend Following Strategy',
+      type: 'TREND',
+      description: 'MACD and ADX Trend Following Strategy',
+      parameters: {
+        macd,
+        adx
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
   }
 }

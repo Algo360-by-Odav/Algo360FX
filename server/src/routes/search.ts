@@ -1,10 +1,11 @@
-import express, { Response, RequestHandler } from 'express';
-import { auth } from '../middleware/auth';
-import { AuthRequest } from '../types/express';
+import express, { Response, RequestHandler, Router } from 'express';
+import { SearchService } from '../services-new/Search';
+import { authenticateToken, validateRequest } from '../middleware';
 import prisma from '../config/database';
 import Joi from 'joi';
 
-const router = express.Router();
+const router = Router();
+const searchService = new SearchService();
 
 // Validation schemas
 const searchSchema = Joi.object({
@@ -14,7 +15,6 @@ const searchSchema = Joi.object({
 
 // Search endpoint
 const searchItems: RequestHandler = async (req, res) => {
-  const authReq = req as AuthRequest;
   try {
     const { error, value } = searchSchema.validate(req.query);
     if (error) {
@@ -31,8 +31,7 @@ const searchItems: RequestHandler = async (req, res) => {
             OR: [
               { name: { contains: query, mode: 'insensitive' } },
               { description: { contains: query, mode: 'insensitive' } }
-            ],
-            userId: authReq.user.id
+            ]
           },
           include: {
             positions: true
@@ -41,13 +40,17 @@ const searchItems: RequestHandler = async (req, res) => {
         break;
 
       case 'position':
+        if (!req.user) {
+          throw new Error('User not authenticated');
+        }
         results = await prisma.position.findMany({
           where: {
             OR: [
-              { symbol: { contains: query, mode: 'insensitive' } },
-              { notes: { contains: query, mode: 'insensitive' } }
+              { symbol: { contains: query, mode: 'insensitive' } }
             ],
-            userId: authReq.user.id
+            portfolio: {
+              userId: req.user.id
+            }
           },
           include: {
             strategy: true,
@@ -57,13 +60,16 @@ const searchItems: RequestHandler = async (req, res) => {
         break;
 
       case 'portfolio':
+        if (!req.user) {
+          throw new Error('User not authenticated');
+        }
         results = await prisma.portfolio.findMany({
           where: {
             OR: [
               { name: { contains: query, mode: 'insensitive' } },
               { description: { contains: query, mode: 'insensitive' } }
             ],
-            userId: authReq.user.id
+            userId: req.user.id
           },
           include: {
             positions: {
@@ -92,7 +98,84 @@ const searchItems: RequestHandler = async (req, res) => {
   }
 };
 
-// Routes
-router.get('/', auth, searchItems);
+// Search across all resources
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    const { query, type } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+    
+    const results = await searchService.search(query as string, type as string, req.user!.id);
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to perform search' });
+  }
+});
+
+// Search portfolios
+router.get('/portfolios', authenticateToken, async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+    
+    const results = await searchService.searchPortfolios(query as string, req.user!.id);
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search portfolios' });
+  }
+});
+
+// Search strategies
+router.get('/strategies', authenticateToken, async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+    
+    const results = await searchService.searchStrategies(query as string, req.user!.id);
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search strategies' });
+  }
+});
+
+// Search positions
+router.get('/positions', authenticateToken, async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+    
+    const results = await searchService.searchPositions(query as string, req.user!.id);
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search positions' });
+  }
+});
+
+// Search market data
+router.get('/market', authenticateToken, async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+    
+    const results = await searchService.searchMarketData(query as string);
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search market data' });
+  }
+});
 
 export { router as searchRouter };

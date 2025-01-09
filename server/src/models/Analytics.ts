@@ -1,47 +1,50 @@
-import { Analytics, AnalyticsType } from '@prisma/client';
+import { Analytics, AnalyticsType, Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
 
 export type { Analytics };
 export { AnalyticsType };
 
-export const createAnalytics = async (data: Omit<Analytics, 'id' | 'createdAt' | 'updatedAt'>) => {
+type AnalyticsCreateInput = Prisma.AnalyticsUncheckedCreateInput;
+type AnalyticsUpdateInput = Prisma.AnalyticsUncheckedUpdateInput;
+
+export const createAnalytics = async (data: AnalyticsCreateInput): Promise<Analytics> => {
   return prisma.analytics.create({
     data,
     include: {
       user: true,
-      relatedStrategies: true,
+      strategies: true,
     },
   });
 };
 
-export const getAnalytics = async (id: string) => {
+export const getAnalytics = async (id: string): Promise<Analytics | null> => {
   return prisma.analytics.findUnique({
     where: { id },
     include: {
       user: true,
-      relatedStrategies: true,
+      strategies: true,
     },
   });
 };
 
-export const updateAnalytics = async (id: string, data: Partial<Analytics>) => {
+export const updateAnalytics = async (id: string, data: AnalyticsUpdateInput): Promise<Analytics> => {
   return prisma.analytics.update({
     where: { id },
     data,
     include: {
       user: true,
-      relatedStrategies: true,
+      strategies: true,
     },
   });
 };
 
-export const deleteAnalytics = async (id: string) => {
+export const deleteAnalytics = async (id: string): Promise<Analytics> => {
   return prisma.analytics.delete({
     where: { id },
   });
 };
 
-export const searchAnalytics = async (query: string) => {
+export const searchAnalytics = async (query: string): Promise<Analytics[]> => {
   return prisma.analytics.findMany({
     where: {
       OR: [
@@ -52,19 +55,19 @@ export const searchAnalytics = async (query: string) => {
     },
     include: {
       user: true,
-      relatedStrategies: true,
+      strategies: true,
     },
   });
 };
 
-export const getAnalyticsByUser = async (userId: string) => {
+export const getAnalyticsByUser = async (userId: string): Promise<Analytics[]> => {
   return prisma.analytics.findMany({
     where: {
       createdBy: userId,
     },
     include: {
       user: true,
-      relatedStrategies: true,
+      strategies: true,
     },
   });
 };

@@ -1,96 +1,88 @@
-import express from 'express';
-import cors from 'cors';
-import { json } from 'body-parser';
-import { Server } from 'socket.io';
-import http from 'http';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import config, { prisma, redis } from './src/config';
+import app from './src/app';
+import { setupWebSocketServer } from './src/websocket/server';
+import { setupMarketDataService } from './src/services/MarketData';
+import { logger } from './src/utils/logger';
 
-const app = express();
-const server = http.createServer(app);
+async function startServer() {
+  try {
+    // Create HTTP server
+    const server = createServer(app);
 
-// Allow both HTTP and WebSocket upgrades
-const io = new Server(server, {
-  path: '/ws',
-  cors: {
-    origin: [
-      'http://localhost:5173',
-      'https://algo360fx.vercel.app'
-    ],
-    methods: ['GET', 'POST'],
-    credentials: true
-  },
-  transports: ['websocket'],
-  pingTimeout: 60000,
-  pingInterval: 25000
-});
+    // Create WebSocket server
+    const wss = new WebSocketServer({ 
+      server,
+      path: '/ws',
+      clientTracking: true,
+    });
 
-const PORT = process.env.PORT || 5000;
+    // Setup WebSocket handlers
+    setupWebSocketServer(wss);
 
-// Configure CORS for HTTP requests
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://algo360fx.vercel.app'
-  ],
-  credentials: true
-}));
+    // Initialize market data service
+    await setupMarketDataService();
 
-app.use(json());
+    // Start HTTP server
+    server.listen(config.server.port, () => {
+      logger.info(`Server running in ${config.env} mode on port ${config.server.port}`);
+      logger.info(`WebSocket server running on ws://localhost:${config.server.port}/ws`);
+      logger.info(`CORS enabled for origin: ${config.server.corsOrigin}`);
+    });
 
-// Health check endpoint
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+    // Handle server shutdown
+    const gracefulShutdown = async (signal: string) => {
+      logger.info(`Received ${signal}. Starting graceful shutdown...`);
 
-// WebSocket connection handling
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-  
-  // Send initial account info
-  socket.emit('account_update', {
-    balance: 10000,
-    equity: 10150,
-    margin: 1000,
-    freeMargin: 9150,
-    marginLevel: 1015,
-    currency: 'USD'
-  });
-
-  // Handle market data subscription
-  socket.on('subscribe', (symbol: string) => {
-    console.log('Client subscribed to:', symbol);
-    
-    // Start sending market data for the subscribed symbol
-    const interval = setInterval(() => {
-      const bid = Math.random() * 0.0010 + 1.1000;
-      socket.emit('market_data', {
-        symbol,
-        bid: bid,
-        ask: bid + 0.0002,
-        timestamp: new Date().toISOString()
+      // Close WebSocket server
+      wss.close(() => {
+        logger.info('WebSocket server closed');
       });
-    }, 1000);
 
-    // Clean up interval on unsubscribe or disconnect
-    socket.on('unsubscribe', (unsub_symbol: string) => {
-      if (unsub_symbol === symbol) {
-        clearInterval(interval);
+      // Close HTTP server
+      server.close(() => {
+        logger.info('HTTP server closed');
+      });
+
+      // Disconnect from databases
+      try {
+        await Promise.all([
+          prisma.$disconnect(),
+          redis.quit()
+        ]);
+        logger.info('Database connections closed');
+      } catch (error) {
+        logger.error('Error during database disconnection:', error);
       }
+
+      // Exit process
+      process.exit(0);
+    };
+
+    // Setup signal handlers
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    // Handle uncaught errors
+    process.on('uncaughtException', (error) => {
+      logger.error('Uncaught Exception:', error);
+      gracefulShutdown('uncaughtException');
     });
 
-    socket.on('disconnect', () => {
-      clearInterval(interval);
-      console.log('Client disconnected:', socket.id);
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      gracefulShutdown('unhandledRejection');
     });
-  });
 
-  // Handle errors
-  socket.on('error', (error) => {
-    console.error('Socket error:', error);
-  });
-});
+  } catch (error) {
+    logger.error('Error starting server:', error);
+    process.exit(1);
+  }
+}
 
 // Start the server
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log('WebSocket server is ready for connections');
+startServer().catch((error) => {
+  logger.error('Failed to start server:', error);
+  process.exit(1);
 });

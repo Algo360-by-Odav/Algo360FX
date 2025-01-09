@@ -1,175 +1,118 @@
-import express, { Response, Request, RequestHandler } from 'express';
-import { auth } from '../middleware/auth';
-import { AuthRequest } from '../types/express';
-import { Prisma } from '@prisma/client';
-import { prisma } from '../config/database';
-import { z } from 'zod';
+import { Router } from 'express';
+import { UserModel } from '../models-new/User';
+import { authenticateToken, validateRequest } from '../middleware';
 
-const router = express.Router();
-
-// Validation schemas
-const updateUserSchema = z.object({
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  preferences: z.any().optional(), // Using any for now since it's JSON
-});
-
-const updatePasswordSchema = z.object({
-  currentPassword: z.string().min(6),
-  newPassword: z.string().min(6),
-});
+const router = Router();
 
 // Get user profile
-const getUserProfile: RequestHandler = async (req: Request, res: Response) => {
+router.get('/profile', authenticateToken, async (req, res) => {
   try {
-    const authReq = req as AuthRequest;
-    if (!authReq.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: authReq.user.id },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        preferences: true,
-      },
-    });
-
+    const user = await UserModel.findUnique({ id: req.user!.id });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-
-    return res.json(user);
+    res.json(user);
   } catch (error) {
-    console.error('Error fetching user profile:', error);
-    return res.status(500).json({ error: 'Failed to fetch user profile' });
+    res.status(500).json({ error: 'Failed to fetch user profile' });
   }
-};
+});
 
 // Update user profile
-const updateUserProfile: RequestHandler = async (req: Request, res: Response) => {
+router.put('/profile', authenticateToken, validateRequest, async (req, res) => {
   try {
-    const authReq = req as AuthRequest;
-    if (!authReq.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const validatedData = updateUserSchema.parse(req.body);
-    
-    const updatedUser = await prisma.user.update({
-      where: { id: authReq.user.id },
-      data: {
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
-        preferences: validatedData.preferences as Prisma.InputJsonValue,
-      },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        preferences: true,
-      },
-    });
-
-    return res.json({
-      status: 'success',
-      message: 'Profile updated successfully',
-      data: { user: updatedUser }
-    });
+    const user = await UserModel.update(req.user!.id, req.body);
+    res.json(user);
   } catch (error) {
-    console.error('Error updating user profile:', error);
-    return res.status(500).json({ error: 'Failed to update user profile' });
+    res.status(500).json({ error: 'Failed to update user profile' });
   }
-};
+});
 
 // Get user preferences
-const getUserPreferences: RequestHandler = async (req: Request, res: Response) => {
+router.get('/preferences', authenticateToken, async (req, res) => {
   try {
-    const authReq = req as AuthRequest;
-    if (!authReq.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: authReq.user.id },
-      select: {
-        preferences: true,
-      },
-    });
-
+    const user = await UserModel.findUnique({ id: req.user!.id });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-
-    return res.json(user.preferences);
+    res.json(user.preferences);
   } catch (error) {
-    console.error('Error fetching user preferences:', error);
-    return res.status(500).json({ error: 'Failed to fetch user preferences' });
+    res.status(500).json({ error: 'Failed to fetch user preferences' });
   }
-};
-
-// Delete user account
-const deleteUserAccount: RequestHandler = async (req: Request, res: Response) => {
-  try {
-    const authReq = req as AuthRequest;
-    if (!authReq.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    await prisma.user.delete({
-      where: { id: authReq.user.id }
-    });
-
-    return res.json({ message: 'Account deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting account:', error);
-    return res.status(500).json({ error: 'Failed to delete account' });
-  }
-};
+});
 
 // Update user preferences
-const updateUserPreferences: RequestHandler = async (req: Request, res: Response) => {
+router.put('/preferences', authenticateToken, validateRequest, async (req, res) => {
   try {
-    const authReq = req as AuthRequest;
-    if (!authReq.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const preferences = req.body;
-    console.log('Updating preferences for user:', authReq.user.id);
-
-    const updatedUser = await prisma.user.update({
-      where: { id: authReq.user.id },
-      data: {
-        preferences: preferences as Prisma.InputJsonValue
-      },
-      select: {
-        preferences: true
-      }
-    });
-
-    return res.json({
-      status: 'success',
-      message: 'Preferences updated successfully',
-      data: { preferences: updatedUser.preferences }
-    });
+    const user = await UserModel.updatePreferences(req.user!.id, req.body);
+    res.json(user.preferences);
   } catch (error) {
-    console.error('Error updating preferences:', error);
-    return res.status(500).json({ error: 'Failed to update preferences' });
+    res.status(500).json({ error: 'Failed to update user preferences' });
   }
-};
+});
 
-// Routes
-router.get('/profile', auth, getUserProfile);
-router.put('/profile', auth, updateUserProfile);
-router.put('/preferences', auth, updateUserPreferences);
-router.get('/preferences', auth, getUserPreferences);
-router.delete('/account', auth, deleteUserAccount);
+// Get user notifications
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    const notifications = await UserModel.getNotifications(req.user!.id);
+    res.json(notifications);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch user notifications' });
+  }
+});
+
+// Mark notification as read
+router.put('/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    const notification = await UserModel.markNotificationAsRead(req.params.id);
+    res.json(notification);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to mark notification as read' });
+  }
+});
+
+// Delete notification
+router.delete('/notifications/:id', authenticateToken, async (req, res) => {
+  try {
+    await UserModel.deleteNotification(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete notification' });
+  }
+});
+
+// Get user activity log
+router.get('/activity', authenticateToken, async (req, res) => {
+  try {
+    const { limit = 10, offset = 0 } = req.query;
+    const activity = await UserModel.getActivityLog(
+      req.user!.id,
+      Number(limit),
+      Number(offset)
+    );
+    res.json(activity);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch user activity log' });
+  }
+});
+
+// Get user statistics
+router.get('/stats', authenticateToken, async (req, res) => {
+  try {
+    const stats = await UserModel.getStatistics(req.user!.id);
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch user statistics' });
+  }
+});
+
+// Delete user account
+router.delete('/account', authenticateToken, async (req, res) => {
+  try {
+    await UserModel.delete(req.user!.id);
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete user account' });
+  }
+});
 
 export default router;

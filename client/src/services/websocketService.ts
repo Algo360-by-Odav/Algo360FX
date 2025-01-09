@@ -1,22 +1,19 @@
-import { io, Socket } from 'socket.io-client';
-import { 
-  API_BASE_URL, 
-  MAX_RECONNECT_ATTEMPTS, 
-  INITIAL_RECONNECT_DELAY, 
-  DEFAULT_TIMEOUT,
-  SOCKET_CONFIG
-} from '../config/constants';
+import { WEBSOCKET_CONFIG } from '@/config/constants';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
-export class WebSocketService {
+type MessageHandler = (data: any) => void;
+
+class WebSocketService {
   private static instance: WebSocketService;
-  private socket: Socket | null = null;
+  private socket: WebSocket | null = null;
+  private subscriptions: Map<string, Set<MessageHandler>> = new Map();
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS;
-  private reconnectDelay = INITIAL_RECONNECT_DELAY;
-  private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private maxReconnectAttempts = WEBSOCKET_CONFIG.CONFIG.RECONNECT_ATTEMPTS;
+  private reconnectTimeout = WEBSOCKET_CONFIG.CONFIG.RECONNECT_DELAY;
+  private isConnecting = false;
 
   private constructor() {
-    this.initializeSocket();
+    this.connect();
   }
 
   public static getInstance(): WebSocketService {
@@ -26,97 +23,151 @@ export class WebSocketService {
     return WebSocketService.instance;
   }
 
-  private initializeSocket() {
+  private async getAuthToken(): Promise<string | null> {
     try {
-      console.log('Connecting to Socket.IO at', API_BASE_URL);
+      const session = await fetchAuthSession();
+      return session.tokens?.idToken?.toString() || null;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  }
+
+  private async connect(): Promise<void> {
+    if (this.isConnecting || this.socket?.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    this.isConnecting = true;
+
+    try {
+      const token = await this.getAuthToken();
       
-      const socketOptions = {
-        ...SOCKET_CONFIG,
-        reconnectionAttempts: this.maxReconnectAttempts,
-        reconnectionDelay: this.reconnectDelay,
-        auth: {
-          timestamp: Date.now()
-        }
+      if (!token) {
+        console.log('No auth token available, delaying connection...');
+        setTimeout(() => this.connect(), 5000); // Try again in 5 seconds
+        return;
+      }
+
+      // Parse the WebSocket URL
+      const wsUrl = new URL(WEBSOCKET_CONFIG.ENDPOINTS.MT5_BRIDGE_URL);
+      
+      // Add the auth token as a query parameter
+      wsUrl.searchParams.append('Authorization', `Bearer ${token}`);
+
+      console.log('Connecting to WebSocket...', wsUrl.toString());
+      this.socket = new WebSocket(wsUrl.toString());
+
+      this.socket.onopen = () => {
+        console.log('WebSocket connected successfully');
+        this.reconnectAttempts = 0;
+        this.isConnecting = false;
+        this.resubscribeAll();
       };
 
-      this.socket = io(API_BASE_URL, socketOptions);
-      this.setupSocketListeners();
+      this.socket.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason);
+        this.isConnecting = false;
+        this.handleReconnect();
+      };
+
+      this.socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        this.isConnecting = false;
+      };
+
+      this.socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const endpoint = data.endpoint;
+          const handlers = this.subscriptions.get(endpoint);
+          
+          if (handlers) {
+            handlers.forEach(handler => handler(data.payload));
+          }
+        } catch (error) {
+          console.error('Error handling WebSocket message:', error);
+        }
+      };
     } catch (error) {
-      console.error('Failed to initialize socket:', error);
+      console.error('Error establishing WebSocket connection:', error);
+      this.isConnecting = false;
       this.handleReconnect();
     }
   }
 
-  private setupSocketListeners() {
-    if (!this.socket) return;
-
-    this.socket.on('connect', () => {
-      console.log('Socket.IO connected');
-      this.reconnectAttempts = 0;
-      this.reconnectDelay = INITIAL_RECONNECT_DELAY;
-    });
-
-    this.socket.on('disconnect', () => {
-      console.log('Socket.IO disconnected');
-      this.handleReconnect();
-    });
-
-    this.socket.on('connect_error', (error) => {
-      console.error('Socket.IO connection error:', error);
-      this.handleReconnect();
-    });
-
-    // Add custom event listeners
-    this.socket.onAny((eventName: string, data: any) => {
-      const listeners = this.listeners.get(eventName);
-      if (listeners) {
-        listeners.forEach(listener => listener(data));
-      }
-    });
-  }
-
-  private handleReconnect() {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      this.reconnectAttempts++;
-      this.reconnectDelay *= 2; // Exponential backoff
-      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-      setTimeout(() => this.initializeSocket(), this.reconnectDelay);
-    } else {
+  private handleReconnect(): void {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error('Max reconnection attempts reached');
+      return;
     }
-  }
 
-  public subscribe<T>(event: string, callback: (data: T) => void): () => void {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, new Set());
-    }
-    const eventListeners = this.listeners.get(event)!;
-    eventListeners.add(callback as (data: any) => void);
-
-    return () => {
-      eventListeners.delete(callback as (data: any) => void);
-      if (eventListeners.size === 0) {
-        this.listeners.delete(event);
+    this.reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000); // Exponential backoff with 30s max
+    console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    
+    setTimeout(() => {
+      if (!this.isConnecting && this.socket?.readyState !== WebSocket.OPEN) {
+        this.connect();
       }
-    };
+    }, delay);
   }
 
-  public emit(event: string, data?: any) {
-    if (this.socket?.connected) {
-      this.socket.emit(event, data);
+  private resubscribeAll(): void {
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    this.subscriptions.forEach((handlers, endpoint) => {
+      this.socket!.send(JSON.stringify({
+        action: 'subscribe',
+        endpoint
+      }));
+    });
+  }
+
+  public subscribe(endpoint: string, handler: MessageHandler): void {
+    let handlers = this.subscriptions.get(endpoint);
+    if (!handlers) {
+      handlers = new Set();
+      this.subscriptions.set(endpoint, handlers);
+    }
+    handlers.add(handler);
+
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({
+        action: 'subscribe',
+        endpoint
+      }));
     } else {
-      console.warn('Socket not connected. Message not sent:', { event, data });
+      this.connect(); // Try to connect if not already connected
     }
   }
 
-  public isConnected(): boolean {
-    return this.socket?.connected ?? false;
+  public unsubscribe(endpoint: string, handler: MessageHandler): void {
+    const handlers = this.subscriptions.get(endpoint);
+    if (handlers) {
+      handlers.delete(handler);
+      if (handlers.size === 0) {
+        this.subscriptions.delete(endpoint);
+        if (this.socket?.readyState === WebSocket.OPEN) {
+          this.socket.send(JSON.stringify({
+            action: 'unsubscribe',
+            endpoint
+          }));
+        }
+      }
+    }
   }
 
-  public disconnect() {
-    this.socket?.disconnect();
-    this.socket = null;
+  public disconnect(): void {
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
+    this.reconnectAttempts = 0;
+    this.isConnecting = false;
   }
 }
 
-export default WebSocketService.getInstance();
+export default WebSocketService;

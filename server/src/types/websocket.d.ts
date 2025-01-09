@@ -1,26 +1,26 @@
 import { Socket } from 'socket.io';
-import { WebSocket } from 'ws';
+import { WebSocket as WS } from 'ws';
 
 declare module 'ws' {
-  interface WebSocket {
-    readyState: number;
-    OPEN: number;
+  export interface WebSocket extends WS {
+    isAlive?: boolean;
+    userId?: string;
   }
 }
 
-interface WebSocketClient {
+export interface WebSocketClient {
   id: string;
   ws: WebSocket;
   subscriptions: Set<string>;
   lastHeartbeat: Date;
 }
 
-interface WebSocketMessage {
+export interface WebSocketMessage {
   type: string;
-  payload: any;
+  payload: unknown;  // Use unknown instead of any for better type safety
 }
 
-interface MarketDataMessage {
+export interface MarketDataMessage {
   symbol: string;
   data: {
     bid: number;
@@ -29,26 +29,18 @@ interface MarketDataMessage {
   };
 }
 
-interface OptimizationConfig {
+export interface OptimizationConfig {
   strategyId: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;  // Use unknown instead of any
   timeframe: string;
   startDate: string;
   endDate: string;
 }
 
-interface OptimizationStatus {
+export interface OptimizationStatus {
   id: string;
   config: OptimizationConfig;
   progress: number;
   status: 'running' | 'completed' | 'error';
   error?: string;
 }
-
-export {
-  WebSocketClient,
-  WebSocketMessage,
-  MarketDataMessage,
-  OptimizationConfig,
-  OptimizationStatus
-};

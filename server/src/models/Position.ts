@@ -1,51 +1,191 @@
 import { prisma } from '../config/database';
-import { Position as PrismaPosition } from '@prisma/client';
+import {
+  Position,
+  PositionCreateInput,
+  PositionUpdateInput,
+  PositionWhereInput,
+  PositionWhereUniqueInput,
+  PositionWithRelations
+} from '../types/Position';
 
-export interface IPosition {
-  id: string;
-  symbol: string;
-  type: string;
-  volume: number;
-  openPrice: number;
-  closePrice?: number;
-  openTime: Date;
-  closeTime?: Date;
-  profit?: number;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Export type-safe database operations
-export const Position = {
-  create: (data: Omit<IPosition, 'id' | 'createdAt' | 'updatedAt'>) => {
+export class PositionService {
+  static async create(data: PositionCreateInput): Promise<Position> {
     return prisma.position.create({
-      data
-    });
-  },
-
-  findById: (id: string) => {
-    return prisma.position.findUnique({
-      where: { id }
-    });
-  },
-
-  findMany: (where = {}) => {
-    return prisma.position.findMany({
-      where
-    });
-  },
-
-  update: (id: string, data: Partial<Omit<IPosition, 'id' | 'createdAt' | 'updatedAt'>>) => {
-    return prisma.position.update({
-      where: { id },
-      data
-    });
-  },
-
-  delete: (id: string) => {
-    return prisma.position.delete({
-      where: { id }
+      data,
+      include: {
+        portfolio: true,
+        strategy: true
+      }
     });
   }
-};
+
+  static async findById(id: string): Promise<PositionWithRelations | null> {
+    return prisma.position.findUnique({
+      where: { id },
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+  }
+
+  static async findMany(where: PositionWhereInput = {}): Promise<PositionWithRelations[]> {
+    return prisma.position.findMany({
+      where,
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+  }
+
+  static async update(id: string, data: PositionUpdateInput): Promise<Position> {
+    return prisma.position.update({
+      where: { id },
+      data,
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+  }
+
+  static async delete(id: string): Promise<Position> {
+    return prisma.position.delete({
+      where: { id },
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+  }
+
+  static async findByPortfolio(portfolioId: string): Promise<PositionWithRelations[]> {
+    return prisma.position.findMany({
+      where: { portfolioId },
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+  }
+
+  static async findByStrategy(strategyId: string): Promise<PositionWithRelations[]> {
+    return prisma.position.findMany({
+      where: { strategyId },
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+  }
+
+  static async findOpenPositions(): Promise<PositionWithRelations[]> {
+    return prisma.position.findMany({
+      where: { status: 'OPEN' },
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+  }
+
+  static async closePosition(
+    id: string,
+    exitPrice: number,
+    closeTime: Date = new Date()
+  ): Promise<Position> {
+    const position = await prisma.position.findUnique({ where: { id } });
+    if (!position) {
+      throw new Error('Position not found');
+    }
+
+    const profit = position.type === 'LONG'
+      ? (exitPrice - position.entryPrice) * position.size
+      : (position.entryPrice - exitPrice) * position.size;
+
+    return prisma.position.update({
+      where: { id },
+      data: {
+        status: 'CLOSED',
+        exitPrice,
+        closeTime,
+        profit
+      },
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+  }
+
+  static async updateStopLoss(id: string, stopLoss: number): Promise<Position> {
+    return prisma.position.update({
+      where: { id },
+      data: { stopLoss },
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+  }
+
+  static async updateTakeProfit(id: string, takeProfit: number): Promise<Position> {
+    return prisma.position.update({
+      where: { id },
+      data: { takeProfit },
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+  }
+
+  static async getPositionMetrics(id: string): Promise<{
+    unrealizedProfit: number;
+    realizedProfit: number;
+    totalProfit: number;
+    winRate: number;
+    averageWin: number;
+    averageLoss: number;
+  }> {
+    const position = await prisma.position.findUnique({
+      where: { id },
+      include: {
+        portfolio: true,
+        strategy: true
+      }
+    });
+
+    if (!position) {
+      throw new Error('Position not found');
+    }
+
+    const closedPositions = await prisma.position.findMany({
+      where: {
+        portfolioId: position.portfolioId,
+        status: 'CLOSED'
+      }
+    });
+
+    const wins = closedPositions.filter(p => (p.profit || 0) > 0);
+    const losses = closedPositions.filter(p => (p.profit || 0) <= 0);
+
+    const winRate = wins.length / closedPositions.length;
+    const averageWin = wins.reduce((sum, p) => sum + (p.profit || 0), 0) / wins.length;
+    const averageLoss = Math.abs(losses.reduce((sum, p) => sum + (p.profit || 0), 0)) / losses.length;
+
+    const unrealizedProfit = position.status === 'OPEN' ? (position.profit || 0) : 0;
+    const realizedProfit = position.status === 'CLOSED' ? (position.profit || 0) : 0;
+    const totalProfit = unrealizedProfit + realizedProfit;
+
+    return {
+      unrealizedProfit,
+      realizedProfit,
+      totalProfit,
+      winRate,
+      averageWin,
+      averageLoss
+    };
+  }
+}
