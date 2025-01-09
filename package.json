@@ -96,6 +96,7 @@
     "@babel/traverse": "^7.23.6",
     "@babel/types": "^7.23.6",
     "@vitejs/plugin-legacy": "^5.0.0",
+    "eslint": "^9.17.0",
     "glob": "^10.3.10",
     "rollup-plugin-visualizer": "^5.12.0",
     "sharp": "^0.33.5",
