@@ -19,37 +19,18 @@
     "removeComments": false,
     "importHelpers": true,
     "isolatedModules": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "noImplicitAny": false,
-    "paths": {
-      "@/*": ["src/*"],
-      "@config/*": ["src/config/*"],
-      "@controllers/*": ["src/controllers/*"],
-      "@models/*": ["src/models-new/*"],
-      "@routes/*": ["src/routes-new/*"],
-      "@services/*": ["src/services-new/*"],
-      "@utils/*": ["src/utils-new/*"],
-      "@middleware/*": ["src/middleware/*"],
-      "@types/*": ["src/types-new/*"],
-      "@tests/*": ["tests/*"]
-    },
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ],
-    "types": ["node", "jest", "express"]
+    "resolveJsonModule": true
   },
   "include": [
     "src/**/*",
-    "prisma/**/*",
-    "node_modules/.prisma/client/index.d.ts"
+    "config/**/*",
+    "index.ts",
+    "jest.config.ts",
+    "jest.setup.js"
   ],
   "exclude": [
     "node_modules",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "dist"
+    "dist",
+    "coverage"
   ]
 }
