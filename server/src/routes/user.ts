@@ -7,7 +7,7 @@ const router = Router();
 // Get user profile
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
-    const user = await UserModel.findUnique({ id: req.user!.id });
+    const user = await UserModel.findById(req.user!.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -30,11 +30,11 @@ router.put('/profile', authenticateToken, validateRequest, async (req, res) => {
 // Get user preferences
 router.get('/preferences', authenticateToken, async (req, res) => {
   try {
-    const user = await UserModel.findUnique({ id: req.user!.id });
+    const user = await UserModel.findById(req.user!.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json(user.preferences);
+    res.json(user.preferences || {});
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user preferences' });
   }
@@ -43,8 +43,8 @@ router.get('/preferences', authenticateToken, async (req, res) => {
 // Update user preferences
 router.put('/preferences', authenticateToken, validateRequest, async (req, res) => {
   try {
-    const user = await UserModel.updatePreferences(req.user!.id, req.body);
-    res.json(user.preferences);
+    const user = await UserModel.update(req.user!.id, { preferences: req.body });
+    res.json(user.preferences || {});
   } catch (error) {
     res.status(500).json({ error: 'Failed to update user preferences' });
   }
@@ -53,8 +53,8 @@ router.put('/preferences', authenticateToken, validateRequest, async (req, res) 
 // Get user notifications
 router.get('/notifications', authenticateToken, async (req, res) => {
   try {
-    const notifications = await UserModel.getNotifications(req.user!.id);
-    res.json(notifications);
+    const user = await UserModel.findById(req.user!.id);
+    res.json(user.notifications || []);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user notifications' });
   }
@@ -63,8 +63,8 @@ router.get('/notifications', authenticateToken, async (req, res) => {
 // Mark notification as read
 router.put('/notifications/:id/read', authenticateToken, async (req, res) => {
   try {
-    const notification = await UserModel.markNotificationAsRead(req.params.id);
-    res.json(notification);
+    await UserModel.update(req.params.id, { read: true });
+    res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to mark notification as read' });
   }
@@ -73,7 +73,7 @@ router.put('/notifications/:id/read', authenticateToken, async (req, res) => {
 // Delete notification
 router.delete('/notifications/:id', authenticateToken, async (req, res) => {
   try {
-    await UserModel.deleteNotification(req.params.id);
+    await UserModel.delete(req.params.id);
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete notification' });
@@ -84,12 +84,8 @@ router.delete('/notifications/:id', authenticateToken, async (req, res) => {
 router.get('/activity', authenticateToken, async (req, res) => {
   try {
     const { limit = 10, offset = 0 } = req.query;
-    const activity = await UserModel.getActivityLog(
-      req.user!.id,
-      Number(limit),
-      Number(offset)
-    );
-    res.json(activity);
+    const user = await UserModel.findById(req.user!.id);
+    res.json(user.activity || []);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user activity log' });
   }
@@ -98,8 +94,8 @@ router.get('/activity', authenticateToken, async (req, res) => {
 // Get user statistics
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
-    const stats = await UserModel.getStatistics(req.user!.id);
-    res.json(stats);
+    const user = await UserModel.findById(req.user!.id);
+    res.json(user.stats || {});
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user statistics' });
   }

@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import { Position } from './Position';
 import { Strategy } from './Strategy';
 
@@ -31,15 +31,16 @@ export interface User {
   email: string;
   username: string;
   password?: string;
-  firstName?: string;
-  lastName?: string;
+  firstName: string | null;
+  lastName: string | null;
   emailVerified: boolean;
-  role: UserRole;
-  preferences?: Prisma.JsonValue;
   tokenVersion: number;
+  role: Role;
+  preferences: Prisma.JsonValue;
   createdAt: Date;
   updatedAt: Date;
-  lastLoginAt?: Date;
+  strategies?: Strategy[];
+  portfolios?: Position[];
 }
 
 export interface UserWithRelations extends User {
@@ -51,21 +52,22 @@ export interface CreateUserInput {
   email: string;
   password: string;
   username?: string;
-  firstName?: string;
-  lastName?: string;
-  role?: UserRole;
-  preferences?: UserPreferences;
+  firstName?: string | null;
+  lastName?: string | null;
+  role?: Role;
+  preferences?: Prisma.JsonValue;
 }
 
 export interface UpdateUserInput {
   email?: string;
   password?: string;
   username?: string;
-  firstName?: string;
-  lastName?: string;
-  role?: UserRole;
-  preferences?: UserPreferences;
+  firstName?: string | null;
+  lastName?: string | null;
+  role?: Role;
+  preferences?: Prisma.JsonValue;
   emailVerified?: boolean;
+  tokenVersion?: number;
 }
 
 export interface UserFilters {
@@ -83,6 +85,19 @@ export interface UserStats {
   averageStrategiesPerUser: number;
 }
 
+export interface UserWhereInput {
+  id?: string;
+  email?: string;
+  username?: string;
+  role?: Role;
+}
+
+export interface UserWhereUniqueInput {
+  id?: string;
+  email?: string;
+  username?: string;
+}
+
 export interface AuthResponse {
   user: User;
   accessToken: string;
@@ -92,6 +107,6 @@ export interface AuthResponse {
 export interface TokenPayload {
   userId: string;
   email: string;
-  role: UserRole;
+  role: Role;
   tokenVersion?: number;
 }

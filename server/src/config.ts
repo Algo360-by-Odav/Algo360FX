@@ -106,7 +106,7 @@ const config: Config = {
   server: {
     port: parseInt(process.env.PORT || '3000', 10),
     host: process.env.HOST || '0.0.0.0',
-    corsOrigin: process.env.CORS_ORIGIN || 'https://algo360fx-client.onrender.com',
+    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     rateLimitWindow: 15 * 60 * 1000, // 15 minutes
     rateLimitMax: 100,
   },

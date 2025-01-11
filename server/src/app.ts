@@ -14,7 +14,7 @@ app.set('trust proxy', 1);
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: ['https://algo360fx-client.onrender.com', 'http://localhost:5173'],
+  origin: ['http://localhost:5173'],
   credentials: true
 }));
 app.use(morgan('dev'));

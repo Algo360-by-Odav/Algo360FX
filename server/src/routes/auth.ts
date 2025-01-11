@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AuthService } from '../services-new/Auth';
 import { authenticateToken, validateRequest } from '../middleware';
 import { CreateUserInput, UpdateUserInput } from '../types-new/User';
+import { Role } from '@prisma/client';
 
 const router = Router();
 const authService = new AuthService();
@@ -9,8 +10,15 @@ const authService = new AuthService();
 // Register a new user
 router.post('/register', validateRequest, async (req, res) => {
   try {
-    const { email, password, firstName, lastName } = req.body;
-    const input: CreateUserInput = { email, password, firstName, lastName };
+    const { email, password, username, firstName, lastName, role = 'USER' as Role } = req.body;
+    const input: CreateUserInput = { 
+      email, 
+      password, 
+      username: username || email.split('@')[0],
+      firstName: firstName || null,
+      lastName: lastName || null,
+      role
+    };
     const result = await authService.register(input);
     res.status(201).json(result);
   } catch (error) {
@@ -48,7 +56,15 @@ router.get('/me', authenticateToken, async (req, res) => {
 // Update user profile
 router.put('/me', authenticateToken, validateRequest, async (req, res) => {
   try {
-    const input: UpdateUserInput = req.body;
+    const { email, username, firstName, lastName, role, preferences } = req.body;
+    const input: UpdateUserInput = {
+      ...(email && { email }),
+      ...(username && { username }),
+      firstName: firstName || null,
+      lastName: lastName || null,
+      ...(role && { role }),
+      ...(preferences && { preferences })
+    };
     const user = await authService.updateUser(req.user!.id, input);
     res.json(user);
   } catch (error) {
