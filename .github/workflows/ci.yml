@@ -9,6 +9,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
     
     strategy:
       matrix:
@@ -41,7 +46,6 @@ jobs:
     
     - name: Run linting
       run: |
-        export NODE_OPTIONS="--max-old-space-size=4096"
         npm run lint
         cd server && npm run lint
         cd ../client && npm run lint
