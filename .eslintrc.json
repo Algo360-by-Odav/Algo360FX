@@ -17,7 +17,8 @@
     "coverage/",
     "*.config.js",
     "*.config.ts",
-    "**/*.d.ts"
+    "**/*.d.ts",
+    "client/src/vite-env.d.ts"
   ],
   "settings": {
     "import/resolver": {
@@ -27,6 +28,20 @@
       }
     }
   },
+  "overrides": [
+    {
+      "files": ["client/**/*.ts", "client/**/*.tsx"],
+      "parserOptions": {
+        "project": "./client/tsconfig.json"
+      }
+    },
+    {
+      "files": ["server/**/*.ts"],
+      "parserOptions": {
+        "project": "./server/tsconfig.json"
+      }
+    }
+  ],
   "rules": {
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "@typescript-eslint/no-explicit-any": "warn",
