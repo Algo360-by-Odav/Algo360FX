@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [18.20.5]
 
     services:
       redis:
@@ -41,6 +41,7 @@ jobs:
     
     - name: Run linting
       run: |
+        export NODE_OPTIONS="--max-old-space-size=4096"
         npm run lint
         cd server && npm run lint
         cd ../client && npm run lint
