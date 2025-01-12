@@ -86,17 +86,18 @@
     "ws": "^8.16.0"
   },
   "devDependencies": {
+    "@babel/plugin-transform-class-properties": "^7.23.3",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
+    "cross-env": "^7.0.3",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-jsx-a11y": "^6.8.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "@babel/plugin-transform-class-properties": "^7.23.3",
-    "rimraf": "^5.0.5",
-    "glob": "^10.3.10"
+    "glob": "^10.3.10",
+    "rimraf": "^5.0.5"
   },
   "scripts": {
     "start": "vite",
@@ -105,8 +106,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint": "node --max-old-space-size=8192 ./node_modules/.bin/eslint \"./server/src/**/*.ts\" \"./client/src/**/*.{ts,tsx}\"",
-    "lint:fix": "node --max-old-space-size=8192 ./node_modules/.bin/eslint \"./server/src/**/*.ts\" \"./client/src/**/*.{ts,tsx}\" --fix",
+    "lint": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" eslint \"./server/src/**/*.ts\" \"./client/src/**/*.{ts,tsx}\"",
+    "lint:fix": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" eslint \"./server/src/**/*.ts\" \"./client/src/**/*.{ts,tsx}\" --fix",
     "format": "prettier --write \"server/src/**/*.{ts,tsx}\" \"client/src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist .vite *.timestamp-*.mjs vite.config.*.mjs",
