@@ -5,6 +5,10 @@
     "plugin:@typescript-eslint/recommended"
   ],
   "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": ["./client/tsconfig.json", "./server/tsconfig.json"],
+    "tsconfigRootDir": "."
+  },
   "plugins": ["@typescript-eslint"],
   "ignorePatterns": [
     "node_modules/",
@@ -12,12 +16,14 @@
     "build/",
     "coverage/",
     "*.config.js",
-    "*.config.ts"
+    "*.config.ts",
+    "**/*.d.ts"
   ],
   "settings": {
     "import/resolver": {
       "typescript": {
-        "alwaysTryTypes": true
+        "alwaysTryTypes": true,
+        "project": ["./client/tsconfig.json", "./server/tsconfig.json"]
       }
     }
   },
