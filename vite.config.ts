@@ -165,21 +165,21 @@ export default defineConfig(({ mode }) => {
     // Server configuration
     server: {
       port: parseInt(env.PORT || '3000'),
-      host: true, // Listen on all addresses
+      host: true,
+      // Enable SPA fallback
       proxy: {
         '/api': {
-          target: env.VITE_API_URL || 'http://localhost:5000',
+          target: 'http://localhost:3001',
           changeOrigin: true,
-          secure: mode === 'production',
-          ws: true // Enable WebSocket proxy
+          secure: false,
         }
-      },
-      // Development server headers
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
       }
+    },
+    
+    // Preview configuration
+    preview: {
+      port: parseInt(env.PORT || '3000'),
+      host: true
     },
     
     // Build configuration
@@ -188,14 +188,12 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: mode !== 'production',
-      // Specify the entry point
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'client/index.html')
         },
         output: {
           manualChunks: (id) => {
-            // Core vendor chunks
             if (id.includes('node_modules')) {
               if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
                 return 'react-vendor';
@@ -203,44 +201,11 @@ export default defineConfig(({ mode }) => {
               if (id.includes('@mui') || id.includes('@emotion')) {
                 return 'ui-vendor';
               }
-              if (id.includes('mobx')) {
-                return 'state-vendor';
-              }
-              if (id.includes('lightweight-charts') || id.includes('dayjs')) {
-                return 'trading-vendor';
-              }
               return 'vendor';
-            }
-            
-            // Feature-based chunks
-            if (id.includes('src/features')) {
-              const feature = id.split('features/')[1].split('/')[0];
-              return `feature-${feature}`;
-            }
-            
-            // Page-based chunks
-            if (id.includes('src/pages')) {
-              const page = id.split('pages/')[1].split('/')[0];
-              return `page-${page}`;
             }
           }
         }
-      },
-      // Minification options
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: mode === 'production',
-          drop_debugger: mode === 'production',
-          pure_funcs: mode === 'production' ? ['console.log', 'console.debug', 'console.info'] : []
-        }
-      },
-      // CSS optimization
-      cssCodeSplit: true,
-      cssMinify: true,
-      // Asset optimization
-      assetsInlineLimit: 4096, // 4kb
-      chunkSizeWarningLimit: 1000 // 1mb
+      }
     },
     
     // Optimization configuration
@@ -258,12 +223,6 @@ export default defineConfig(({ mode }) => {
         'dayjs'
       ],
       exclude: ['@vite/client', '@vite/env']
-    },
-    
-    // Preview configuration (for production builds)
-    preview: {
-      port: parseInt(env.PORT || '3000'),
-      host: true
     },
     
     // Define environment variables
