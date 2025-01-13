@@ -1,54 +1,65 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import { prisma } from '../config/database';
+import { Strategy as PrismaStrategy, Prisma } from '@prisma/client';
 
-export interface IStrategy extends Document {
-  name: string;
-  description: string;
-  type: string;
-  category: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export type Strategy = PrismaStrategy;
+type StrategyCreateInput = Prisma.StrategyUncheckedCreateInput;
+type StrategyUpdateInput = Prisma.StrategyUncheckedUpdateInput;
+type StrategyWhereInput = Prisma.StrategyWhereInput;
 
-const strategySchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-    index: true
+// Export type-safe database operations
+export const Strategy = {
+  create: async (data: StrategyCreateInput): Promise<Strategy> => {
+    return prisma.strategy.create({
+      data,
+      include: {
+        analytics: true
+      }
+    });
   },
-  description: {
-    type: String,
-    required: true
+
+  findById: async (id: string): Promise<Strategy | null> => {
+    return prisma.strategy.findUnique({
+      where: { id },
+      include: {
+        analytics: true
+      }
+    });
   },
-  type: {
-    type: String,
-    required: true,
-    index: true
+
+  findByName: async (name: string): Promise<Strategy | null> => {
+    return prisma.strategy.findFirst({
+      where: { name },
+      include: {
+        analytics: true
+      }
+    });
   },
-  category: {
-    type: String,
-    required: true,
-    index: true
+
+  findMany: async (where: StrategyWhereInput = {}): Promise<Strategy[]> => {
+    return prisma.strategy.findMany({
+      where,
+      include: {
+        analytics: true
+      }
+    });
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+
+  update: async (id: string, data: StrategyUpdateInput): Promise<Strategy> => {
+    return prisma.strategy.update({
+      where: { id },
+      data,
+      include: {
+        analytics: true
+      }
+    });
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+
+  delete: async (id: string): Promise<Strategy> => {
+    return prisma.strategy.delete({
+      where: { id },
+      include: {
+        analytics: true
+      }
+    });
   }
-}, {
-  timestamps: true
-});
-
-// Create text index for search
-strategySchema.index({ 
-  name: 'text', 
-  description: 'text', 
-  type: 'text',
-  category: 'text'
-});
-
-const Strategy = mongoose.model<IStrategy>('Strategy', strategySchema);
-
-export default Strategy;
+};

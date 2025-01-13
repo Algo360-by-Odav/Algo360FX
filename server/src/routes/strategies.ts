@@ -1,119 +1,195 @@
-import express, { Request, Response } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import { asyncHandler } from '../middleware/asyncHandler';
+import { Router } from 'express';
+import { StrategyModel } from '../models-new/Strategy';
+import { StrategyCreateInput, StrategyUpdateInput } from '../types-new/Strategy';
+import { authenticateToken, validateRequest } from '../middleware';
 
-const router = express.Router();
+const router = Router();
 
-// Get all strategies
-router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+// Get all strategies for the authenticated user
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    // For now, return mock strategies data
-    res.json({
-      strategies: [
-        {
-          id: '1',
-          name: 'Trend Following EMA',
-          description: 'Uses exponential moving averages to identify and follow trends',
-          status: 'active',
-          performance: {
-            winRate: 65,
-            profitFactor: 1.8,
-            totalTrades: 150
-          }
-        }
-      ]
-    });
+    const strategies = await StrategyModel.findByUser(req.user!.id);
+    res.json(strategies);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: 'Failed to fetch strategies' });
   }
-}));
+});
 
-// Get strategy by ID
-router.get('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+// Get a specific strategy
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    res.json({
-      id,
-      name: 'Trend Following EMA',
-      description: 'Uses exponential moving averages to identify and follow trends',
-      status: 'active',
-      performance: {
-        winRate: 65,
-        profitFactor: 1.8,
-        totalTrades: 150,
-        averageProfit: 25.5,
-        sharpeRatio: 1.2
-      },
-      parameters: {
-        fastEMA: 12,
-        slowEMA: 26,
-        signalEMA: 9,
-        timeframe: '1h',
-        symbols: ['EUR/USD', 'GBP/USD']
-      },
-      backtest: {
-        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        endDate: new Date().toISOString(),
-        initialBalance: 10000,
-        finalBalance: 12500,
-        maxDrawdown: 8.5,
-        totalTrades: 150,
-        profitableTrades: 98,
-        unprofitableTrades: 52
-      },
-      lastModified: new Date().toISOString()
-    });
+    const strategy = await StrategyModel.findUnique({ id: req.params.id });
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+    if (strategy.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Unauthorized access to strategy' });
+    }
+    res.json(strategy);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: 'Failed to fetch strategy' });
   }
-}));
+});
+
+// Create a new strategy
+router.post('/', authenticateToken, validateRequest, async (req, res) => {
+  try {
+    const strategyData: StrategyCreateInput = {
+      ...req.body,
+      userId: req.user!.id,
+    };
+    const strategy = await StrategyModel.create(strategyData);
+    res.status(201).json(strategy);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create strategy' });
+  }
+});
+
+// Update a strategy
+router.put('/:id', authenticateToken, validateRequest, async (req, res) => {
+  try {
+    const strategy = await StrategyModel.findUnique({ id: req.params.id });
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+    if (strategy.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Unauthorized access to strategy' });
+    }
+    const strategyData: StrategyUpdateInput = req.body;
+    const updatedStrategy = await StrategyModel.update(req.params.id, strategyData);
+    res.json(updatedStrategy);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update strategy' });
+  }
+});
+
+// Delete a strategy
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const strategy = await StrategyModel.findUnique({ id: req.params.id });
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+    if (strategy.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Unauthorized access to strategy' });
+    }
+    await StrategyModel.delete(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete strategy' });
+  }
+});
+
+// Backtest a strategy
+router.post('/:id/backtest', authenticateToken, validateRequest, async (req, res) => {
+  try {
+    const strategy = await StrategyModel.findUnique({ id: req.params.id });
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+    if (strategy.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Unauthorized access to strategy' });
+    }
+    const backtestResults = await StrategyModel.backtest(req.params.id, req.body);
+    res.json(backtestResults);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to run backtest' });
+  }
+});
 
 // Get strategy performance
-router.get('/:id/performance', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.get('/:id/performance', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    res.json({
-      performance: {
-        winRate: 65,
-        profitFactor: 1.8,
-        totalTrades: 150,
-        averageProfit: 25.5,
-        maxDrawdown: 10,
-        sharpeRatio: 1.5,
-        monthlyReturns: [
-          { month: '2024-01', return: 5.2 },
-          { month: '2024-02', return: 3.8 }
-        ]
-      }
-    });
+    const strategy = await StrategyModel.findUnique({ id: req.params.id });
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+    if (strategy.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Unauthorized access to strategy' });
+    }
+    const performance = await StrategyModel.getPerformance(req.params.id);
+    res.json(performance);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: 'Failed to fetch strategy performance' });
   }
-}));
+});
 
-// Update strategy
-router.put('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+// Get strategy risk metrics
+router.get('/:id/risk', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    res.json({ message: `Strategy ${id} updated successfully` });
+    const strategy = await StrategyModel.findUnique({ id: req.params.id });
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+    if (strategy.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Unauthorized access to strategy' });
+    }
+    const riskMetrics = await StrategyModel.getRiskMetrics(req.params.id);
+    res.json(riskMetrics);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: 'Failed to fetch strategy risk metrics' });
   }
-}));
+});
 
-// Delete strategy
-router.delete('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+// Duplicate strategy
+router.post('/:id/duplicate', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    res.json({ message: `Strategy ${id} deleted successfully` });
+    const strategy = await StrategyModel.findUnique({ id: req.params.id });
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+    if (strategy.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Unauthorized access to strategy' });
+    }
+    const duplicatedStrategy = await StrategyModel.duplicate(req.params.id, req.user!.id);
+    res.json(duplicatedStrategy);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: 'Failed to duplicate strategy' });
   }
-}));
+});
+
+// Get active strategies
+router.get('/status/active', authenticateToken, async (req, res) => {
+  try {
+    const strategies = await StrategyModel.findActive(req.user!.id);
+    res.json(strategies);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch active strategies' });
+  }
+});
+
+// Get strategy performance metrics
+router.get('/:id/performance', authenticateToken, async (req, res) => {
+  try {
+    const strategy = await StrategyModel.findUnique({ id: req.params.id });
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+    if (strategy.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Unauthorized access to strategy' });
+    }
+    const metrics = await StrategyModel.getPerformanceMetrics(req.params.id);
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch strategy performance metrics' });
+  }
+});
+
+// Update strategy performance metrics
+router.put('/:id/performance', authenticateToken, validateRequest, async (req, res) => {
+  try {
+    const strategy = await StrategyModel.findUnique({ id: req.params.id });
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+    if (strategy.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Unauthorized access to strategy' });
+    }
+    const updatedStrategy = await StrategyModel.updatePerformance(req.params.id, req.body);
+    res.json(updatedStrategy);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update strategy performance metrics' });
+  }
+});
 
 export default router;

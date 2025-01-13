@@ -1,60 +1,100 @@
-import mongoose, { ConnectOptions } from 'mongoose';
+import logger from '../utils/logger';
 import { config } from './config';
+import { PrismaClient, Prisma } from '@prisma/client';
 
-export const connectToDatabase = async (): Promise<void> => {
-  try {
-    const options: ConnectOptions = {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
-      maxPoolSize: 10,
-      retryWrites: true,
-      retryReads: true
-    };
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined;
+}
 
-    await mongoose.connect(config.mongoUri || config.databaseUrl, options);
-    console.log('Connected to MongoDB');
-    
-    // Create indexes for all models
-    await Promise.all([
-      mongoose.model('Strategy').createIndexes(),
-      mongoose.model('Portfolio').createIndexes(),
-      mongoose.model('Documentation').createIndexes(),
-      mongoose.model('Analytics').createIndexes(),
-    ]);
-    console.log('Database indexes created successfully');
-  } catch (error) {
-    console.error('Error connecting to database:', error);
-    process.exit(1);
+const prismaOptions: Prisma.PrismaClientOptions = {
+  log: [
+    { level: 'query', emit: 'event' },
+    { level: 'error', emit: 'event' },
+    { level: 'warn', emit: 'stdout' },
+    { level: 'info', emit: 'stdout' }
+  ],
+  datasources: {
+    db: {
+      url: config.database.url
+    }
   }
 };
 
-export const disconnectDatabase = async () => {
-  try {
-    await mongoose.disconnect();
-  } catch (error) {
-    console.error('Error disconnecting from database:', error);
-    process.exit(1);
+// Create a new PrismaClient instance with connection pooling
+export const prisma = global.prisma || new PrismaClient(prismaOptions);
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma;
+}
+
+// @ts-ignore
+prisma.$on('query', (event: any) => {
+  logger.debug('Query:', event);
+});
+
+// @ts-ignore
+prisma.$on('error', (event: any) => {
+  logger.error('Prisma Error:', event);
+});
+
+export async function connectDB(): Promise<void> {
+  const MAX_RETRIES = 5;
+  const RETRY_DELAY = 5000; // 5 seconds
+  const CONNECT_TIMEOUT = 30000; // 30 seconds
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      // Set a timeout for the connection attempt
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Connection timeout')), CONNECT_TIMEOUT);
+      });
+
+      // Attempt to connect
+      await Promise.race([
+        prisma.$connect(),
+        timeoutPromise
+      ]);
+
+      logger.info('Successfully connected to database');
+      return;
+    } catch (error) {
+      logger.error(`Failed to connect to database (attempt ${attempt}/${MAX_RETRIES}):`, error);
+      
+      if (attempt === MAX_RETRIES) {
+        throw new Error('Failed to connect to database after maximum retries');
+      }
+
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+    }
   }
-};
+}
 
-// Handle database connection events
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB error:', err);
-});
-
-// Gracefully close the connection when the app is shutting down
-process.on('SIGINT', async () => {
+export async function disconnectDB(): Promise<void> {
   try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed through app termination');
+    await prisma.$disconnect();
+    logger.info('Successfully disconnected from database');
+  } catch (error) {
+    logger.error('Error disconnecting from database:', error);
+    throw error;
+  }
+}
+
+// Handle process termination
+async function handleShutdown(): Promise<void> {
+  try {
+    logger.info('Shutting down gracefully...');
+    await disconnectDB();
     process.exit(0);
-  } catch (err) {
-    console.error('Error closing MongoDB connection:', err);
+  } catch (error) {
+    logger.error('Error during shutdown:', error);
     process.exit(1);
   }
-});
+}
+
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);
+process.on('beforeExit', handleShutdown);
+
+export default prisma;

@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+coverage/
+
+# Config files (except ESLint config)
+/*.config.js
+!.eslintrc.js
+/*.config.ts
+
+# Scripts directory
+scripts/

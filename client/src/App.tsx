@@ -1,5 +1,5 @@
-import React from 'react';
-import { HashRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import {
   AppBar,
@@ -11,18 +11,19 @@ import {
   Container,
 } from '@mui/material';
 
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import WelcomePage from './pages/WelcomePage';
-import MT5Page from './pages/MT5Page';
-import PortfolioPage from './pages/PortfolioPage';
-import PositionsPage from './pages/PositionsPage';
-import StrategiesPage from './pages/StrategiesPage';
+import Login from './components/auth/Login';
+import { SignUp } from './components/auth/SignUp';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { Dashboard } from './components/Dashboard';
+import { PortfolioList } from './components/portfolio/PortfolioList';
+import { Callback } from './components/auth/Callback';
 
-import ErrorBoundary from './components/ErrorBoundary';
-import LoadingOverlay from './components/LoadingOverlay';
-import NotificationSystem from './components/NotificationSystem';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import LoadingOverlay from './components/common/LoadingOverlay';
+import NotificationSystem from './components/common/NotificationSystem';
 import { AppProvider, useApp } from './context/AppContext';
+import { AuthProvider } from './context/AuthContext';
+import { configureAWS } from './config/aws-config';
 
 const theme = createTheme({
   palette: {
@@ -38,93 +39,46 @@ const theme = createTheme({
 
 const AppContent: React.FC = () => {
   const { state } = useApp();
-  const isAuthenticated = !!localStorage.getItem('token');
+
+  useEffect(() => {
+    configureAWS();
+  }, []);
 
   return (
-    <>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <LoadingOverlay open={state.isLoading} message={state.loadingMessage || undefined} />
-      <NotificationSystem />
       
-      <Box sx={{ flexGrow: 1 }}>
-        {isAuthenticated && (
-          <AppBar position="static">
-            <Toolbar>
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                Algo360FX
-                {!state.isConnected && (
-                  <Typography
-                    component="span"
-                    sx={{
-                      ml: 2,
-                      fontSize: '0.8rem',
-                      color: 'error.main',
-                    }}
-                  >
-                    (Disconnected)
-                  </Typography>
-                )}
-              </Typography>
-              <Button color="inherit" component={Link} to="/portfolio">
-                Portfolio
-              </Button>
-              <Button color="inherit" component={Link} to="/positions">
-                Positions
-              </Button>
-              <Button color="inherit" component={Link} to="/strategies">
-                Strategies
-              </Button>
-              <Button color="inherit" component={Link} to="/mt5">
-                MT5
-              </Button>
-              <Button 
-                color="inherit" 
-                onClick={() => {
-                  localStorage.removeItem('token');
-                  window.location.href = '/#/';
-                }}
-              >
-                Logout
-              </Button>
-            </Toolbar>
-          </AppBar>
-        )}
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Algo360FX
+          </Typography>
+          <Button color="inherit" component={Link} to="/login">
+            Login
+          </Button>
+        </Toolbar>
+      </AppBar>
 
-        <Container>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                isAuthenticated ? (
-                  <Navigate to="/portfolio" replace />
-                ) : (
-                  <WelcomePage />
-                )
-              }
-            />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            
-            {/* Protected Routes */}
-            <Route
-              path="/portfolio"
-              element={isAuthenticated ? <PortfolioPage /> : <Navigate to="/" replace />}
-            />
-            <Route
-              path="/positions"
-              element={isAuthenticated ? <PositionsPage /> : <Navigate to="/" replace />}
-            />
-            <Route
-              path="/strategies"
-              element={isAuthenticated ? <StrategiesPage /> : <Navigate to="/" replace />}
-            />
-            <Route
-              path="/mt5"
-              element={isAuthenticated ? <MT5Page /> : <Navigate to="/" replace />}
-            />
-          </Routes>
-        </Container>
-      </Box>
-    </>
+      <Container sx={{ mt: 4, mb: 4, flex: 1 }}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/callback" element={<Callback />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/portfolio" element={
+            <ProtectedRoute>
+              <PortfolioList />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Container>
+
+      <NotificationSystem />
+    </Box>
   );
 };
 
@@ -133,11 +87,13 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <AppProvider>
-          <Router>
-            <AppContent />
-          </Router>
-        </AppProvider>
+        <Router>
+          <AuthProvider>
+            <AppProvider>
+              <AppContent />
+            </AppProvider>
+          </AuthProvider>
+        </Router>
       </ThemeProvider>
     </ErrorBoundary>
   );

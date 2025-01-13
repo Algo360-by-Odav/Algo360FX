@@ -1,28 +1,40 @@
 {
   "compilerOptions": {
-    "target": "es2020",
-    "module": "commonjs",
-    "lib": ["es2020", "dom"],
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": false,
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "declaration": true,
     "allowJs": true,
-    "noImplicitAny": false,
-    "removeComments": true,
-    "sourceMap": false,
-    "baseUrl": ".",
-    "paths": {
-      "*": ["node_modules/*"]
-    },
-    "typeRoots": ["./node_modules/@types", "./src/types"],
-    "types": ["node", "express", "jest"]
+    "checkJs": false,
+    "declaration": true,
+    "declarationMap": true,
+    "declarationDir": "types",
+    "sourceMap": true,
+    "removeComments": false,
+    "importHelpers": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "include": [
+    "src/**/*",
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.test.ts",
+    "src/__tests__/**/*",
+    "config/**/*",
+    "index.ts",
+    "jest.config.ts",
+    "jest.setup.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage"
+  ]
 }

@@ -1,162 +1,124 @@
-import { Router, Request, Response } from 'express';
-import { User } from '../models/User';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { config } from '../config/config';
-import { validateRequest } from '../middleware/validateRequest';
-import { registerSchema, loginSchema } from '../schemas/auth.schema';
-import { asyncHandler } from '../middleware/asyncHandler';
+import { Router } from 'express';
+import { AuthService } from '../services-new/Auth';
+import { authenticateToken, validateRequest } from '../middleware';
+import { CreateUserInput, UpdateUserInput } from '../types-new/User';
+import { Role } from '@prisma/client';
 
 const router = Router();
+const authService = new AuthService();
 
-// Register new user
-router.post('/register', 
-  validateRequest(registerSchema),
-  asyncHandler(async (req: Request, res: Response) => {
-    const { email, password, firstName, lastName } = req.body;
-
-    try {
-      console.log('Registration attempt:', { email, firstName, lastName });
-
-      // Check for existing user
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        console.log('User already exists:', email);
-        return res.status(409).json({ 
-          status: 'error',
-          code: 'USER_EXISTS',
-          message: 'This email is already registered. Please login or use a different email.'
-        });
-      }
-
-      // Hash password
-      console.log('Hashing password...');
-      const hashedPassword = await bcrypt.hash(password, 10);
-      
-      console.log('Creating new user...');
-      const user = new User({
-        email,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        emailVerified: true, // Set to true by default for development
-        preferences: {
-          theme: 'light',
-          notifications: true,
-          language: 'en',
-          riskLevel: 'medium',
-          defaultLotSize: 0.01,
-          tradingPairs: ['EUR/USD', 'GBP/USD', 'USD/JPY']
-        }
-      });
-
-      console.log('Saving user to database...');
-      await user.save();
-
-      console.log('Registration successful:', email);
-      return res.status(201).json({
-        status: 'success',
-        message: 'Registration successful',
-        data: {
-          user: {
-            id: user._id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            emailVerified: true
-          }
-        }
-      });
-
-    } catch (error: any) {
-      console.error('Registration error details:', {
-        error: error.message,
-        stack: error.stack,
-        code: error.code,
-        name: error.name
-      });
-      
-      return res.status(500).json({
-        status: 'error',
-        code: 'REGISTRATION_FAILED',
-        message: 'Registration failed. Please try again later.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
+// Register a new user
+router.post('/register', validateRequest, async (req, res) => {
+  try {
+    const { email, password, username, firstName, lastName, role = 'USER' as Role } = req.body;
+    const input: CreateUserInput = { 
+      email, 
+      password, 
+      username: username || email.split('@')[0],
+      firstName: firstName || null,
+      lastName: lastName || null,
+      role
+    };
+    const result = await authService.register(input);
+    res.status(201).json(result);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'User already exists') {
+      return res.status(409).json({ error: error.message });
     }
-  })
-);
+    res.status(500).json({ error: 'Failed to register user' });
+  }
+});
 
 // Login user
-router.post('/login',
-  validateRequest(loginSchema),
-  asyncHandler(async (req: Request, res: Response) => {
+router.post('/login', validateRequest, async (req, res) => {
+  try {
     const { email, password } = req.body;
-
-    try {
-      console.log('Login attempt:', email);
-
-      // Find user
-      const user = await User.findOne({ email }).select('+password');
-      if (!user) {
-        console.log('User not found:', email);
-        return res.status(401).json({ 
-          status: 'error',
-          code: 'INVALID_CREDENTIALS',
-          message: 'Invalid email or password'
-        });
-      }
-
-      // Verify password
-      console.log('Verifying password...');
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      if (!isValidPassword) {
-        console.log('Invalid password for user:', email);
-        return res.status(401).json({ 
-          status: 'error',
-          code: 'INVALID_CREDENTIALS',
-          message: 'Invalid email or password'
-        });
-      }
-
-      // Generate JWT token
-      console.log('Generating JWT token...');
-      const token = jwt.sign(
-        { userId: user._id, email: user.email },
-        config.jwtSecret,
-        { expiresIn: '7d' }
-      );
-
-      console.log('Login successful:', email);
-      return res.status(200).json({
-        status: 'success',
-        message: 'Login successful',
-        data: {
-          user: {
-            id: user._id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            emailVerified: user.emailVerified
-          },
-          token
-        }
-      });
-    } catch (error: any) {
-      console.error('Login error details:', {
-        error: error.message,
-        stack: error.stack,
-        code: error.code,
-        name: error.name
-      });
-      
-      return res.status(500).json({
-        status: 'error',
-        code: 'LOGIN_FAILED',
-        message: 'Login failed. Please try again later.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
+    const result = await authService.login(email, password);
+    res.json(result);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Invalid credentials') {
+      return res.status(401).json({ error: error.message });
     }
-  })
-);
+    res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+// Get current user
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await authService.getCurrentUser(req.user!.id);
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get user profile' });
+  }
+});
+
+// Update user profile
+router.put('/me', authenticateToken, validateRequest, async (req, res) => {
+  try {
+    const { email, username, firstName, lastName, role, preferences } = req.body;
+    const input: UpdateUserInput = {
+      ...(email && { email }),
+      ...(username && { username }),
+      firstName: firstName || null,
+      lastName: lastName || null,
+      ...(role && { role }),
+      ...(preferences && { preferences })
+    };
+    const user = await authService.updateUser(req.user!.id, input);
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update user profile' });
+  }
+});
+
+// Change password
+router.put('/change-password', authenticateToken, validateRequest, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    await authService.changePassword(req.user!.id, currentPassword, newPassword);
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Invalid current password') {
+      return res.status(401).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// Request password reset
+router.post('/request-reset', validateRequest, async (req, res) => {
+  try {
+    const { email } = req.body;
+    await authService.requestPasswordReset(email);
+    res.json({ message: 'Password reset email sent' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to request password reset' });
+  }
+});
+
+// Reset password
+router.post('/reset-password', validateRequest, async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    await authService.resetPassword(token, newPassword);
+    res.json({ message: 'Password reset successful' });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Invalid or expired token') {
+      return res.status(401).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// Logout
+router.post('/logout', authenticateToken, async (req, res) => {
+  try {
+    await authService.logout(req.user!.id);
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to logout' });
+  }
+});
 
 export default router;

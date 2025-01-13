@@ -1,102 +1,103 @@
 services:
+  # Frontend Web Service
   - type: web
-    name: algo360fx-server
-    env: node
-    region: singapore
-    plan: starter
-    buildCommand: |
-      cd server
-      npm ci
-      npm run build
-      cd dist
-      npm ci --production
-    startCommand: cd server/dist && NODE_ENV=production node index.js
-    healthCheckPath: /api/health
-    healthCheckTimeout: 300
-    autoDeploy: true
-    scaling:
-      minInstances: 1
-      maxInstances: 1
-      targetMemoryPercent: 90
-      targetCPUPercent: 90
+    name: algo360fx-frontend
+    env: static
+    buildCommand: cd client && npm install && npm install -g rimraf && npx rimraf dist && npm run build
+    staticPublishPath: ./client/dist
+    pullRequestPreviewsEnabled: true
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer-when-downgrade
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.algo360fx.com wss://*.algo360fx.com;"
     envVars:
       - key: NODE_VERSION
-        value: 18.x
+        value: 18.18.0
+      - key: VITE_API_URL
+        fromService:
+          name: algo360fx-api
+          type: web
+          property: host
+      - key: VITE_WS_URL
+        fromService:
+          name: algo360fx-api
+          type: web
+          property: host
+      - key: VITE_SENTRY_DSN
+        sync: false
+
+  # Backend API Service
+  - type: web
+    name: algo360fx-api
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: cd server && npm install && npm install -g rimraf && npm run build
+    startCommand: cd server && npm run start:prod
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 18.18.0
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: "8080"
-      - key: MONGODB_URI
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: META_API_TOKEN
-        sync: false
-      - key: MT5_ACCOUNT_ID
-        sync: false
-      - key: META_API_RETRY_ATTEMPTS
-        value: "3"
-      - key: META_API_RETRY_DELAY
-        value: "1000"
-      - key: MARKET_API_KEY
-        sync: false
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: algo360fx-db
+          property: connectionString
       - key: REDIS_URL
         fromService:
-          type: redis
           name: algo360fx-redis
+          type: redis
           property: connectionString
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: METAAPI_TOKEN
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
 
-  - type: static
-    name: algo360fx-client
-    env: static
-    region: global
-    plan: starter
-    buildCommand: cd client && npm ci --production=false && npm run build
-    staticPublishPath: ./client/build
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: max-age=0, s-maxage=86400
-      - path: /static/*
-        name: Cache-Control
-        value: public, max-age=31536000, immutable
-    envVars:
-      - key: NODE_VERSION
-        value: 18.x
-      - key: VITE_API_URL
-        value: https://algo360fx-server.onrender.com
-      - key: VITE_WS_URL
-        value: wss://algo360fx-server.onrender.com
-      - key: REACT_APP_API_URL
-        value: https://algo360fx-server.onrender.com
-
+  # Redis Service
   - type: redis
     name: algo360fx-redis
     region: singapore
-    plan: starter
-    maxmemoryPolicy: allkeys-lru
-    maxmemoryMB: 256
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: everywhere
-
-  - type: redis
-    name: algo360fx-cache
-    region: singapore
-    plan: starter
-    maxmemoryPolicy: allkeys-lru
+    plan: standard  # Keep as standard since we can't downgrade
+    maxmemoryPolicy: noeviction
     ipAllowList:
       - source: 0.0.0.0/0
         description: everywhere
 
 databases:
+  # PostgreSQL Database
   - name: algo360fx-db
-    plan: starter
     region: singapore
-    ipAllowList: 
+    plan: free
+    databaseName: algo360fx
+    user: algo360fx
+    ipAllowList:
       - source: 0.0.0.0/0
         description: everywhere
+
+# Global Environment Groups
+envVarGroups:
+  - name: algo360fx-production
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TZ
+        value: UTC
+      - key: LANG
+        value: en_US.UTF-8

@@ -1,211 +1,160 @@
 import React, { useEffect, useState } from 'react';
 import {
   Container,
-  Paper,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Alert,
-  IconButton,
-  Tooltip,
+  Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import apiService from '../services/apiService';
-import websocketService from '../services/websocketService';
-import { useApp } from '../context/AppContext';
+import { useStore } from '@/context/StoreContext';
+import PositionsTable from '@/components/trading/PositionsTable';
 
 interface Position {
   id: string;
   symbol: string;
-  type: 'BUY' | 'SELL';
-  openPrice: number;
+  type: 'buy' | 'sell';
+  size: number;
+  entryPrice: number;
   currentPrice: number;
-  volume: number;
-  pnl: number;
+  stopLoss: number | null;
+  takeProfit: number | null;
+  margin: number;
+  swap: number;
+  commission: number;
   openTime: string;
 }
 
-const PositionsPage: React.FC = () => {
-  const { state, dispatch } = useApp();
-  const [positions, setPositions] = useState<Position[]>([]);
+interface EditDialogProps {
+  open: boolean;
+  position: Position | null;
+  onClose: () => void;
+  onSave: (positionId: string, takeProfit: number | null, stopLoss: number | null) => void;
+}
 
-  const fetchPositions = async () => {
-    try {
-      dispatch({ 
-        type: 'SET_LOADING', 
-        payload: { 
-          isLoading: true, 
-          message: 'Loading positions...' 
-        } 
-      });
+const EditDialog: React.FC<EditDialogProps> = ({ open, position, onClose, onSave }) => {
+  const [takeProfit, setTakeProfit] = useState<string>('');
+  const [stopLoss, setStopLoss] = useState<string>('');
 
-      const data = await apiService.get<Position[]>('/api/positions');
-      setPositions(data);
-      
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          message: 'Positions loaded successfully',
-          type: 'success'
-        }
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch positions';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          message: errorMessage,
-          type: 'error'
-        }
-      });
-    } finally {
-      dispatch({ 
-        type: 'SET_LOADING', 
-        payload: { isLoading: false } 
-      });
+  useEffect(() => {
+    if (position) {
+      setTakeProfit(position.takeProfit?.toString() || '');
+      setStopLoss(position.stopLoss?.toString() || '');
     }
+  }, [position]);
+
+  const handleSave = () => {
+    if (!position) return;
+    onSave(
+      position.id,
+      takeProfit ? parseFloat(takeProfit) : null,
+      stopLoss ? parseFloat(stopLoss) : null
+    );
+    onClose();
   };
+
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>Edit Position</DialogTitle>
+      <DialogContent>
+        <Box sx={{ pt: 2 }}>
+          <TextField
+            label="Take Profit"
+            type="number"
+            value={takeProfit}
+            onChange={(e) => setTakeProfit(e.target.value)}
+            fullWidth
+            margin="normal"
+          />
+          <TextField
+            label="Stop Loss"
+            type="number"
+            value={stopLoss}
+            onChange={(e) => setStopLoss(e.target.value)}
+            fullWidth
+            margin="normal"
+          />
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleSave} variant="contained" color="primary">
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+const PositionsPage: React.FC = () => {
+  const { tradingStore } = useStore();
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [editPosition, setEditPosition] = useState<Position | null>(null);
+
+  useEffect(() => {
+    const fetchPositions = async () => {
+      try {
+        const positions = await tradingStore.getPositions();
+        setPositions(positions);
+      } catch (error) {
+        console.error('Failed to fetch positions:', error);
+      }
+    };
+
+    fetchPositions();
+  }, [tradingStore]);
 
   const handleClosePosition = async (positionId: string) => {
     try {
-      dispatch({ 
-        type: 'SET_LOADING', 
-        payload: { 
-          isLoading: true, 
-          message: 'Closing position...' 
-        } 
-      });
-
-      await apiService.post(`/api/positions/${positionId}/close`, {});
-      
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          message: 'Position closed successfully',
-          type: 'success'
-        }
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to close position';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          message: errorMessage,
-          type: 'error'
-        }
-      });
-    } finally {
-      dispatch({ 
-        type: 'SET_LOADING', 
-        payload: { isLoading: false } 
-      });
+      await tradingStore.closePosition(positionId);
+      setPositions(positions.filter(p => p.id !== positionId));
+    } catch (error) {
+      console.error('Failed to close position:', error);
     }
   };
 
-  useEffect(() => {
-    fetchPositions();
+  const handleEditPosition = (position: Position) => {
+    setEditPosition(position);
+  };
 
-    // Subscribe to real-time position updates
-    const unsubscribe = websocketService.subscribe<Position[]>('positions-update', (data) => {
-      setPositions(data);
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          message: 'Positions updated in real-time',
-          type: 'info'
-        }
-      });
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [dispatch]);
-
-  if (state.lastError) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Alert 
-          severity="error" 
-          onClose={() => dispatch({ type: 'SET_ERROR', payload: null })}
-        >
-          {state.lastError}
-        </Alert>
-      </Container>
-    );
-  }
+  const handleSavePosition = async (
+    positionId: string,
+    takeProfit: number | null,
+    stopLoss: number | null
+  ) => {
+    try {
+      await tradingStore.modifyPosition(positionId, takeProfit || 0, stopLoss || 0);
+      setPositions(positions.map(p =>
+        p.id === positionId
+          ? { ...p, takeProfit, stopLoss }
+          : p
+      ));
+    } catch (error) {
+      console.error('Failed to modify position:', error);
+    }
+  };
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Open Positions
-      </Typography>
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Symbol</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell align="right">Volume</TableCell>
-              <TableCell align="right">Open Price</TableCell>
-              <TableCell align="right">Current Price</TableCell>
-              <TableCell align="right">P&L</TableCell>
-              <TableCell align="right">Open Time</TableCell>
-              <TableCell align="center">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {positions.map((position) => (
-              <TableRow key={position.id}>
-                <TableCell>{position.symbol}</TableCell>
-                <TableCell>
-                  <Typography color={position.type === 'BUY' ? 'success.main' : 'error.main'}>
-                    {position.type}
-                  </Typography>
-                </TableCell>
-                <TableCell align="right">{position.volume}</TableCell>
-                <TableCell align="right">${position.openPrice.toFixed(5)}</TableCell>
-                <TableCell align="right">${position.currentPrice.toFixed(5)}</TableCell>
-                <TableCell align="right">
-                  <Typography color={position.pnl >= 0 ? 'success.main' : 'error.main'}>
-                    ${position.pnl.toFixed(2)}
-                  </Typography>
-                </TableCell>
-                <TableCell align="right">
-                  {new Date(position.openTime).toLocaleString()}
-                </TableCell>
-                <TableCell align="center">
-                  <Tooltip title="Close Position">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleClosePosition(position.id)}
-                      color="error"
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
-            ))}
-            {positions.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
-                  <Typography variant="body1" sx={{ py: 2 }}>
-                    No open positions
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+    <Container maxWidth="xl">
+      <Box sx={{ pt: 4, pb: 2 }}>
+        <Typography variant="h4" gutterBottom>
+          Open Positions
+        </Typography>
+      </Box>
+      <PositionsTable
+        positions={positions}
+        onClosePosition={handleClosePosition}
+        onEditPosition={handleEditPosition}
+      />
+      <EditDialog
+        open={!!editPosition}
+        position={editPosition}
+        onClose={() => setEditPosition(null)}
+        onSave={handleSavePosition}
+      />
     </Container>
   );
 };

@@ -1,0 +1,55 @@
+{
+  "root": true,
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": ["./client/tsconfig.json", "./server/tsconfig.json"],
+    "tsconfigRootDir": "."
+  },
+  "plugins": ["@typescript-eslint"],
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    "build/",
+    "coverage/",
+    "*.config.js",
+    "*.config.ts",
+    "**/*.d.ts",
+    "client/src/vite-env.d.ts"
+  ],
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+        "alwaysTryTypes": true,
+        "project": ["./client/tsconfig.json", "./server/tsconfig.json"]
+      }
+    }
+  },
+  "overrides": [
+    {
+      "files": ["client/**/*.ts", "client/**/*.tsx"],
+      "parserOptions": {
+        "project": "./client/tsconfig.json"
+      }
+    },
+    {
+      "files": ["server/src/**/*.ts"],
+      "parserOptions": {
+        "project": "./server/tsconfig.json"
+      },
+      "rules": {
+        "@typescript-eslint/explicit-module-boundary-types": "off",
+        "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }]
+      }
+    }
+  ],
+  "rules": {
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }]
+  }
+}

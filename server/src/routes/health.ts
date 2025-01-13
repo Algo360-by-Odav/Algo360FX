@@ -1,35 +1,58 @@
-import { Router } from 'express';
-import mongoose from 'mongoose';
-import os from 'os';
-import { asyncHandler } from '../middleware/asyncHandler';
+import express from 'express';
+import { prisma } from '../lib/prisma';
 
-const router = Router();
+const router = express.Router();
 
 // Enhanced health check endpoint
-router.get('/', asyncHandler(async (req, res) => {
-  const dbState = ['disconnected', 'connected', 'connecting', 'disconnecting'];
-  const mongoStatus = dbState[mongoose.connection.readyState];
-  
-  const health = {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    database: {
-      status: mongoStatus,
-      collections: mongoose.connection.collections ? Object.keys(mongoose.connection.collections).length : 0,
-    },
-    memory: {
-      heapUsed: process.memoryUsage().heapUsed,
-      heapTotal: process.memoryUsage().heapTotal,
-      external: process.memoryUsage().external
-    },
-    environment: process.env.NODE_ENV || 'development'
-  };
+router.get('/', async (req, res) => {
+  try {
+    // Check database connection
+    await prisma.$queryRaw`SELECT 1`;
+    const dbStatus = 'Connected';
 
-  const isHealthy = mongoStatus === 'connected';
-  
-  res.status(isHealthy ? 200 : 503).json(health);
-}));
+    // Get system info
+    const systemInfo = {
+      nodeVersion: process.version,
+      platform: process.platform,
+      memory: process.memoryUsage(),
+      uptime: process.uptime(),
+      env: process.env.NODE_ENV
+    };
+
+    // Get database info
+    const [userCount, portfolioCount] = await Promise.all([
+      prisma.user.count(),
+      prisma.portfolio.count()
+    ]);
+
+    const databaseInfo = {
+      status: dbStatus,
+      collections: {
+        users: userCount,
+        portfolios: portfolioCount
+      }
+    };
+
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      system: systemInfo,
+      database: databaseInfo
+    });
+  } catch (error: any) {
+    console.error('Health check failed:', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
 
 // Detailed health check for internal monitoring
 router.get('/detailed', async (req, res) => {
@@ -44,18 +67,18 @@ router.get('/detailed', async (req, res) => {
       uptime: process.uptime()
     },
     system: {
-      cpus: os.cpus(),
-      totalMemory: os.totalmem(),
-      freeMemory: os.freemem(),
-      loadAvg: os.loadavg(),
-      uptime: os.uptime(),
-      networkInterfaces: os.networkInterfaces()
+      cpus: require('os').cpus(),
+      totalMemory: require('os').totalmem(),
+      freeMemory: require('os').freemem(),
+      loadAvg: require('os').loadavg(),
+      uptime: require('os').uptime(),
+      networkInterfaces: require('os').networkInterfaces()
     },
     database: {
-      status: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-      name: mongoose.connection.name,
-      host: mongoose.connection.host,
-      port: mongoose.connection.port
+      status: 'Connected',
+      name: 'Prisma',
+      host: 'localhost',
+      port: 5432
     }
   };
 

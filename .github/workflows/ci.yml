@@ -9,10 +9,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
     
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [18.20.5]
 
     services:
       redis:
