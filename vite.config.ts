@@ -24,10 +24,9 @@ export default defineConfig(({ mode }) => {
         // Babel options for better performance
         babel: {
           plugins: [
-            ['@babel/plugin-transform-runtime'],
-            // Enable legacy decorators for MobX
+            '@babel/plugin-transform-runtime',
             ['@babel/plugin-proposal-decorators', { legacy: true }],
-            ['@babel/plugin-proposal-class-properties', { loose: true }]
+            '@babel/plugin-transform-class-properties'
           ]
         }
       }),
@@ -122,9 +121,10 @@ export default defineConfig(({ mode }) => {
       }),
       // Compression for production builds
       mode === 'production' && compression({
-        algorithm: 'brotli',
+        algorithm: 'brotliCompress',
         exclude: [/\.(br)$/, /\.(gz)$/, /\.(png|jpe?g|gif|webp)$/i],
-        threshold: 1024
+        threshold: 1024,
+        deleteOriginalAssets: false
       }),
       // Fallback for older browsers
       mode === 'production' && legacy({
@@ -143,21 +143,22 @@ export default defineConfig(({ mode }) => {
     // Resolve path aliases
     resolve: {
       alias: {
-        '@': resolve(__dirname, 'src'),
-        '@components': resolve(__dirname, 'src/components'),
-        '@pages': resolve(__dirname, 'src/pages'),
-        '@hooks': resolve(__dirname, 'src/hooks'),
-        '@services': resolve(__dirname, 'src/services'),
-        '@store': resolve(__dirname, 'src/store'),
-        '@utils': resolve(__dirname, 'src/utils'),
-        '@types': resolve(__dirname, 'src/types'),
-        '@assets': resolve(__dirname, 'src/assets'),
-        '@styles': resolve(__dirname, 'src/styles'),
-        '@config': resolve(__dirname, 'src/config'),
-        '@constants': resolve(__dirname, 'src/constants'),
-        '@features': resolve(__dirname, 'src/features'),
-        '@layouts': resolve(__dirname, 'src/layouts'),
-        '@theme': resolve(__dirname, 'src/theme')
+        '@': resolve(__dirname, 'client/src'),
+        '@components': resolve(__dirname, 'client/src/components'),
+        '@pages': resolve(__dirname, 'client/src/pages'),
+        '@hooks': resolve(__dirname, 'client/src/hooks'),
+        '@services': resolve(__dirname, 'client/src/services'),
+        '@store': resolve(__dirname, 'client/src/store'),
+        '@utils': resolve(__dirname, 'client/src/utils'),
+        '@types': resolve(__dirname, 'client/src/types'),
+        '@assets': resolve(__dirname, 'client/src/assets'),
+        '@styles': resolve(__dirname, 'client/src/styles'),
+        '@config': resolve(__dirname, 'client/src/config'),
+        '@constants': resolve(__dirname, 'client/src/constants'),
+        '@features': resolve(__dirname, 'client/src/features'),
+        '@layouts': resolve(__dirname, 'client/src/layouts'),
+        '@theme': resolve(__dirname, 'client/src/theme'),
+        '/src': resolve(__dirname, 'client/src')
       }
     },
     
@@ -187,8 +188,11 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: mode !== 'production',
-      // Chunk splitting strategy
+      // Specify the entry point
       rollupOptions: {
+        input: {
+          main: resolve(__dirname, 'client/index.html')
+        },
         output: {
           manualChunks: (id) => {
             // Core vendor chunks
@@ -260,6 +264,17 @@ export default defineConfig(({ mode }) => {
     preview: {
       port: parseInt(env.PORT || '3000'),
       host: true
-    }
+    },
+    
+    // Define environment variables
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(mode),
+      'process.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version),
+    },
+    
+    // Legacy browser support
+    legacy: {
+      targets: ['defaults', 'not IE 11'],
+    },
   };
 });

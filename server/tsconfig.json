@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "CommonJS",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "lib": ["ES2022"],
     "outDir": "dist",
     "rootDir": "src",
@@ -19,18 +19,22 @@
     "removeComments": false,
     "importHelpers": true,
     "isolatedModules": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "*": ["node_modules/*", "src/types/*"]
+    }
   },
   "include": [
-    "src/**/*",
     "src/**/*.ts",
     "src/**/*.d.ts",
-    "src/**/*.test.ts",
+    "src/**/*.tsx",
+    "src/**/*.json",
     "src/__tests__/**/*",
-    "config/**/*",
-    "index.ts",
-    "jest.config.ts",
-    "jest.setup.js"
+    "src/types/**/*",
+    "src/utils/**/*",
+    "src/utils-new/**/*",
+    ".eslintrc.js"
   ],
   "exclude": [
     "node_modules",
