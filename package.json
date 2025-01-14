@@ -93,6 +93,8 @@
     "ws": "^8.16.0"
   },
   "devDependencies": {
+    "@hookform/resolvers": "^3.10.0",
+    "@types/crypto-js": "^4.2.2",
     "@types/node": "^18.18.2",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
@@ -111,7 +113,9 @@
     "vite": "^5.0.0",
     "vite-imagetools": "^6.2.7",
     "vite-plugin-html": "^3.2.0",
-    "vite-plugin-pwa": "^0.17.4"
+    "vite-plugin-pwa": "^0.17.4",
+    "vitest": "^2.1.8",
+    "zod": "^3.24.1"
   },
   "scripts": {
     "dev": "vite",

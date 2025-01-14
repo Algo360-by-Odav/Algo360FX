@@ -1,6 +1,5 @@
-import { get, post, put, del } from 'aws-amplify/api';
-
-const API_NAME = 'Algo360FX-API';
+import { post, get, put, del } from './api';
+import type { Strategy, CreateStrategyData, UpdateStrategyData } from '../types/strategy';
 
 export interface Strategy {
   id: string;
@@ -17,84 +16,66 @@ export interface CreateStrategyData {
   parameters: Record<string, any>;
 }
 
+export interface UpdateStrategyData {
+  name?: string;
+  description?: string;
+  parameters?: Record<string, any>;
+}
+
 export const strategyService = {
-  listStrategies: async () => {
+  createStrategy: async (data: CreateStrategyData): Promise<Strategy> => {
     try {
-      const response = await get({
-        apiName: API_NAME,
-        path: '/strategy'
-      }).response;
-      
-      const { body } = await response;
-      return JSON.parse(await body.text());
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+      const response = await post('/strategies', formData);
+      return response.data;
     } catch (error) {
-      console.error('List Strategies Error:', error);
+      console.error('Create strategy error:', error);
       throw error;
     }
   },
 
-  getStrategy: async (id: string) => {
+  getStrategies: async (): Promise<Strategy[]> => {
     try {
-      const response = await get({
-        apiName: API_NAME,
-        path: `/strategy/${id}`
-      }).response;
-      
-      const { body } = await response;
-      return JSON.parse(await body.text());
+      const response = await get('/strategies');
+      return response.data;
     } catch (error) {
-      console.error('Get Strategy Error:', error);
+      console.error('Get strategies error:', error);
       throw error;
     }
   },
 
-  createStrategy: async (data: CreateStrategyData) => {
+  getStrategy: async (id: string): Promise<Strategy> => {
     try {
-      const response = await post({
-        apiName: API_NAME,
-        path: '/strategy',
-        options: {
-          body: data
-        }
-      }).response;
-      
-      const { body } = await response;
-      return JSON.parse(await body.text());
+      const response = await get(`/strategies/${id}`);
+      return response.data;
     } catch (error) {
-      console.error('Create Strategy Error:', error);
+      console.error('Get strategy error:', error);
       throw error;
     }
   },
 
-  updateStrategy: async (id: string, data: Partial<CreateStrategyData>) => {
+  updateStrategy: async (id: string, data: UpdateStrategyData): Promise<Strategy> => {
     try {
-      const response = await put({
-        apiName: API_NAME,
-        path: `/strategy/${id}`,
-        options: {
-          body: data
-        }
-      }).response;
-      
-      const { body } = await response;
-      return JSON.parse(await body.text());
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+      const response = await put(`/strategies/${id}`, formData);
+      return response.data;
     } catch (error) {
-      console.error('Update Strategy Error:', error);
+      console.error('Update strategy error:', error);
       throw error;
     }
   },
 
-  deleteStrategy: async (id: string) => {
+  deleteStrategy: async (id: string): Promise<void> => {
     try {
-      const response = await del({
-        apiName: API_NAME,
-        path: `/strategy/${id}`
-      }).response;
-      
-      const { body } = await response;
-      return JSON.parse(await body.text());
+      await del(`/strategies/${id}`);
     } catch (error) {
-      console.error('Delete Strategy Error:', error);
+      console.error('Delete strategy error:', error);
       throw error;
     }
   }

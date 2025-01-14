@@ -1,39 +1,45 @@
 import { Amplify } from 'aws-amplify';
-import { signUp, signIn, confirmSignUp, signOut, getCurrentUser } from 'aws-amplify/auth';
+import { signIn, signUp, type SignUpInput } from 'aws-amplify/auth';
 import { calculateSecretHash } from '../utils/auth';
 
 const API_NAME = 'Algo360FX-API';
-const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID;
-const CLIENT_SECRET = import.meta.env.VITE_COGNITO_CLIENT_SECRET;
+const CLIENT_ID = process.env.VITE_COGNITO_CLIENT_ID || '';
+const CLIENT_SECRET = process.env.VITE_COGNITO_CLIENT_SECRET || '';
 
-export interface SignUpData {
-  email: string;
+interface SignUpData {
+  username: string;
   password: string;
+  email: string;
   firstName: string;
   lastName: string;
 }
 
-export interface LoginData {
-  email: string;
+interface SignInData {
+  username: string;
   password: string;
 }
 
 export const authService = {
-  signUp: async (data: SignUpData) => {
+  signUp: async ({ username, password, email, firstName, lastName }: SignUpData) => {
     try {
-      const secretHash = calculateSecretHash(data.email, CLIENT_ID, CLIENT_SECRET);
-      const { user } = await signUp({
-        username: data.email,
-        password: data.password,
+      const secretHash = calculateSecretHash(username, CLIENT_ID, CLIENT_SECRET);
+      
+      const signUpInput: SignUpInput = {
+        username,
+        password,
         options: {
           userAttributes: {
-            email: data.email,
-            given_name: data.firstName,
-            family_name: data.lastName
+            email,
+            given_name: firstName,
+            family_name: lastName
           },
-          secretHash
+          clientMetadata: {
+            secretHash
+          }
         }
-      });
+      };
+
+      const { user } = await signUp(signUpInput);
       return user;
     } catch (error) {
       console.error('SignUp Error:', error);
@@ -41,17 +47,21 @@ export const authService = {
     }
   },
 
-  login: async (data: LoginData) => {
+  login: async ({ username, password }: SignInData) => {
     try {
-      const secretHash = calculateSecretHash(data.email, CLIENT_ID, CLIENT_SECRET);
-      const { isSignedIn, nextStep } = await signIn({
-        username: data.email,
-        password: data.password,
+      const secretHash = calculateSecretHash(username, CLIENT_ID, CLIENT_SECRET);
+      
+      const result = await signIn({ 
+        username, 
+        password,
         options: {
-          secretHash
+          clientMetadata: {
+            secretHash
+          }
         }
       });
-      return { isSignedIn, nextStep };
+      
+      return result;
     } catch (error) {
       console.error('Login Error:', error);
       throw error;

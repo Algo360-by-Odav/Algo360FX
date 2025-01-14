@@ -1,6 +1,5 @@
-import { get, post, put, del } from 'aws-amplify/api';
-
-const API_NAME = 'Algo360FX-API';
+import { post, get, put, del } from './api';
+import type { Portfolio, CreatePortfolioData, UpdatePortfolioData } from '../types/portfolio';
 
 export interface Portfolio {
   id: string;
@@ -19,84 +18,67 @@ export interface CreatePortfolioData {
   currency: string;
 }
 
+export interface UpdatePortfolioData {
+  name?: string;
+  description?: string;
+  balance?: number;
+  currency?: string;
+}
+
 export const portfolioService = {
-  listPortfolios: async () => {
+  createPortfolio: async (data: CreatePortfolioData): Promise<Portfolio> => {
     try {
-      const response = await get({
-        apiName: API_NAME,
-        path: '/portfolio'
-      }).response;
-      
-      const { body } = await response;
-      return JSON.parse(await body.text());
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+      const response = await post('/portfolios', formData);
+      return response.data;
     } catch (error) {
-      console.error('List Portfolios Error:', error);
+      console.error('Create portfolio error:', error);
       throw error;
     }
   },
 
-  getPortfolio: async (id: string) => {
+  getPortfolios: async (): Promise<Portfolio[]> => {
     try {
-      const response = await get({
-        apiName: API_NAME,
-        path: `/portfolio/${id}`
-      }).response;
-      
-      const { body } = await response;
-      return JSON.parse(await body.text());
+      const response = await get('/portfolios');
+      return response.data;
     } catch (error) {
-      console.error('Get Portfolio Error:', error);
+      console.error('Get portfolios error:', error);
       throw error;
     }
   },
 
-  createPortfolio: async (data: CreatePortfolioData) => {
+  getPortfolio: async (id: string): Promise<Portfolio> => {
     try {
-      const response = await post({
-        apiName: API_NAME,
-        path: '/portfolio',
-        options: {
-          body: data
-        }
-      }).response;
-      
-      const { body } = await response;
-      return JSON.parse(await body.text());
+      const response = await get(`/portfolios/${id}`);
+      return response.data;
     } catch (error) {
-      console.error('Create Portfolio Error:', error);
+      console.error('Get portfolio error:', error);
       throw error;
     }
   },
 
-  updatePortfolio: async (id: string, data: Partial<CreatePortfolioData>) => {
+  updatePortfolio: async (id: string, data: UpdatePortfolioData): Promise<Portfolio> => {
     try {
-      const response = await put({
-        apiName: API_NAME,
-        path: `/portfolio/${id}`,
-        options: {
-          body: data
-        }
-      }).response;
-      
-      const { body } = await response;
-      return JSON.parse(await body.text());
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+      const response = await put(`/portfolios/${id}`, formData);
+      return response.data;
     } catch (error) {
-      console.error('Update Portfolio Error:', error);
+      console.error('Update portfolio error:', error);
       throw error;
     }
   },
 
-  deletePortfolio: async (id: string) => {
+  deletePortfolio: async (id: string): Promise<void> => {
     try {
-      const response = await del({
-        apiName: API_NAME,
-        path: `/portfolio/${id}`
-      }).response;
-      
-      const { body } = await response;
-      return JSON.parse(await body.text());
+      await del(`/portfolios/${id}`);
     } catch (error) {
-      console.error('Delete Portfolio Error:', error);
+      console.error('Delete portfolio error:', error);
       throw error;
     }
   }
