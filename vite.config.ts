@@ -1,7 +1,7 @@
 import { resolve } from 'path';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import viteCompression from 'vite-plugin-compression2';
+import compression from 'vite-plugin-compression';
 import legacy from '@vitejs/plugin-legacy';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { createHtmlPlugin } from 'vite-plugin-html';
@@ -32,19 +32,19 @@ export default ({ mode }: ConfigEnv): UserConfig => {
       // PWA plugin
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
         manifest: {
           name: 'Algo360FX Trading Platform',
           short_name: 'Algo360FX',
+          description: 'Advanced algorithmic trading platform for forex markets',
           theme_color: '#1a1a1a',
           icons: [
             {
-              src: '/android-chrome-192x192.png',
+              src: '/icon-192x192.png',
               sizes: '192x192',
               type: 'image/png'
             },
             {
-              src: '/android-chrome-512x512.png',
+              src: '/icon-512x512.png',
               sizes: '512x512',
               type: 'image/png'
             }
@@ -54,6 +54,14 @@ export default ({ mode }: ConfigEnv): UserConfig => {
 
       // Image optimization
       imagetools(),
+
+      // Compression configuration
+      compression({
+        algorithm: 'gzip',
+        exclude: [/\.(br)$/, /\.(gz)$/],
+        deleteOriginalAssets: false,
+        threshold: 10240 // Only compress files > 10KB
+      }),
 
       // HTML plugin
       createHtmlPlugin({
@@ -72,23 +80,11 @@ export default ({ mode }: ConfigEnv): UserConfig => {
         brotliSize: true
       }),
 
-      // Compression for production builds
-      isProduction && viteCompression({
-        algorithm: 'brotliCompress',
-        exclude: [/\.(br)$/, /\.(gz)$/, /\.(png|jpe?g|gif|webp)$/i],
-        threshold: 1024,
-        compressionOptions: {
-          params: {
-            [11]: true // Level 11 compression
-          }
-        }
-      }),
-
       // Legacy browsers support
       isProduction && legacy({
+        targets: ['defaults', 'not IE 11'],
         modernPolyfills: true,
-        renderLegacyChunks: true,
-        targets: ['defaults', 'not IE 11']  // Specify legacy browser targets
+        renderLegacyChunks: true
       })
     ].filter(Boolean),
     
@@ -114,7 +110,7 @@ export default ({ mode }: ConfigEnv): UserConfig => {
 
     // Build configuration
     build: {
-      target: 'esnext',  // This will be overridden by legacy plugin
+      target: 'esnext',
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: !isProduction,
@@ -131,11 +127,18 @@ export default ({ mode }: ConfigEnv): UserConfig => {
               }
               return 'vendor';
             }
-            return undefined; // Explicitly return undefined for non-node_modules files
+            return undefined;
           }
         }
       },
-      copyPublicDir: true
+      copyPublicDir: true,
+      minify: isProduction,
+      terserOptions: isProduction ? {
+        compress: {
+          drop_console: true,
+          drop_debugger: true
+        }
+      } : undefined
     },
     
     // Optimization configuration
@@ -158,6 +161,9 @@ export default ({ mode }: ConfigEnv): UserConfig => {
           ws: true
         }
       }
+    },
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
     }
   };
 }
