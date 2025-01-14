@@ -32,8 +32,8 @@ export interface Position {
   id: string;
   userId: string;
   symbol: string;
-  type: string;
-  status: string;
+  type: PositionType;
+  status: PositionStatus;
   openTime: Date;
   closeTime: Date | null;
   entryPrice: number;
@@ -49,26 +49,11 @@ export interface Position {
   updatedAt: Date;
 }
 
-export interface PositionWithRelations extends Position {
-  user: User;
-  strategy?: Strategy | null;
-  portfolio: {
-    id: string;
-    name: string;
-    userId: string;
-    balance: number;
-    currency: string;
-    description?: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-}
-
 export interface PositionCreateInput {
   userId: string;
   symbol: string;
-  type: string;
-  status: string;
+  type: PositionType;
+  status: PositionStatus;
   openTime: Date;
   entryPrice: number;
   size: number;
@@ -81,8 +66,8 @@ export interface PositionCreateInput {
 
 export interface PositionUpdateInput {
   symbol?: string;
-  type?: string;
-  status?: string;
+  type?: PositionType;
+  status?: PositionStatus;
   closeTime?: Date | null;
   exitPrice?: number | null;
   profit?: number | null;
@@ -97,8 +82,8 @@ export interface PositionWhereInput {
   strategyId?: string;
   portfolioId?: string;
   symbol?: string;
-  type?: string;
-  status?: string;
+  type?: PositionType;
+  status?: PositionStatus;
 }
 
 export interface PositionWhereUniqueInput {
@@ -109,8 +94,8 @@ export interface CreatePositionInput {
   userId: string;
   strategyId?: string;
   symbol: string;
-  type: string;
-  status: string;
+  type: PositionType;
+  status: PositionStatus;
   openTime: Date;
   entryPrice: number;
   size: number;
@@ -122,8 +107,8 @@ export interface CreatePositionInput {
 
 export interface UpdatePositionInput {
   symbol?: string;
-  type?: string;
-  status?: string;
+  type?: PositionType;
+  status?: PositionStatus;
   closeTime?: Date | null;
   exitPrice?: number | null;
   profit?: number | null;
@@ -136,8 +121,8 @@ export interface PositionFilters {
   userId?: string;
   strategyId?: string;
   symbol?: string;
-  type?: string;
-  status?: string;
+  type?: PositionType;
+  status?: PositionStatus;
   startDate?: Date;
   endDate?: Date;
 }
