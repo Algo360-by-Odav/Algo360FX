@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { portfolioService, Portfolio } from '../../services/portfolioService';
+import { portfolioService, Portfolio } from '../../services/portfolioService.js';
 import { Box, Button, Card, CardContent, Typography, Grid, CircularProgress, Alert } from '@mui/material';
 
-export const PortfolioList = () => {
+export const PortfolioList: React.FC = () => {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const fetchPortfolios = async () => {
     try {
-      const data = await portfolioService.listPortfolios();
+      const data = await portfolioService.getPortfolios();
       setPortfolios(data);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch portfolios');
@@ -31,41 +31,46 @@ export const PortfolioList = () => {
   }
 
   if (error) {
-    return <Alert severity="error">{error}</Alert>;
+    return (
+      <Box p={2}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5">Your Portfolios</Typography>
-        <Button variant="contained" color="primary">
-          Create New Portfolio
+    <Box p={2}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h5" component="h1">
+          Your Portfolios
+        </Typography>
+        <Button variant="contained" color="primary" href="/portfolios/new">
+          Create Portfolio
         </Button>
       </Box>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {portfolios.map((portfolio) => (
           <Grid item xs={12} sm={6} md={4} key={portfolio.id}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" component="h2">
                   {portfolio.name}
                 </Typography>
                 <Typography color="textSecondary" gutterBottom>
                   {portfolio.description}
                 </Typography>
-                <Typography variant="h6">
+                <Typography variant="body2">
                   Balance: {portfolio.balance} {portfolio.currency}
                 </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Created: {new Date(portfolio.createdAt).toLocaleDateString()}
-                </Typography>
                 <Box mt={2}>
-                  <Button size="small" color="primary">
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    href={`/portfolios/${portfolio.id}`}
+                    size="small"
+                  >
                     View Details
-                  </Button>
-                  <Button size="small" color="error">
-                    Delete
                   </Button>
                 </Box>
               </CardContent>

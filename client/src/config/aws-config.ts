@@ -1,61 +1,51 @@
 import { Amplify } from 'aws-amplify';
-import { fetchAuthSession } from 'aws-amplify/auth';
-import { type ResourcesConfig } from 'aws-amplify/lib/types';
+import { ResourcesConfig } from '@aws-amplify/core';
+
+/// <reference types="vite/client" />
 
 declare module 'vite' {
   interface ImportMetaEnv {
-    VITE_AWS_REGION: string;
-    VITE_COGNITO_USER_POOL_ID: string;
-    VITE_COGNITO_CLIENT_ID: string;
-    VITE_COGNITO_CLIENT_SECRET: string;
-    VITE_API_GATEWAY_URL: string;
-    VITE_ENV: string;
+    readonly VITE_AWS_REGION: string;
+    readonly VITE_COGNITO_USER_POOL_ID: string;
+    readonly VITE_COGNITO_CLIENT_ID: string;
+    readonly VITE_COGNITO_CLIENT_SECRET: string;
+    readonly VITE_API_GATEWAY_URL: string;
+    readonly VITE_ENV: 'development' | 'production';
   }
 }
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+
+const region = import.meta.env.VITE_AWS_REGION;
+const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID;
+const userPoolClientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
+const userPoolClientSecret = import.meta.env.VITE_COGNITO_CLIENT_SECRET;
 
 const awsConfig: ResourcesConfig = {
   Auth: {
     Cognito: {
-      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
-      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
-      region: import.meta.env.VITE_AWS_REGION,
-      identityPoolId: undefined,
+      userPoolId,
+      userPoolClientId,
+      signUpVerificationMethod: 'code',
       loginWith: {
-        oauth: {
-          domain: `${import.meta.env.VITE_COGNITO_USER_POOL_ID}.auth.${import.meta.env.VITE_AWS_REGION}.amazoncognito.com`,
-          scopes: ['email', 'openid', 'phone'],
-          redirectSignIn: import.meta.env.VITE_ENV === 'production' 
-            ? 'https://algo360fx.cloudfront.net/callback'
-            : 'http://localhost:5173/callback',
-          redirectSignOut: import.meta.env.VITE_ENV === 'production'
-            ? 'https://algo360fx.cloudfront.net'
-            : 'http://localhost:5173',
-          responseType: 'code'
-        },
-        username: true,
-        email: true
+        email: true,
+        phone: false,
+        username: true
       }
     }
-  },
+  } as const,
   API: {
     REST: {
       'Algo360FX-API': {
         endpoint: import.meta.env.VITE_API_GATEWAY_URL,
-        region: import.meta.env.VITE_AWS_REGION,
-        custom_header: async () => {
-          try {
-            const session = await fetchAuthSession();
-            const token = session.tokens?.idToken?.toString();
-            return token ? { Authorization: `Bearer ${token}` } : {};
-          } catch (error) {
-            console.error('Error getting auth session:', error);
-            return {};
-          }
-        }
+        region,
+        defaultAuthMode: 'userPool'
       }
     }
-  }
-};
+  } as const
+} as const;
 
 console.log('Environment Variables:');
 console.log('VITE_AWS_REGION:', import.meta.env.VITE_AWS_REGION);
@@ -80,10 +70,12 @@ export const configureAWS = () => {
   }
 
   console.log('Configuring AWS Amplify with:', {
-    region: awsConfig.Auth.Cognito.region,
+    region: awsConfig.Auth.Cognito.userPoolId,
     userPoolId: awsConfig.Auth.Cognito.userPoolId,
     endpoint: awsConfig.API.REST['Algo360FX-API'].endpoint
   });
 
   Amplify.configure(awsConfig);
 };
+
+export { awsConfig };

@@ -24,22 +24,30 @@ export interface UpdatePortfolioData {
   currency?: string;
 }
 
+interface ApiResponse<T> {
+  data: T;
+  success: boolean;
+  message?: string;
+}
+
 export const portfolioService = {
   createPortfolio: async (data: CreatePortfolioData): Promise<Portfolio> => {
     try {
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value.toString());
-      });
-      
-      const response = await post({
+      const apiResponse = await post({
         apiName: 'Algo360FX-API',
         path: '/portfolios',
         options: {
-          body: formData
+          body: JSON.stringify(data),
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
       });
-      return response.data;
+
+      const response = await apiResponse.response;
+      const jsonData = await response.body.json();
+      const result = jsonData as ApiResponse<Portfolio>;
+      return result.data;
     } catch (error) {
       console.error('Create portfolio error:', error);
       throw error;
@@ -48,11 +56,15 @@ export const portfolioService = {
 
   getPortfolios: async (): Promise<Portfolio[]> => {
     try {
-      const response = await get({
+      const apiResponse = await get({
         apiName: 'Algo360FX-API',
         path: '/portfolios'
       });
-      return response.data;
+
+      const response = await apiResponse.response;
+      const jsonData = await response.body.json();
+      const result = jsonData as ApiResponse<Portfolio[]>;
+      return result.data;
     } catch (error) {
       console.error('Get portfolios error:', error);
       throw error;
@@ -61,11 +73,15 @@ export const portfolioService = {
 
   getPortfolio: async (id: string): Promise<Portfolio> => {
     try {
-      const response = await get({
+      const apiResponse = await get({
         apiName: 'Algo360FX-API',
         path: `/portfolios/${id}`
       });
-      return response.data;
+
+      const response = await apiResponse.response;
+      const jsonData = await response.body.json();
+      const result = jsonData as ApiResponse<Portfolio>;
+      return result.data;
     } catch (error) {
       console.error('Get portfolio error:', error);
       throw error;
@@ -74,21 +90,21 @@ export const portfolioService = {
 
   updatePortfolio: async (id: string, data: UpdatePortfolioData): Promise<Portfolio> => {
     try {
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined) {
-          formData.append(key, value.toString());
-        }
-      });
-
-      const response = await put({
+      const apiResponse = await put({
         apiName: 'Algo360FX-API',
         path: `/portfolios/${id}`,
         options: {
-          body: formData
+          body: JSON.stringify(data),
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
       });
-      return response.data;
+
+      const response = await apiResponse.response;
+      const jsonData = await response.body.json();
+      const result = jsonData as ApiResponse<Portfolio>;
+      return result.data;
     } catch (error) {
       console.error('Update portfolio error:', error);
       throw error;

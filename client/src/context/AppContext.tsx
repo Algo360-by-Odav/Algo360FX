@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react';
 import { useSnackbar, SnackbarKey } from 'notistack';
 import WebSocketService from '@/services/websocketService';
 import { UI_CONFIG, WEBSOCKET_CONFIG } from '@/config/constants';
@@ -242,6 +242,11 @@ export const useApp = () => {
     throw new Error('useApp must be used within an AppProvider');
   }
   return context;
+};
+
+export const useNotification = () => {
+  const { showNotification } = useApp();
+  return { showNotification };
 };
 
 export default AppContext;

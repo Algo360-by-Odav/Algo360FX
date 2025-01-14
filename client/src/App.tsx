@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import {
   AppBar,
@@ -11,19 +11,19 @@ import {
   Container,
 } from '@mui/material';
 
-import Login from './components/auth/Login';
-import { SignUp } from './components/auth/SignUp';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { Dashboard } from './components/Dashboard';
-import { PortfolioList } from './components/portfolio/PortfolioList';
-import { Callback } from './components/auth/Callback';
+import Login from './components/auth/Login.js';
+import { SignUp } from './components/auth/SignUp.js';
+import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
+import { Dashboard } from './components/Dashboard.js';
+import { PortfolioList } from './components/portfolio/PortfolioList.js';
+import { Callback } from './components/auth/Callback.js';
 
-import ErrorBoundary from './components/common/ErrorBoundary';
-import LoadingOverlay from './components/common/LoadingOverlay';
-import NotificationSystem from './components/common/NotificationSystem';
-import { AppProvider, useApp } from './context/AppContext';
-import { AuthProvider } from './context/AuthContext';
-import { configureAWS } from './config/aws-config';
+import ErrorBoundary from './components/common/ErrorBoundary.js';
+import LoadingOverlay from './components/common/LoadingOverlay.js';
+import NotificationSystem from './components/common/NotificationSystem.js';
+import { AppProvider, useApp } from './context/AppContext.js';
+import { AuthProvider } from './context/AuthContext.js';
+import { configureAWS } from './config/aws-config.js';
 
 const theme = createTheme({
   palette: {
@@ -77,7 +77,7 @@ const AppContent: React.FC = () => {
         </Routes>
       </Container>
 
-      <NotificationSystem />
+      <NotificationSystem children={undefined} />
     </Box>
   );
 };
