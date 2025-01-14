@@ -28,8 +28,13 @@ export interface UpdatePortfolioData {
 export const portfolioService = {
   createPortfolio: async (data: CreatePortfolioData): Promise<Portfolio> => {
     try {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        formData.append(key, value as string | Blob);
+      });
+      
       const response = await API.post('Algo360FX-API', '/portfolios', {
-        body: data
+        body: formData
       });
       return response.data;
     } catch (error) {

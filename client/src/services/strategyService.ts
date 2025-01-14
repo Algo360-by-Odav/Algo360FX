@@ -1,5 +1,4 @@
 import { API } from 'aws-amplify';
-import type { Strategy, CreateStrategyData, UpdateStrategyData } from '../types/strategy';
 
 export interface Strategy {
   id: string;
@@ -25,8 +24,17 @@ export interface UpdateStrategyData {
 export const strategyService = {
   createStrategy: async (data: CreateStrategyData): Promise<Strategy> => {
     try {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (key === 'parameters') {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value as string | Blob);
+        }
+      });
+      
       const response = await API.post('Algo360FX-API', '/strategies', {
-        body: data
+        body: formData
       });
       return response.data;
     } catch (error) {

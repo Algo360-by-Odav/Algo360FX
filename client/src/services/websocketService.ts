@@ -1,4 +1,4 @@
-import { WEBSOCKET_CONFIG } from '@/config/constants';
+import { WEBSOCKET_CONFIG } from '../config/websocket';
 import { fetchAuthSession } from 'aws-amplify/auth';
 
 type MessageHandler = (data: any) => void;
