@@ -1,10 +1,10 @@
 import { Amplify } from 'aws-amplify';
-import { signIn, signUp, type SignUpInput } from 'aws-amplify/auth';
+import { signIn, signUp, signOut, confirmSignUp, getCurrentUser, type SignUpInput } from 'aws-amplify/auth';
 import { calculateSecretHash } from '../utils/auth';
 
 const API_NAME = 'Algo360FX-API';
-const CLIENT_ID = process.env.VITE_COGNITO_CLIENT_ID || '';
-const CLIENT_SECRET = process.env.VITE_COGNITO_CLIENT_SECRET || '';
+const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID || '';
+const CLIENT_SECRET = import.meta.env.VITE_COGNITO_CLIENT_SECRET || '';
 
 interface SignUpData {
   username: string;
@@ -39,8 +39,8 @@ export const authService = {
         }
       };
 
-      const { user } = await signUp(signUpInput);
-      return user;
+      const result = await signUp(signUpInput);
+      return result;
     } catch (error) {
       console.error('SignUp Error:', error);
       throw error;

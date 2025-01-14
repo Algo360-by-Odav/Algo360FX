@@ -1,30 +1,35 @@
 import { Amplify } from 'aws-amplify';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { type ResourcesConfig } from 'aws-amplify/lib/types';
 
-const awsConfig = {
+declare module 'vite' {
+  interface ImportMetaEnv {
+    VITE_AWS_REGION: string;
+    VITE_COGNITO_USER_POOL_ID: string;
+    VITE_COGNITO_CLIENT_ID: string;
+    VITE_COGNITO_CLIENT_SECRET: string;
+    VITE_API_GATEWAY_URL: string;
+    VITE_ENV: string;
+  }
+}
+
+const awsConfig: ResourcesConfig = {
   Auth: {
     Cognito: {
-      region: import.meta.env.VITE_AWS_REGION,
-      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
       userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
-      userPoolClientSecret: import.meta.env.VITE_COGNITO_CLIENT_SECRET,
-      mandatorySignIn: true,
-      authenticationFlowType: 'USER_PASSWORD_AUTH',
-      oauth: {
-        domain: `${import.meta.env.VITE_COGNITO_USER_POOL_ID}.auth.${import.meta.env.VITE_AWS_REGION}.amazoncognito.com`,
-        scope: ['email', 'openid', 'phone'],
-        redirectSignIn: import.meta.env.VITE_ENV === 'production' 
-          ? 'https://algo360fx.cloudfront.net/callback'
-          : 'http://localhost:5173/callback',
-        redirectSignOut: import.meta.env.VITE_ENV === 'production'
-          ? 'https://algo360fx.cloudfront.net'
-          : 'http://localhost:5173',
-        responseType: 'code'
-      },
+      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+      region: import.meta.env.VITE_AWS_REGION,
+      identityPoolId: undefined,
       loginWith: {
         oauth: {
           domain: `${import.meta.env.VITE_COGNITO_USER_POOL_ID}.auth.${import.meta.env.VITE_AWS_REGION}.amazoncognito.com`,
           scopes: ['email', 'openid', 'phone'],
+          redirectSignIn: import.meta.env.VITE_ENV === 'production' 
+            ? 'https://algo360fx.cloudfront.net/callback'
+            : 'http://localhost:5173/callback',
+          redirectSignOut: import.meta.env.VITE_ENV === 'production'
+            ? 'https://algo360fx.cloudfront.net'
+            : 'http://localhost:5173',
           responseType: 'code'
         },
         username: true,
@@ -66,7 +71,7 @@ export const configureAWS = () => {
     'VITE_COGNITO_CLIENT_ID',
     'VITE_COGNITO_CLIENT_SECRET',
     'VITE_API_GATEWAY_URL'
-  ];
+  ] as const;
 
   for (const envVar of requiredEnvVars) {
     if (!import.meta.env[envVar]) {

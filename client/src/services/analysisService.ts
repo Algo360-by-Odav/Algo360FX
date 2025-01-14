@@ -1,4 +1,4 @@
-import { API } from 'aws-amplify';
+import { post, get } from 'aws-amplify/api';
 
 const API_NAME = 'Algo360FX-API';
 
@@ -13,9 +13,14 @@ export interface TechnicalAnalysisRequest {
 export const analysisService = {
   getTechnicalAnalysis: async (data: TechnicalAnalysisRequest) => {
     try {
-      return await API.post(API_NAME, '/analysis/technical', {
-        body: data
+      const response = await post({
+        apiName: API_NAME,
+        path: '/analysis/technical',
+        options: {
+          body: data
+        }
       });
+      return response.data;
     } catch (error) {
       console.error('Technical Analysis Error:', error);
       throw error;
@@ -24,7 +29,11 @@ export const analysisService = {
 
   getAvailableIndicators: async () => {
     try {
-      return await API.get(API_NAME, '/analysis/indicators', {});
+      const response = await get({
+        apiName: API_NAME,
+        path: '/analysis/indicators'
+      });
+      return response.data;
     } catch (error) {
       console.error('Get Indicators Error:', error);
       throw error;

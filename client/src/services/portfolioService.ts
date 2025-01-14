@@ -1,5 +1,4 @@
-import { API } from 'aws-amplify';
-import type { Portfolio, CreatePortfolioData, UpdatePortfolioData } from '../types/portfolio';
+import { post, get, put, del } from 'aws-amplify/api';
 
 export interface Portfolio {
   id: string;
@@ -30,11 +29,15 @@ export const portfolioService = {
     try {
       const formData = new FormData();
       Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value as string | Blob);
+        formData.append(key, value.toString());
       });
       
-      const response = await API.post('Algo360FX-API', '/portfolios', {
-        body: formData
+      const response = await post({
+        apiName: 'Algo360FX-API',
+        path: '/portfolios',
+        options: {
+          body: formData
+        }
       });
       return response.data;
     } catch (error) {
@@ -45,7 +48,10 @@ export const portfolioService = {
 
   getPortfolios: async (): Promise<Portfolio[]> => {
     try {
-      const response = await API.get('Algo360FX-API', '/portfolios', {});
+      const response = await get({
+        apiName: 'Algo360FX-API',
+        path: '/portfolios'
+      });
       return response.data;
     } catch (error) {
       console.error('Get portfolios error:', error);
@@ -55,7 +61,10 @@ export const portfolioService = {
 
   getPortfolio: async (id: string): Promise<Portfolio> => {
     try {
-      const response = await API.get('Algo360FX-API', `/portfolios/${id}`, {});
+      const response = await get({
+        apiName: 'Algo360FX-API',
+        path: `/portfolios/${id}`
+      });
       return response.data;
     } catch (error) {
       console.error('Get portfolio error:', error);
@@ -65,8 +74,19 @@ export const portfolioService = {
 
   updatePortfolio: async (id: string, data: UpdatePortfolioData): Promise<Portfolio> => {
     try {
-      const response = await API.put('Algo360FX-API', `/portfolios/${id}`, {
-        body: data
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined) {
+          formData.append(key, value.toString());
+        }
+      });
+
+      const response = await put({
+        apiName: 'Algo360FX-API',
+        path: `/portfolios/${id}`,
+        options: {
+          body: formData
+        }
       });
       return response.data;
     } catch (error) {
@@ -77,7 +97,10 @@ export const portfolioService = {
 
   deletePortfolio: async (id: string): Promise<void> => {
     try {
-      await API.del('Algo360FX-API', `/portfolios/${id}`, {});
+      await del({
+        apiName: 'Algo360FX-API',
+        path: `/portfolios/${id}`
+      });
     } catch (error) {
       console.error('Delete portfolio error:', error);
       throw error;
