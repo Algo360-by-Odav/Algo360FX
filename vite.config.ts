@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import legacy from '@vitejs/plugin-legacy';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { createHtmlPlugin } from 'vite-plugin-html';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import { imagetools } from 'vite-imagetools';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -55,11 +55,18 @@ export default defineConfig({
     })
   ],
     
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'client/src')
+    }
+  },
+
   publicDir: resolve(__dirname, 'client/public'),
   base: '/',
 
   build: {
     outDir: resolve(__dirname, 'dist'),
+    emptyOutDir: true,
     assetsDir: 'assets',
     sourcemap: !isProduction,
     rollupOptions: {
