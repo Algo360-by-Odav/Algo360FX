@@ -6,30 +6,9 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    
-    // Node.js Specific
-    "target": "ESNext",
-    "lib": ["ESNext"],
-    "types": ["node"],
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-
-    // Type Checking
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    
-    // Source Maps
-    "sourceMap": true,
-    "inlineSources": true,
-    "declaration": true,
-    "declarationMap": true
+    "strict": true
   },
   "include": [
-    "vite.config.ts",
-    "vitest.config.ts",
-    "scripts/**/*.ts"
+    "vite.config.ts"
   ]
 }

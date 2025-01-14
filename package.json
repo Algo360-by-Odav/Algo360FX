@@ -120,7 +120,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "cross-env NODE_ENV=production yarn tsc && yarn vite build",
+    "build": "cross-env NODE_ENV=production tsc -p tsconfig.node.json && tsc && vite build",
     "preview": "vite preview",
     "test": "jest",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"

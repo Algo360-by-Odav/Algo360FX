@@ -2,9 +2,9 @@
   "extends": "./tsconfig.paths.json",
   "compilerOptions": {
     // Target and Module Configuration
-    "target": "ESNext",
+    "target": "ES2020",
     "module": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "moduleResolution": "bundler",
     "useDefineForClassFields": true,
     "allowImportingTsExtensions": true,
@@ -35,7 +35,11 @@
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "incremental": true
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": [
     "src/**/*.ts",
@@ -43,8 +47,7 @@
     "src/**/*.js",
     "src/**/*.jsx",
     "tests/**/*.ts",
-    "tests/**/*.tsx",
-    "vite.config.ts"
+    "tests/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
@@ -55,7 +58,8 @@
     "**/*.spec.ts",
     "**/*.test.ts",
     "**/*.spec.tsx",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "vite.config.ts"
   ],
   "references": [
     { "path": "./tsconfig.node.json" }
