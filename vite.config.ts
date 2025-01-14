@@ -87,7 +87,8 @@ export default ({ mode }: ConfigEnv): UserConfig => {
       // Legacy browsers support
       isProduction && legacy({
         modernPolyfills: true,
-        renderLegacyChunks: true
+        renderLegacyChunks: true,
+        targets: ['defaults', 'not IE 11']  // Specify legacy browser targets
       })
     ].filter(Boolean),
     
@@ -113,14 +114,12 @@ export default ({ mode }: ConfigEnv): UserConfig => {
 
     // Build configuration
     build: {
-      target: 'esnext',
+      target: 'esnext',  // This will be overridden by legacy plugin
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: !isProduction,
       rollupOptions: {
-        input: {
-          main: resolve(__dirname, 'client/index.html')
-        },
+        input: resolve(__dirname, 'client/index.html'),
         output: {
           manualChunks: (id: string): string | undefined => {
             if (id.includes('node_modules')) {
