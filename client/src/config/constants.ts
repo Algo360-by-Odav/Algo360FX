@@ -319,24 +319,23 @@ export const WEBSOCKET_CONFIG = {
     MARKET_DATA: '/ws/market-data',
     TRADING: '/ws/trading',
     NOTIFICATIONS: '/ws/notifications',
-    MT5_BRIDGE_URL: import.meta.env.VITE_WS_URL || 'wss://aaobehxctd.execute-api.us-east-1.amazonaws.com/dev',
+    MT5_BRIDGE_URL: process.env.VITE_MT5_BRIDGE_URL,
     CONNECT: '/ws/connect',
     DISCONNECT: '/ws/disconnect',
     ERROR: '/ws/error'
   },
   EVENTS: {
-    CONNECT: 'connect',
-    DISCONNECT: 'disconnect',
-    ERROR: 'error',
-    MARKET_DATA: 'market_data',
-    TRADING: 'trading',
-    NOTIFICATION: 'notification'
+    MARKET_DATA: 'MARKET_DATA',
+    ORDER_UPDATE: 'ORDER_UPDATE',
+    POSITION_UPDATE: 'POSITION_UPDATE',
+    ACCOUNT_UPDATE: 'ACCOUNT_UPDATE',
+    ERROR: 'ERROR'
   },
   CONFIG: {
     RECONNECT_ATTEMPTS: 5,
-    RECONNECT_DELAY: 1000,
-    PING_INTERVAL: 30000
-  }
+    RECONNECT_DELAY: 5000
+  },
+  URL: process.env.VITE_WEBSOCKET_URL || 'wss://api.algo360fx.com/ws'
 } as const;
 
 // API and WebSocket Configuration

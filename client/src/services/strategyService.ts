@@ -1,10 +1,10 @@
-import { post, get, put, del } from './api';
+import { API } from 'aws-amplify';
 import type { Strategy, CreateStrategyData, UpdateStrategyData } from '../types/strategy';
 
 export interface Strategy {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   parameters: Record<string, any>;
   createdAt: string;
   updatedAt: string;
@@ -12,7 +12,7 @@ export interface Strategy {
 
 export interface CreateStrategyData {
   name: string;
-  description?: string;
+  description: string;
   parameters: Record<string, any>;
 }
 
@@ -25,11 +25,9 @@ export interface UpdateStrategyData {
 export const strategyService = {
   createStrategy: async (data: CreateStrategyData): Promise<Strategy> => {
     try {
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value);
+      const response = await API.post('Algo360FX-API', '/strategies', {
+        body: data
       });
-      const response = await post('/strategies', formData);
       return response.data;
     } catch (error) {
       console.error('Create strategy error:', error);
@@ -39,7 +37,7 @@ export const strategyService = {
 
   getStrategies: async (): Promise<Strategy[]> => {
     try {
-      const response = await get('/strategies');
+      const response = await API.get('Algo360FX-API', '/strategies', {});
       return response.data;
     } catch (error) {
       console.error('Get strategies error:', error);
@@ -49,7 +47,7 @@ export const strategyService = {
 
   getStrategy: async (id: string): Promise<Strategy> => {
     try {
-      const response = await get(`/strategies/${id}`);
+      const response = await API.get('Algo360FX-API', `/strategies/${id}`, {});
       return response.data;
     } catch (error) {
       console.error('Get strategy error:', error);
@@ -59,11 +57,9 @@ export const strategyService = {
 
   updateStrategy: async (id: string, data: UpdateStrategyData): Promise<Strategy> => {
     try {
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value);
+      const response = await API.put('Algo360FX-API', `/strategies/${id}`, {
+        body: data
       });
-      const response = await put(`/strategies/${id}`, formData);
       return response.data;
     } catch (error) {
       console.error('Update strategy error:', error);
@@ -73,7 +69,7 @@ export const strategyService = {
 
   deleteStrategy: async (id: string): Promise<void> => {
     try {
-      await del(`/strategies/${id}`);
+      await API.del('Algo360FX-API', `/strategies/${id}`, {});
     } catch (error) {
       console.error('Delete strategy error:', error);
       throw error;

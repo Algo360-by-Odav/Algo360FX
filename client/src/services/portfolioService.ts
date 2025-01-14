@@ -1,10 +1,10 @@
-import { post, get, put, del } from './api';
+import { API } from 'aws-amplify';
 import type { Portfolio, CreatePortfolioData, UpdatePortfolioData } from '../types/portfolio';
 
 export interface Portfolio {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   balance: number;
   currency: string;
   createdAt: string;
@@ -13,7 +13,7 @@ export interface Portfolio {
 
 export interface CreatePortfolioData {
   name: string;
-  description?: string;
+  description: string;
   balance: number;
   currency: string;
 }
@@ -28,11 +28,9 @@ export interface UpdatePortfolioData {
 export const portfolioService = {
   createPortfolio: async (data: CreatePortfolioData): Promise<Portfolio> => {
     try {
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value);
+      const response = await API.post('Algo360FX-API', '/portfolios', {
+        body: data
       });
-      const response = await post('/portfolios', formData);
       return response.data;
     } catch (error) {
       console.error('Create portfolio error:', error);
@@ -42,7 +40,7 @@ export const portfolioService = {
 
   getPortfolios: async (): Promise<Portfolio[]> => {
     try {
-      const response = await get('/portfolios');
+      const response = await API.get('Algo360FX-API', '/portfolios', {});
       return response.data;
     } catch (error) {
       console.error('Get portfolios error:', error);
@@ -52,7 +50,7 @@ export const portfolioService = {
 
   getPortfolio: async (id: string): Promise<Portfolio> => {
     try {
-      const response = await get(`/portfolios/${id}`);
+      const response = await API.get('Algo360FX-API', `/portfolios/${id}`, {});
       return response.data;
     } catch (error) {
       console.error('Get portfolio error:', error);
@@ -62,11 +60,9 @@ export const portfolioService = {
 
   updatePortfolio: async (id: string, data: UpdatePortfolioData): Promise<Portfolio> => {
     try {
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value);
+      const response = await API.put('Algo360FX-API', `/portfolios/${id}`, {
+        body: data
       });
-      const response = await put(`/portfolios/${id}`, formData);
       return response.data;
     } catch (error) {
       console.error('Update portfolio error:', error);
@@ -76,7 +72,7 @@ export const portfolioService = {
 
   deletePortfolio: async (id: string): Promise<void> => {
     try {
-      await del(`/portfolios/${id}`);
+      await API.del('Algo360FX-API', `/portfolios/${id}`, {});
     } catch (error) {
       console.error('Delete portfolio error:', error);
       throw error;

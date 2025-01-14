@@ -8,7 +8,7 @@ class WebSocketService {
   private socket: WebSocket | null = null;
   private subscriptions: Map<string, Set<MessageHandler>> = new Map();
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = WEBSOCKET_CONFIG.RECONNECT_ATTEMPTS;
+  private maxReconnectAttempts = WEBSOCKET_CONFIG.CONFIG.RECONNECT_ATTEMPTS;
   private isConnecting = false;
 
   private constructor() {
@@ -37,7 +37,7 @@ class WebSocketService {
         throw new Error('No access token available');
       }
 
-      this.socket = new WebSocket(`${WEBSOCKET_CONFIG.URL}?token=${token}`);
+      this.socket = new WebSocket(`${WEBSOCKET_CONFIG.CONFIG.URL}?token=${token}`);
       this.setupSocketHandlers();
     } catch (error) {
       console.error('WebSocket connection error:', error);
