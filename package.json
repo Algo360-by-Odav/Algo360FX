@@ -6,6 +6,9 @@
     "node": ">=18.18.2",
     "npm": ">=9.8.1"
   },
+  "resolutions": {
+    "milliparsec": "3.0.0"
+  },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.8.1",
     "@emotion/react": "^11.14.0",
@@ -117,18 +120,9 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "cross-env NODE_ENV=production tsc && vite build",
+    "build": "cross-env NODE_ENV=production yarn tsc && yarn vite build",
     "preview": "vite preview",
     "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "lint": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" eslint \"./server/src/**/*.ts\" \"./client/src/**/*.{ts,tsx}\"",
-    "lint:fix": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" eslint \"./server/src/**/*.ts\" \"./client/src/**/*.{ts,tsx}\" --fix",
-    "format": "prettier --write \"server/src/**/*.{ts,tsx}\" \"client/src/**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit",
-    "clean": "rimraf dist .vite *.timestamp-*.mjs vite.config.*.mjs",
-    "clean:all": "npm run clean && rimraf node_modules package-lock.json",
-    "build:clean": "npm run clean && npm run build",
-    "typecheck:watch": "tsc --noEmit --watch"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   }
 }
