@@ -1,21 +1,21 @@
 version: 1
 applications:
-  - appRoot: client
-    frontend:
+  - frontend:
       phases:
         preBuild:
           commands:
+            - cd client
             - npm ci
         build:
           commands:
             - npm run build
       artifacts:
-        baseDirectory: dist
+        baseDirectory: client/dist
         files:
           - '**/*'
       cache:
         paths:
-          - node_modules/**/*
+          - client/node_modules/**/*
       customHeaders:
         - pattern: '**/*'
           headers:
@@ -35,20 +35,22 @@ applications:
         - source: '</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|ttf|map|json)$)([^.]+$)/>'
           target: '/index.html'
           status: '200'
-  - appRoot: server
-    backend:
+    appRoot: client
+  - backend:
       phases:
         preBuild:
           commands:
+            - cd server
             - npm ci
             - npx prisma generate
         build:
           commands:
             - npm run build
       artifacts:
-        baseDirectory: dist
+        baseDirectory: server/dist
         files:
           - '**/*'
       cache:
         paths:
-          - node_modules/**/*
+          - server/node_modules/**/*
+    appRoot: server
