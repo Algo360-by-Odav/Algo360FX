@@ -40,9 +40,11 @@ export const analysisService = {
       });
 
       const response = await apiResponse.response;
-      const jsonData = await response.body.json();
-      const result = jsonData as TechnicalAnalysisResponse;
-      return result.data;
+      const jsonData = await response.body.json() as unknown;
+      if (!isTechnicalAnalysisResponse(jsonData)) {
+        throw new Error('Invalid response format from technical analysis API');
+      }
+      return jsonData.data;
     } catch (error) {
       console.error('Technical Analysis Error:', error);
       throw error;
@@ -57,12 +59,41 @@ export const analysisService = {
       });
 
       const response = await apiResponse.response;
-      const jsonData = await response.body.json();
-      const result = jsonData as IndicatorsResponse;
-      return result.data;
+      const jsonData = await response.body.json() as unknown;
+      if (!isIndicatorsResponse(jsonData)) {
+        throw new Error('Invalid response format from indicators API');
+      }
+      return jsonData.data;
     } catch (error) {
       console.error('Get Indicators Error:', error);
       throw error;
     }
   }
 };
+
+function isTechnicalAnalysisResponse(data: unknown): data is TechnicalAnalysisResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'data' in data &&
+    'success' in data &&
+    typeof data.success === 'boolean' &&
+    typeof data.data === 'object' &&
+    data.data !== null &&
+    'results' in data.data &&
+    Array.isArray(data.data.results) &&
+    'metadata' in data.data &&
+    typeof data.data.metadata === 'object'
+  );
+}
+
+function isIndicatorsResponse(data: unknown): data is IndicatorsResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'data' in data &&
+    'success' in data &&
+    typeof data.success === 'boolean' &&
+    Array.isArray(data.data)
+  );
+}

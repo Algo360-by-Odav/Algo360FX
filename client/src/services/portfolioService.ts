@@ -1,4 +1,5 @@
 import { post, get, put, del } from 'aws-amplify/api';
+import { API_NAME, type ApiResponse, isApiResponse } from './api.js';
 
 export interface Portfolio {
   id: string;
@@ -24,17 +25,11 @@ export interface UpdatePortfolioData {
   currency?: string;
 }
 
-interface ApiResponse<T> {
-  data: T;
-  success: boolean;
-  message?: string;
-}
-
 export const portfolioService = {
   createPortfolio: async (data: CreatePortfolioData): Promise<Portfolio> => {
     try {
       const apiResponse = await post({
-        apiName: 'Algo360FX-API',
+        apiName: API_NAME,
         path: '/portfolios',
         options: {
           body: JSON.stringify(data),
@@ -45,9 +40,11 @@ export const portfolioService = {
       });
 
       const response = await apiResponse.response;
-      const jsonData = await response.body.json();
-      const result = jsonData as ApiResponse<Portfolio>;
-      return result.data;
+      const jsonData = await response.body.json() as unknown;
+      if (!isApiResponse<Portfolio>(jsonData)) {
+        throw new Error('Invalid response format from create portfolio API');
+      }
+      return jsonData.data;
     } catch (error) {
       console.error('Create portfolio error:', error);
       throw error;
@@ -57,14 +54,16 @@ export const portfolioService = {
   getPortfolios: async (): Promise<Portfolio[]> => {
     try {
       const apiResponse = await get({
-        apiName: 'Algo360FX-API',
+        apiName: API_NAME,
         path: '/portfolios'
       });
 
       const response = await apiResponse.response;
-      const jsonData = await response.body.json();
-      const result = jsonData as ApiResponse<Portfolio[]>;
-      return result.data;
+      const jsonData = await response.body.json() as unknown;
+      if (!isApiResponse<Portfolio[]>(jsonData)) {
+        throw new Error('Invalid response format from get portfolios API');
+      }
+      return jsonData.data;
     } catch (error) {
       console.error('Get portfolios error:', error);
       throw error;
@@ -74,14 +73,16 @@ export const portfolioService = {
   getPortfolio: async (id: string): Promise<Portfolio> => {
     try {
       const apiResponse = await get({
-        apiName: 'Algo360FX-API',
+        apiName: API_NAME,
         path: `/portfolios/${id}`
       });
 
       const response = await apiResponse.response;
-      const jsonData = await response.body.json();
-      const result = jsonData as ApiResponse<Portfolio>;
-      return result.data;
+      const jsonData = await response.body.json() as unknown;
+      if (!isApiResponse<Portfolio>(jsonData)) {
+        throw new Error('Invalid response format from get portfolio API');
+      }
+      return jsonData.data;
     } catch (error) {
       console.error('Get portfolio error:', error);
       throw error;
@@ -91,7 +92,7 @@ export const portfolioService = {
   updatePortfolio: async (id: string, data: UpdatePortfolioData): Promise<Portfolio> => {
     try {
       const apiResponse = await put({
-        apiName: 'Algo360FX-API',
+        apiName: API_NAME,
         path: `/portfolios/${id}`,
         options: {
           body: JSON.stringify(data),
@@ -102,9 +103,11 @@ export const portfolioService = {
       });
 
       const response = await apiResponse.response;
-      const jsonData = await response.body.json();
-      const result = jsonData as ApiResponse<Portfolio>;
-      return result.data;
+      const jsonData = await response.body.json() as unknown;
+      if (!isApiResponse<Portfolio>(jsonData)) {
+        throw new Error('Invalid response format from update portfolio API');
+      }
+      return jsonData.data;
     } catch (error) {
       console.error('Update portfolio error:', error);
       throw error;
@@ -114,7 +117,7 @@ export const portfolioService = {
   deletePortfolio: async (id: string): Promise<void> => {
     try {
       await del({
-        apiName: 'Algo360FX-API',
+        apiName: API_NAME,
         path: `/portfolios/${id}`
       });
     } catch (error) {

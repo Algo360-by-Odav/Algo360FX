@@ -4,6 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { Box, Button, TextField, Typography, Container, Alert } from '@mui/material';
 
+/// <reference types="vite/client" />
+
+declare module 'vite' {
+  interface ImportMetaEnv {
+    readonly VITE_COGNITO_CLIENT_ID: string;
+    readonly VITE_ENV: 'development' | 'production';
+  }
+}
+
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
@@ -25,6 +34,16 @@ const Login: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOAuthLogin = () => {
+    const domain = 'us-east-1_dVdF18NRe.auth.us-east-1.amazoncognito.com';
+    const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
+    const redirectUri = import.meta.env.VITE_ENV === 'production'
+      ? encodeURIComponent('https://algo360fx.cloudfront.net/callback')
+      : encodeURIComponent('http://localhost:5173/callback');
+    const scopes = encodeURIComponent('email openid phone');
+    window.location.href = `https://${domain}/login?client_id=${clientId}&response_type=code&scope=${scopes}&redirect_uri=${redirectUri}`;
   };
 
   return (
@@ -93,17 +112,11 @@ const Login: React.FC = () => {
             </div>
           </div>
           <button
-  onClick={() => {
-    const domain = 'us-east-1_dVdF18NRe.auth.us-east-1.amazoncognito.com'; // Updated domain
-    const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
-    const redirectUri = encodeURIComponent('http://localhost:5173/callback');
-    const scopes = encodeURIComponent('email openid phone');
-    window.location.href = `https://${domain}/login?client_id=${clientId}&response_type=code&scope=${scopes}&redirect_uri=${redirectUri}`;
-  }}
-  className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
->
-  Sign in with Hosted UI
-</button>
+            onClick={handleOAuthLogin}
+            className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Sign in with Hosted UI
+          </button>
         </div>
         <p className="text-center text-sm text-gray-600">
           Don't have an account?{' '}

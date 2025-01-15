@@ -1,19 +1,40 @@
-import { API } from 'aws-amplify';
+import { post, get, put, del } from 'aws-amplify/api';
+import { type ResourcesConfig } from '@aws-amplify/core';
 
-const API_NAME = 'Algo360FX-API';
+export interface ApiResponse<T> {
+  data: T;
+  success: boolean;
+  message?: string;
+}
 
-const getHeaders = async () => {
-  return {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-  };
-};
+export const API_NAME = 'Algo360FX-API';
+
+export function isApiResponse<T>(data: unknown): data is ApiResponse<T> {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'data' in data &&
+    'success' in data &&
+    typeof data.success === 'boolean'
+  );
+}
+
+export async function handleApiResponse<T>(response: Response): Promise<T> {
+  const jsonData = await response.json() as unknown;
+  if (!isApiResponse<T>(jsonData)) {
+    throw new Error('Invalid API response format');
+  }
+  if (!jsonData.success) {
+    throw new Error(jsonData.message || 'API request failed');
+  }
+  return jsonData.data;
+}
 
 export const apiService = {
   get: async (path: string) => {
     try {
-      const headers = await getHeaders();
-      return await API.get(API_NAME, path, { headers });
+      const response = await get(API_NAME, path);
+      return await handleApiResponse(response);
     } catch (error) {
       console.error('API GET Error:', error);
       throw error;
@@ -22,11 +43,8 @@ export const apiService = {
 
   post: async (path: string, data: any) => {
     try {
-      const headers = await getHeaders();
-      return await API.post(API_NAME, path, {
-        body: data,
-        headers
-      });
+      const response = await post(API_NAME, path, { body: data });
+      return await handleApiResponse(response);
     } catch (error) {
       console.error('API POST Error:', error);
       throw error;
@@ -35,11 +53,8 @@ export const apiService = {
 
   put: async (path: string, data: any) => {
     try {
-      const headers = await getHeaders();
-      return await API.put(API_NAME, path, {
-        body: data,
-        headers
-      });
+      const response = await put(API_NAME, path, { body: data });
+      return await handleApiResponse(response);
     } catch (error) {
       console.error('API PUT Error:', error);
       throw error;
@@ -48,8 +63,8 @@ export const apiService = {
 
   delete: async (path: string) => {
     try {
-      const headers = await getHeaders();
-      return await API.del(API_NAME, path, { headers });
+      const response = await del(API_NAME, path);
+      return await handleApiResponse(response);
     } catch (error) {
       console.error('API DELETE Error:', error);
       throw error;

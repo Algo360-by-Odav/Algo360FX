@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { useSnackbar, SnackbarKey } from 'notistack';
 import WebSocketService from '@/services/websocketService';
 import { UI_CONFIG, WEBSOCKET_CONFIG } from '@/config/constants';

@@ -7,20 +7,27 @@ import {
   Typography,
   Container,
   Alert,
+  Link
 } from '@mui/material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext.js';
 
-export const SignUp = () => {
+interface SignUpStep {
+  signUpStep: 'CONFIRM_SIGN_UP' | 'DONE';
+  userId?: string;
+  nextStep?: string;
+}
+
+const SignUp: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError(null);
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -28,7 +35,9 @@ export const SignUp = () => {
     }
 
     try {
-      const nextStep = await signUp(email, password, email);
+      const response = await signUp(email, password, email);
+      const nextStep = response as SignUpStep;
+      
       if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
         navigate('/verify-email', { state: { email } });
       }

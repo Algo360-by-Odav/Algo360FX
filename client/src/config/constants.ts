@@ -1,3 +1,19 @@
+/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly VITE_AWS_REGION: string;
+  readonly VITE_COGNITO_USER_POOL_ID: string;
+  readonly VITE_COGNITO_CLIENT_ID: string;
+  readonly VITE_API_GATEWAY_URL: string;
+  readonly VITE_ENV: 'development' | 'production';
+  readonly VITE_MT5_BRIDGE_URL: string;
+  readonly VITE_WEBSOCKET_URL: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 // Application Constants
 export const APP_CONFIG = {
   NAME: 'Algo360FX',
@@ -10,6 +26,20 @@ export const APP_CONFIG = {
 
 // Authentication Constants
 export const AUTH_CONFIG = {
+  REGION: import.meta.env.VITE_AWS_REGION,
+  USER_POOL_ID: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+  CLIENT_ID: import.meta.env.VITE_COGNITO_CLIENT_ID,
+  OAUTH: {
+    DOMAIN: `${import.meta.env.VITE_COGNITO_USER_POOL_ID}.auth.${import.meta.env.VITE_AWS_REGION}.amazoncognito.com`,
+    REDIRECT_SIGN_IN: import.meta.env.VITE_ENV === 'production' 
+      ? 'https://algo360fx.cloudfront.net/callback'
+      : 'http://localhost:5173/callback',
+    REDIRECT_SIGN_OUT: import.meta.env.VITE_ENV === 'production'
+      ? 'https://algo360fx.cloudfront.net'
+      : 'http://localhost:5173',
+    RESPONSE_TYPE: 'code',
+    SCOPE: ['email', 'openid', 'phone']
+  },
   TOKEN_KEY: 'accessToken',
   REFRESH_TOKEN_KEY: 'refreshToken',
   TOKEN_EXPIRY: 3600, // 1 hour in seconds
@@ -315,11 +345,14 @@ export const UI_CONFIG = {
 
 // WebSocket Configuration
 export const WEBSOCKET_CONFIG = {
+  RECONNECT_ATTEMPTS: 5,
+  RECONNECT_DELAY: 5000,
+  PING_INTERVAL: 30000,
   ENDPOINTS: {
     MARKET_DATA: '/ws/market-data',
     TRADING: '/ws/trading',
     NOTIFICATIONS: '/ws/notifications',
-    MT5_BRIDGE_URL: process.env.VITE_MT5_BRIDGE_URL,
+    MT5_BRIDGE_URL: import.meta.env.VITE_MT5_BRIDGE_URL,
     CONNECT: '/ws/connect',
     DISCONNECT: '/ws/disconnect',
     ERROR: '/ws/error'
@@ -331,16 +364,12 @@ export const WEBSOCKET_CONFIG = {
     ACCOUNT_UPDATE: 'ACCOUNT_UPDATE',
     ERROR: 'ERROR'
   },
-  CONFIG: {
-    RECONNECT_ATTEMPTS: 5,
-    RECONNECT_DELAY: 5000
-  },
-  URL: process.env.VITE_WEBSOCKET_URL || 'wss://api.algo360fx.com/ws'
+  URL: import.meta.env.VITE_WEBSOCKET_URL || 'wss://api.algo360fx.com/ws'
 } as const;
 
 // API and WebSocket Configuration
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  BASE_URL: import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3001',
   TIMEOUT: 30000,
   WEBSOCKET: WEBSOCKET_CONFIG
 } as const;
@@ -374,10 +403,10 @@ export const UI = UI_CONFIG;
 export const AUTH = AUTH_CONFIG;
 export const WEBSOCKET = WEBSOCKET_CONFIG;
 export const API_BASE_URL = API_CONFIG.BASE_URL;
-export const MAX_RECONNECT_ATTEMPTS = API_CONFIG.WEBSOCKET.CONFIG.RECONNECT_ATTEMPTS;
-export const INITIAL_RECONNECT_DELAY = API_CONFIG.WEBSOCKET.CONFIG.RECONNECT_DELAY;
-export const DEFAULT_TIMEOUT = API_CONFIG.WEBSOCKET.CONFIG.PING_INTERVAL;
-export const SOCKET_CONFIG = API_CONFIG.WEBSOCKET.CONFIG;
+export const MAX_RECONNECT_ATTEMPTS = WEBSOCKET_CONFIG.RECONNECT_ATTEMPTS;
+export const INITIAL_RECONNECT_DELAY = WEBSOCKET_CONFIG.RECONNECT_DELAY;
+export const DEFAULT_TIMEOUT = WEBSOCKET_CONFIG.PING_INTERVAL;
+export const SOCKET_CONFIG = WEBSOCKET_CONFIG;
 
 // Export all constants as a single object
 export const Constants = {
