@@ -1,33 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
-import { Box, Button, TextField, Typography, Container, Alert, Link } from '@mui/material';
+import { Box, Button, TextField, Typography, Container } from '@mui/material';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/context/AuthContext';
 
-interface SignUpStep {
-  signUpStep: string;
-}
-
-interface SignUpProps {}
-
-const SignUp: React.FC<SignUpProps> = () => {
+const SignUp: React.FC = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { setIsAuthenticated } = useAuth();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      enqueueSnackbar('Passwords do not match', { variant: 'error' });
       return;
     }
 
@@ -40,24 +32,26 @@ const SignUp: React.FC<SignUpProps> = () => {
         enqueueSnackbar(response.message || 'Sign up failed', { variant: 'error' });
       }
     } catch (error: any) {
-      setError(error.message || 'Sign up failed');
+      enqueueSnackbar(error.message || 'Sign up failed', { variant: 'error' });
     }
   };
 
   const handleVerification = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     try {
       const response = await authService.confirmSignUp(email, verificationCode);
       if (response.success) {
         enqueueSnackbar('Email verified successfully', { variant: 'success' });
-        setIsAuthenticated(true);
-        navigate('/dashboard');
+        const signInResponse = await authService.signIn(email, password);
+        if (signInResponse.success) {
+          login();
+          navigate('/dashboard');
+        }
       } else {
-        setError(response.message || 'Verification failed');
+        enqueueSnackbar(response.message || 'Verification failed', { variant: 'error' });
       }
     } catch (error: any) {
-      setError(error.message || 'Verification failed');
+      enqueueSnackbar(error.message || 'Verification failed', { variant: 'error' });
     }
   };
 
@@ -74,11 +68,6 @@ const SignUp: React.FC<SignUpProps> = () => {
         <Typography component="h1" variant="h5">
           {isVerifying ? 'Verify Email' : 'Sign Up'}
         </Typography>
-        {error && (
-          <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
-            {error}
-          </Alert>
-        )}
         <Box component="form" onSubmit={isVerifying ? handleVerification : handleSignUp} sx={{ mt: 1 }}>
           {!isVerifying ? (
             <>
@@ -131,20 +120,8 @@ const SignUp: React.FC<SignUpProps> = () => {
               onChange={(e) => setVerificationCode(e.target.value)}
             />
           )}
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-          >
+          <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
             {isVerifying ? 'Verify' : 'Sign Up'}
-          </Button>
-          <Button
-            fullWidth
-            variant="text"
-            onClick={() => navigate('/login')}
-          >
-            Already have an account? Sign in
           </Button>
         </Box>
       </Box>
