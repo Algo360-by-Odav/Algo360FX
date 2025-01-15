@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+node_modules
+src
+tests
+coverage
+.vscode
+*.log
+.DS_Store
+README.md
+*.test.ts
+jest.config.ts
+tsconfig.json
+.prettierrc
+.eslintrc
+.eslintignore

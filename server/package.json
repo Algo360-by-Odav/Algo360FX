@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",
+    "start:prod": "node dist/index.js",
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "npm install && npm run clean:dist && npx prisma generate && tsc",
     "build:watch": "tsc --watch",
@@ -30,7 +31,6 @@
     "seed": "ts-node prisma/seed.ts",
     "docker:build": "docker build -t algo360fx-server .",
     "docker:run": "docker run -p 3000:3000 algo360fx-server",
-    "start:prod": "SET NODE_ENV=production && node dist/index.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
