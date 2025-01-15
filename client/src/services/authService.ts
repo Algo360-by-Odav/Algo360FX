@@ -1,5 +1,6 @@
 import { Amplify } from 'aws-amplify';
 import { signIn, signUp, signOut, confirmSignUp, getCurrentUser } from 'aws-amplify/auth';
+import { type SignUpInput } from '@aws-amplify/auth';
 import { AUTH_CONFIG } from '@/config/constants.js';
 
 /// <reference types="vite/client" />
@@ -16,7 +17,7 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-interface SignUpData {
+export interface SignUpData {
   username: string;
   password: string;
   email: string;
@@ -24,12 +25,12 @@ interface SignUpData {
   lastName: string;
 }
 
-interface SignInData {
+export interface SignInData {
   username: string;
   password: string;
 }
 
-interface AuthResponse {
+export interface AuthResponse {
   success: boolean;
   message?: string;
   user?: any;
@@ -41,40 +42,7 @@ const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID || '';
 const CLIENT_SECRET = import.meta.env.VITE_COGNITO_CLIENT_SECRET || '';
 
 export const authService = {
-  signUp: async ({ username, password, email, firstName, lastName }: SignUpData): Promise<AuthResponse> => {
-    try {
-      const secretHash = calculateSecretHash(username, CLIENT_ID, CLIENT_SECRET);
-      
-      const signUpInput = {
-        username,
-        password,
-        options: {
-          userAttributes: {
-            email,
-            given_name: firstName,
-            family_name: lastName
-          },
-          clientMetadata: {
-            secretHash
-          }
-        }
-      };
-
-      const { isSignUpComplete, nextStep } = await signUp(signUpInput);
-      return {
-        success: isSignUpComplete,
-        nextStep: nextStep.signUpStep
-      };
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to sign up'
-      };
-    }
-  },
-
-  login: async ({ username, password }: SignInData): Promise<AuthResponse> => {
+  signIn: async (username: string, password: string): Promise<AuthResponse> => {
     try {
       const secretHash = calculateSecretHash(username, CLIENT_ID, CLIENT_SECRET);
       
@@ -93,7 +61,7 @@ export const authService = {
         nextStep: nextStep.signInStep
       };
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Sign in error:', error);
       return {
         success: false,
         message: error.message || 'Failed to sign in'
@@ -101,10 +69,44 @@ export const authService = {
     }
   },
 
-  verifyEmail: async (email: string, code: string): Promise<AuthResponse> => {
+  signUp: async ({ username, password, email, firstName, lastName }: SignUpData): Promise<AuthResponse> => {
+    try {
+      const secretHash = calculateSecretHash(username, CLIENT_ID, CLIENT_SECRET);
+      
+      const signUpInput: SignUpInput = {
+        username,
+        password,
+        options: {
+          userAttributes: {
+            email,
+            given_name: firstName,
+            family_name: lastName
+          },
+          clientMetadata: {
+            secretHash
+          }
+        }
+      };
+
+      const { isSignUpComplete, nextStep } = await signUp(signUpInput);
+
+      return {
+        success: isSignUpComplete,
+        nextStep: nextStep.signUpStep
+      };
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to sign up'
+      };
+    }
+  },
+
+  confirmSignUp: async (username: string, code: string): Promise<AuthResponse> => {
     try {
       const { isSignUpComplete } = await confirmSignUp({
-        username: email,
+        username,
         confirmationCode: code
       });
 
@@ -121,7 +123,7 @@ export const authService = {
     }
   },
 
-  logout: async (): Promise<AuthResponse> => {
+  signOut: async (): Promise<AuthResponse> => {
     try {
       await signOut();
       return {

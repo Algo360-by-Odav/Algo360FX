@@ -1,5 +1,5 @@
 import { Amplify } from 'aws-amplify';
-import { ResourcesConfig } from '@aws-amplify/core';
+import { type ResourcesConfig } from '@aws-amplify/core';
 
 /// <reference types="vite/client" />
 
@@ -19,7 +19,7 @@ const region = import.meta.env.VITE_AWS_REGION;
 const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID;
 const userPoolClientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
 
-const awsConfig: ResourcesConfig = {
+const awsConfig = {
   Auth: {
     Cognito: {
       userPoolId,
@@ -32,13 +32,13 @@ const awsConfig: ResourcesConfig = {
         username: true
       }
     }
-  } as const,
+  },
   API: {
     REST: {
       'Algo360FX-API': {
         endpoint: import.meta.env.VITE_API_GATEWAY_URL,
         region,
-        custom_header: async () => {
+        headers: async () => {
           try {
             return {
               'Content-Type': 'application/json'
@@ -50,7 +50,7 @@ const awsConfig: ResourcesConfig = {
         }
       }
     }
-  } as const
+  }
 } as const;
 
 console.log('Configuring AWS Amplify with:', {

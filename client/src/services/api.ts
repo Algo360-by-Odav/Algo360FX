@@ -1,5 +1,5 @@
 import { post, get, put, del } from 'aws-amplify/api';
-import { type ResourcesConfig } from '@aws-amplify/core';
+import { type RestApiResponse } from '@aws-amplify/api/rest';
 
 export interface ApiResponse<T> {
   data: T;
@@ -19,8 +19,8 @@ export function isApiResponse<T>(data: unknown): data is ApiResponse<T> {
   );
 }
 
-export async function handleApiResponse<T>(response: Response): Promise<T> {
-  const jsonData = await response.json() as unknown;
+export async function handleApiResponse<T>(response: RestApiResponse): Promise<T> {
+  const jsonData = await response.body.json() as unknown;
   if (!isApiResponse<T>(jsonData)) {
     throw new Error('Invalid API response format');
   }
@@ -31,40 +31,58 @@ export async function handleApiResponse<T>(response: Response): Promise<T> {
 }
 
 export const apiService = {
-  get: async (path: string) => {
+  get: async <T>(path: string) => {
     try {
-      const response = await get(API_NAME, path);
-      return await handleApiResponse(response);
+      const response = await get({
+        apiName: API_NAME,
+        path
+      }).response;
+      return handleApiResponse<T>(response);
     } catch (error) {
       console.error('API GET Error:', error);
       throw error;
     }
   },
 
-  post: async (path: string, data: any) => {
+  post: async <T>(path: string, data: unknown) => {
     try {
-      const response = await post(API_NAME, path, { body: data });
-      return await handleApiResponse(response);
+      const response = await post({
+        apiName: API_NAME,
+        path,
+        options: {
+          body: data
+        }
+      }).response;
+      return handleApiResponse<T>(response);
     } catch (error) {
       console.error('API POST Error:', error);
       throw error;
     }
   },
 
-  put: async (path: string, data: any) => {
+  put: async <T>(path: string, data: unknown) => {
     try {
-      const response = await put(API_NAME, path, { body: data });
-      return await handleApiResponse(response);
+      const response = await put({
+        apiName: API_NAME,
+        path,
+        options: {
+          body: data
+        }
+      }).response;
+      return handleApiResponse<T>(response);
     } catch (error) {
       console.error('API PUT Error:', error);
       throw error;
     }
   },
 
-  delete: async (path: string) => {
+  delete: async <T>(path: string) => {
     try {
-      const response = await del(API_NAME, path);
-      return await handleApiResponse(response);
+      const response = await del({
+        apiName: API_NAME,
+        path
+      }).response;
+      return handleApiResponse<T>(response);
     } catch (error) {
       console.error('API DELETE Error:', error);
       throw error;
