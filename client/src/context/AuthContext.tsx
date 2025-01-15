@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { signIn as amplifySignIn, signUp as amplifySignUp, signOut as amplifySignOut, getCurrentUser } from 'aws-amplify/auth';
 import { useNotification } from './AppContext.js';
 
@@ -10,6 +10,7 @@ interface AuthContextType {
   signUp: (username: string, password: string, email: string) => Promise<void>;
   signOut: () => Promise<void>;
   checkAuthState: () => Promise<void>;
+  login: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +91,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const login = useCallback(() => {
+    setIsAuthenticated(true);
+  }, []);
+
   const value: AuthContextType = {
     isAuthenticated,
     isLoading,
@@ -97,7 +102,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signUp,
     signOut,
-    checkAuthState
+    checkAuthState,
+    login
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -7,10 +7,9 @@
       "DOM",
       "DOM.Iterable"
     ],
-    "module": "node16",
+    "module": "ESNext",
     "skipLibCheck": true,
-    "moduleResolution": "node16",
-    "allowImportingTsExtensions": true,
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -29,11 +28,7 @@
     }
   },
   "include": [
-    "src/**/*",
-    "*.ts",
-    "*.tsx",
-    ".eslintrc.js",
-    "vite.config.ts"
+    "src"
   ],
   "exclude": [
     "node_modules",

@@ -1,29 +1,10 @@
-import { Amplify } from 'aws-amplify';
-import { signIn, signUp, signOut, confirmSignUp, getCurrentUser } from 'aws-amplify/auth';
+import { signIn, signUp, signOut, confirmSignUp, getCurrentUser } from '@aws-amplify/auth';
 import { type SignUpInput } from '@aws-amplify/auth';
-import { CognitoIdentityProviderClient, InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider';
-import { createHmac } from 'crypto';
-
-/// <reference types="vite/client" />
-
-interface ImportMetaEnv {
-  readonly VITE_AWS_REGION: string;
-  readonly VITE_COGNITO_USER_POOL_ID: string;
-  readonly VITE_COGNITO_CLIENT_ID: string;
-  readonly VITE_API_GATEWAY_URL: string;
-  readonly VITE_ENV: 'development' | 'production';
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
 
 export interface SignUpData {
   username: string;
   password: string;
   email: string;
-  firstName: string;
-  lastName: string;
 }
 
 export interface SignInData {
@@ -38,32 +19,10 @@ export interface AuthResponse {
   nextStep?: string;
 }
 
-const API_NAME = 'Algo360FX-API';
-const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID || '';
-const CLIENT_SECRET = import.meta.env.VITE_COGNITO_CLIENT_SECRET || '';
-
-const calculateSecretHash = (username: string, clientId: string, clientSecret: string): string => {
-  const message = username + clientId;
-  const hmac = createHmac('sha256', clientSecret);
-  hmac.update(message);
-  return hmac.digest('base64');
-};
-
 export const authService = {
   signIn: async (username: string, password: string): Promise<AuthResponse> => {
     try {
-      const secretHash = calculateSecretHash(username, CLIENT_ID, CLIENT_SECRET);
-      
-      const { isSignedIn, nextStep } = await signIn({ 
-        username, 
-        password,
-        options: {
-          clientMetadata: {
-            secretHash
-          }
-        }
-      });
-      
+      const { isSignedIn, nextStep } = await signIn({ username, password });
       return {
         success: isSignedIn,
         nextStep: nextStep.signInStep
@@ -77,29 +36,22 @@ export const authService = {
     }
   },
 
-  signUp: async ({ username, password, email, firstName, lastName }: SignUpData): Promise<AuthResponse> => {
+  signUp: async (username: string, password: string, email: string): Promise<AuthResponse> => {
     try {
-      const secretHash = calculateSecretHash(username, CLIENT_ID, CLIENT_SECRET);
-      
       const signUpInput: SignUpInput = {
         username,
         password,
         options: {
           userAttributes: {
-            email,
-            given_name: firstName,
-            family_name: lastName
-          },
-          clientMetadata: {
-            secretHash
+            email
           }
         }
       };
 
-      const { isSignUpComplete, nextStep } = await signUp(signUpInput);
+      const { nextStep } = await signUp(signUpInput);
 
       return {
-        success: isSignUpComplete,
+        success: true,
         nextStep: nextStep.signUpStep
       };
     } catch (error: any) {

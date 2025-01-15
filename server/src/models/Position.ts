@@ -9,14 +9,14 @@ import {
 } from '../types/Position';
 
 export class PositionService {
-  static async create(data: PositionCreateInput): Promise<Position> {
+  static async create(data: PositionCreateInput): Promise<PositionWithRelations> {
     return prisma.position.create({
       data,
       include: {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations>;
   }
 
   static async findById(id: string): Promise<PositionWithRelations | null> {
@@ -26,7 +26,7 @@ export class PositionService {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations | null>;
   }
 
   static async findMany(where: PositionWhereInput = {}): Promise<PositionWithRelations[]> {
@@ -36,10 +36,10 @@ export class PositionService {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations[]>;
   }
 
-  static async update(id: string, data: PositionUpdateInput): Promise<Position> {
+  static async update(id: string, data: PositionUpdateInput): Promise<PositionWithRelations> {
     return prisma.position.update({
       where: { id },
       data,
@@ -47,17 +47,17 @@ export class PositionService {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations>;
   }
 
-  static async delete(id: string): Promise<Position> {
+  static async delete(id: string): Promise<PositionWithRelations> {
     return prisma.position.delete({
       where: { id },
       include: {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations>;
   }
 
   static async findByPortfolio(portfolioId: string): Promise<PositionWithRelations[]> {
@@ -67,7 +67,7 @@ export class PositionService {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations[]>;
   }
 
   static async findByStrategy(strategyId: string): Promise<PositionWithRelations[]> {
@@ -77,7 +77,7 @@ export class PositionService {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations[]>;
   }
 
   static async findOpenPositions(): Promise<PositionWithRelations[]> {
@@ -87,14 +87,14 @@ export class PositionService {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations[]>;
   }
 
   static async closePosition(
     id: string,
     exitPrice: number,
     closeTime: Date = new Date()
-  ): Promise<Position> {
+  ): Promise<PositionWithRelations> {
     const position = await prisma.position.findUnique({ where: { id } });
     if (!position) {
       throw new Error('Position not found');
@@ -116,10 +116,10 @@ export class PositionService {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations>;
   }
 
-  static async updateStopLoss(id: string, stopLoss: number): Promise<Position> {
+  static async updateStopLoss(id: string, stopLoss: number): Promise<PositionWithRelations> {
     return prisma.position.update({
       where: { id },
       data: { stopLoss },
@@ -127,10 +127,10 @@ export class PositionService {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations>;
   }
 
-  static async updateTakeProfit(id: string, takeProfit: number): Promise<Position> {
+  static async updateTakeProfit(id: string, takeProfit: number): Promise<PositionWithRelations> {
     return prisma.position.update({
       where: { id },
       data: { takeProfit },
@@ -138,7 +138,7 @@ export class PositionService {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as Promise<PositionWithRelations>;
   }
 
   static async getPositionMetrics(id: string): Promise<{
@@ -155,7 +155,7 @@ export class PositionService {
         portfolio: true,
         strategy: true
       }
-    });
+    }) as PositionWithRelations | null;
 
     if (!position) {
       throw new Error('Position not found');

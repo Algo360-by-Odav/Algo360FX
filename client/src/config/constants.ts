@@ -1,19 +1,5 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_AWS_REGION: string;
-  readonly VITE_COGNITO_USER_POOL_ID: string;
-  readonly VITE_COGNITO_CLIENT_ID: string;
-  readonly VITE_API_GATEWAY_URL: string;
-  readonly VITE_ENV: 'development' | 'production';
-  readonly VITE_MT5_BRIDGE_URL: string;
-  readonly VITE_WEBSOCKET_URL: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
-
 // Application Constants
 export const APP_CONFIG = {
   NAME: 'Algo360FX',
@@ -121,7 +107,7 @@ export const TRADING_CONFIG = {
       },
       CROSS_PAIRS: {
         'ETH/BTC': { decimals: 6, minQty: 0.01, maxQty: 100, leverage: 5 },
-        'BNB/BTC': { decimals: 6, minQty: 0.01, maxQty: 100, leverage: 5 },
+        'BNB/BTC': { decimals: 6, minLot: 0.01, maxLot: 100, leverage: 5 },
         'SOL/BTC': { decimals: 8, minQty: 0.1, maxQty: 1000, leverage: 5 },
         'ADA/ETH': { decimals: 8, minQty: 1, maxQty: 10000, leverage: 5 },
         'DOT/BTC': { decimals: 8, minQty: 0.1, maxQty: 1000, leverage: 5 }
@@ -418,4 +404,77 @@ export const Constants = {
   API: API_CONFIG,
   UI: UI_CONFIG,
   NOTIFICATION: NOTIFICATION_CONFIG
+} as const;
+
+export const APP_NAME = 'Algo360FX';
+
+export const API_ROUTES = {
+  AUTH: {
+    SIGN_IN: '/auth/sign-in',
+    SIGN_UP: '/auth/sign-up',
+    SIGN_OUT: '/auth/sign-out',
+    VERIFY_EMAIL: '/auth/verify-email',
+  },
+  PORTFOLIO: {
+    BASE: '/portfolios',
+    GET_ALL: '/portfolios',
+    GET_ONE: (id: string) => `/portfolios/${id}`,
+    CREATE: '/portfolios',
+    UPDATE: (id: string) => `/portfolios/${id}`,
+    DELETE: (id: string) => `/portfolios/${id}`,
+  },
+  STRATEGY: {
+    BASE: '/strategies',
+    GET_ALL: '/strategies',
+    GET_ONE: (id: string) => `/strategies/${id}`,
+    CREATE: '/strategies',
+    UPDATE: (id: string) => `/strategies/${id}`,
+    DELETE: (id: string) => `/strategies/${id}`,
+    ACTIVATE: (id: string) => `/strategies/${id}/activate`,
+    DEACTIVATE: (id: string) => `/strategies/${id}/deactivate`,
+  },
+  POSITION: {
+    BASE: '/positions',
+    GET_ALL: '/positions',
+    GET_ONE: (id: string) => `/positions/${id}`,
+    CREATE: '/positions',
+    UPDATE: (id: string) => `/positions/${id}`,
+    DELETE: (id: string) => `/positions/${id}`,
+  },
+};
+
+export const TRADING_PAIRS = {
+  CRYPTO: {
+    BTC_USD: 'BTC/USD',
+    ETH_USD: 'ETH/USD',
+    BNB_USD: 'BNB/USD',
+    SOL_USD: 'SOL/USD',
+    ADA_USD: 'ADA/USD',
+    DOT_USD: 'DOT/USD',
+  },
+  FOREX: {
+    EUR_USD: 'EUR/USD',
+    GBP_USD: 'GBP/USD',
+    USD_JPY: 'USD/JPY',
+    USD_CHF: 'USD/CHF',
+    AUD_USD: 'AUD/USD',
+    NZD_USD: 'NZD/USD',
+  },
+};
+
+export const POSITION_TYPES = {
+  LONG: 'LONG',
+  SHORT: 'SHORT',
+} as const;
+
+export const POSITION_STATUS = {
+  OPEN: 'OPEN',
+  CLOSED: 'CLOSED',
+  PENDING: 'PENDING',
+} as const;
+
+export const STRATEGY_STATUS = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  ERROR: 'ERROR',
 } as const;
