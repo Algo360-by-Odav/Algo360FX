@@ -1,7 +1,8 @@
 import { Amplify } from 'aws-amplify';
 import { signIn, signUp, signOut, confirmSignUp, getCurrentUser } from 'aws-amplify/auth';
 import { type SignUpInput } from '@aws-amplify/auth';
-import { AUTH_CONFIG } from '@/config/constants.js';
+import { CognitoIdentityProviderClient, InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { createHmac } from 'crypto';
 
 /// <reference types="vite/client" />
 
@@ -40,6 +41,13 @@ export interface AuthResponse {
 const API_NAME = 'Algo360FX-API';
 const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID || '';
 const CLIENT_SECRET = import.meta.env.VITE_COGNITO_CLIENT_SECRET || '';
+
+const calculateSecretHash = (username: string, clientId: string, clientSecret: string): string => {
+  const message = username + clientId;
+  const hmac = createHmac('sha256', clientSecret);
+  hmac.update(message);
+  return hmac.digest('base64');
+};
 
 export const authService = {
   signIn: async (username: string, password: string): Promise<AuthResponse> => {

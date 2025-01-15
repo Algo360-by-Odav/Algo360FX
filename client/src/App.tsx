@@ -1,84 +1,55 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import {
-  AppBar,
-  Box,
-  Button,
-  CssBaseline,
-  Toolbar,
-  Typography,
-  Container,
-} from '@mui/material';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { SnackbarProvider } from 'notistack';
+import { theme } from './theme';
 
-import Login from './components/auth/Login.js';
-import { SignUp } from './components/auth/SignUp.js';
-import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
-import { Dashboard } from './components/Dashboard.js';
-import { PortfolioList } from './components/portfolio/PortfolioList.js';
-import { Callback } from './components/auth/Callback.js';
+// Components
+import Layout from './components/layout/Layout';
+import Dashboard from './components/dashboard/Dashboard';
+import Login from './components/auth/Login';
+import SignUp from './components/auth/SignUp';
+import VerifyEmail from './components/auth/VerifyEmail';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import PortfolioList from './components/portfolio/PortfolioList';
+import Callback from './components/auth/Callback';
 
-import ErrorBoundary from './components/common/ErrorBoundary.js';
-import LoadingOverlay from './components/common/LoadingOverlay.js';
-import NotificationSystem from './components/common/NotificationSystem.js';
-import { AppProvider, useApp } from './context/AppContext.js';
-import { AuthProvider } from './context/AuthContext.js';
-import { configureAWS } from './config/aws-config.js';
+// Context Providers
+import { AuthProvider } from './context/AuthContext';
+import { AppProvider, useApp } from './context/AppContext';
 
-const theme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#2196f3',
-    },
-    secondary: {
-      main: '#f50057',
-    },
-  },
-});
+// Initialize AWS Amplify
+import { Amplify } from 'aws-amplify';
+import { awsConfig } from './config/aws-config';
+
+Amplify.configure(awsConfig);
 
 const AppContent: React.FC = () => {
   const { state } = useApp();
 
   useEffect(() => {
-    configureAWS();
+    // configureAWS();
   }, []);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <LoadingOverlay open={state.isLoading} message={state.loadingMessage || undefined} />
-      
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Algo360FX
-          </Typography>
-          <Button color="inherit" component={Link} to="/login">
-            Login
-          </Button>
-        </Toolbar>
-      </AppBar>
-
-      <Container sx={{ mt: 4, mb: 4, flex: 1 }}>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/callback" element={<Callback />} />
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/portfolio" element={
-            <ProtectedRoute>
-              <PortfolioList />
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </Container>
-
-      <NotificationSystem children={undefined} />
-    </Box>
+    <div>
+      <SnackbarProvider maxSnack={3}>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/callback" element={<Callback />} />
+            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/portfolio" element={<PortfolioList />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+          </Routes>
+        </Router>
+      </SnackbarProvider>
+    </div>
   );
 };
 
@@ -87,13 +58,11 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Router>
-          <AuthProvider>
-            <AppProvider>
-              <AppContent />
-            </AppProvider>
-          </AuthProvider>
-        </Router>
+        <AuthProvider>
+          <AppProvider>
+            <AppContent />
+          </AppProvider>
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

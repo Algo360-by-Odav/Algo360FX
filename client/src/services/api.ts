@@ -1,5 +1,5 @@
 import { post, get, put, del } from 'aws-amplify/api';
-import { type RestApiResponse } from '@aws-amplify/api/rest';
+import { type Operation } from '@aws-amplify/api/internals';
 
 export interface ApiResponse<T> {
   data: T;
@@ -19,7 +19,8 @@ export function isApiResponse<T>(data: unknown): data is ApiResponse<T> {
   );
 }
 
-export async function handleApiResponse<T>(response: RestApiResponse): Promise<T> {
+export async function handleApiResponse<T>(operation: Operation<any>): Promise<T> {
+  const response = await operation.response;
   const jsonData = await response.body.json() as unknown;
   if (!isApiResponse<T>(jsonData)) {
     throw new Error('Invalid API response format');
@@ -33,11 +34,11 @@ export async function handleApiResponse<T>(response: RestApiResponse): Promise<T
 export const apiService = {
   get: async <T>(path: string) => {
     try {
-      const response = await get({
+      const operation = get({
         apiName: API_NAME,
         path
-      }).response;
-      return handleApiResponse<T>(response);
+      });
+      return handleApiResponse<T>(operation);
     } catch (error) {
       console.error('API GET Error:', error);
       throw error;
@@ -46,14 +47,17 @@ export const apiService = {
 
   post: async <T>(path: string, data: unknown) => {
     try {
-      const response = await post({
+      const operation = post({
         apiName: API_NAME,
         path,
         options: {
-          body: data
+          body: JSON.stringify(data),
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
-      }).response;
-      return handleApiResponse<T>(response);
+      });
+      return handleApiResponse<T>(operation);
     } catch (error) {
       console.error('API POST Error:', error);
       throw error;
@@ -62,14 +66,17 @@ export const apiService = {
 
   put: async <T>(path: string, data: unknown) => {
     try {
-      const response = await put({
+      const operation = put({
         apiName: API_NAME,
         path,
         options: {
-          body: data
+          body: JSON.stringify(data),
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
-      }).response;
-      return handleApiResponse<T>(response);
+      });
+      return handleApiResponse<T>(operation);
     } catch (error) {
       console.error('API PUT Error:', error);
       throw error;
@@ -78,11 +85,11 @@ export const apiService = {
 
   delete: async <T>(path: string) => {
     try {
-      const response = await del({
+      const operation = del({
         apiName: API_NAME,
         path
-      }).response;
-      return handleApiResponse<T>(response);
+      });
+      return handleApiResponse<T>(operation);
     } catch (error) {
       console.error('API DELETE Error:', error);
       throw error;
