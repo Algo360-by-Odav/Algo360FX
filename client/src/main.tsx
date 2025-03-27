@@ -1,17 +1,23 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { SnackbarProvider } from 'notistack';
 import App from './App';
+import { StoreProvider } from "./stores/StoreProvider";
+import "./index.css";
 
-// Initialize root element
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
-
-root.render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <SnackbarProvider maxSnack={3}>
-      <App />
-    </SnackbarProvider>
+    <BrowserRouter>
+      <StoreProvider>
+        <SnackbarProvider maxSnack={3}>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <App />
+          </LocalizationProvider>
+        </SnackbarProvider>
+      </StoreProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );

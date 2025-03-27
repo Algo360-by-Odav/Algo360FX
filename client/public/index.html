@@ -1,24 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <link rel="icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#1a1a1a" />
-    <meta name="description" content="Advanced algorithmic trading platform for forex markets" />
-    <meta name="msapplication-config" content="/browserconfig.xml" />
-    <meta name="msapplication-TileImage" content="/mstile-150x150.png" />
-    <meta property="og:title" content="Algo360FX Trading Platform" />
-    <meta property="og:description" content="Advanced algorithmic trading platform for forex markets" />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="/logo512.png" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Algo360FX Trading Platform" />
-    <meta name="twitter:description" content="Advanced algorithmic trading platform for forex markets" />
-    <meta name="twitter:image" content="/logo512.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Algo360FX - Advanced Forex Trading Platform"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        connect-src 'self' ws: wss: https://*.amazonaws.com wss://*.amazonaws.com https://*.amazoncognito.com http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: https: blob:;
+        font-src 'self' data:;
+        frame-src 'self';
+        media-src 'self';
+        object-src 'none';
+      "
+    />
     <link rel="apple-touch-icon" href="/logo192.png" />
     <link rel="manifest" href="/manifest.json" />
-    <title>Algo360FX Trading Platform</title>
+    <title>Algo360FX</title>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -631,6 +638,7 @@
     </script>
   </head>
   <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
   </body>

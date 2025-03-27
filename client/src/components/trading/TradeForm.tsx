@@ -10,7 +10,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useStore } from '@/context/StoreContext';
+import { useStores } from '../../stores/StoreProvider';
 
 interface TradeFormProps {
   symbol: string;
@@ -26,7 +26,7 @@ interface TradeFormData {
 }
 
 const TradeForm: React.FC<TradeFormProps> = ({ symbol }) => {
-  const { tradingStore } = useStore();
+  const { tradingStore } = useStores();
   const [formData, setFormData] = useState<TradeFormData>({
     type: 'market',
     side: 'buy',
@@ -148,3 +148,4 @@ const TradeForm: React.FC<TradeFormProps> = ({ symbol }) => {
 };
 
 export default TradeForm;
+

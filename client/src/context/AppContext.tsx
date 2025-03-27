@@ -45,7 +45,7 @@ interface AppContextType {
   toggleSidebar: () => void;
   setChartLayout: (layout: AppState['layout']['chartLayout']) => void;
   clearNotifications: () => void;
-};
+}
 
 const initialState: AppState = {
   isLoading: false,
@@ -53,78 +53,76 @@ const initialState: AppState = {
   isConnected: false,
   notifications: [],
   lastError: null,
-  theme: (localStorage.getItem('theme') as AppState['theme']) || UI_CONFIG.THEME.DEFAULT,
-  language: localStorage.getItem('language') || 'en',
+  theme: 'light',
+  language: 'en',
   layout: {
     sidebarOpen: true,
     chartLayout: 'default'
   }
 };
 
+// Create the context with a default value
 const AppContext = createContext<AppContextType | null>(null);
 
+// Reducer function
 const appReducer = (state: AppState, action: AppAction): AppState => {
   switch (action.type) {
     case 'SET_LOADING':
       return {
         ...state,
         isLoading: action.payload.isLoading,
-        loadingMessage: action.payload.message || null,
+        loadingMessage: action.payload.message || null
       };
     case 'SET_CONNECTION_STATUS':
       return {
         ...state,
-        isConnected: action.payload,
+        isConnected: action.payload
       };
     case 'ADD_NOTIFICATION':
+      const newNotification: Notification = {
+        id: Math.random().toString(36).substr(2, 9),
+        timestamp: Date.now(),
+        ...action.payload
+      };
       return {
         ...state,
-        notifications: [
-          {
-            id: Math.random().toString(36).substr(2, 9),
-            timestamp: Date.now(),
-            ...action.payload,
-          },
-          ...state.notifications,
-        ].slice(0, 5), // Keep only last 5 notifications
+        notifications: [...state.notifications, newNotification]
       };
     case 'REMOVE_NOTIFICATION':
       return {
         ...state,
-        notifications: state.notifications.filter((n) => n.id !== action.payload),
+        notifications: state.notifications.filter(n => n.id !== action.payload)
       };
     case 'SET_ERROR':
       return {
         ...state,
-        lastError: action.payload,
+        lastError: action.payload
       };
     case 'SET_THEME':
-      localStorage.setItem('theme', action.payload);
       return {
         ...state,
-        theme: action.payload,
+        theme: action.payload
       };
     case 'SET_LANGUAGE':
-      localStorage.setItem('language', action.payload);
       return {
         ...state,
-        language: action.payload,
+        language: action.payload
       };
     case 'SET_SIDEBAR_OPEN':
       return {
         ...state,
         layout: {
           ...state.layout,
-          sidebarOpen: action.payload,
-        },
+          sidebarOpen: action.payload
+        }
       };
     case 'SET_CHART_LAYOUT':
       return {
         ...state,
         layout: {
           ...state.layout,
-          chartLayout: action.payload,
-        },
+          chartLayout: action.payload
+        }
       };
     default:
       return state;
@@ -189,48 +187,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showNotification('Disconnected from server', 'warning');
     };
 
-    const handleError = (error: Error) => {
-      dispatch({ type: 'SET_ERROR', payload: error.message });
-      showNotification(`Connection error: ${error.message}`, 'error');
+    const handleError = (error: any) => {
+      dispatch({ type: 'SET_ERROR', payload: error?.message || 'Unknown error' });
+      showNotification(error?.message || 'Connection error', 'error');
     };
 
-    const handleNotification = (data: any) => {
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          message: data.message,
-          type: data.type || 'info',
-        },
-      });
-    };
-
-    // Subscribe to WebSocket events
-    wsService.subscribe(WEBSOCKET_CONFIG.ENDPOINTS.CONNECT, handleConnect);
-    wsService.subscribe(WEBSOCKET_CONFIG.ENDPOINTS.DISCONNECT, handleDisconnect);
-    wsService.subscribe(WEBSOCKET_CONFIG.ENDPOINTS.ERROR, handleError);
-    wsService.subscribe(WEBSOCKET_CONFIG.ENDPOINTS.NOTIFICATIONS, handleNotification);
+    wsService.subscribe(WEBSOCKET_CONFIG.EVENTS.CONNECT, handleConnect);
+    wsService.subscribe(WEBSOCKET_CONFIG.EVENTS.DISCONNECT, handleDisconnect);
+    wsService.subscribe(WEBSOCKET_CONFIG.EVENTS.ERROR, handleError);
 
     return () => {
-      // Cleanup subscriptions
-      wsService.unsubscribe(WEBSOCKET_CONFIG.ENDPOINTS.CONNECT, handleConnect);
-      wsService.unsubscribe(WEBSOCKET_CONFIG.ENDPOINTS.DISCONNECT, handleDisconnect);
-      wsService.unsubscribe(WEBSOCKET_CONFIG.ENDPOINTS.ERROR, handleError);
-      wsService.unsubscribe(WEBSOCKET_CONFIG.ENDPOINTS.NOTIFICATIONS, handleNotification);
+      wsService.unsubscribe(WEBSOCKET_CONFIG.EVENTS.CONNECT, handleConnect);
+      wsService.unsubscribe(WEBSOCKET_CONFIG.EVENTS.DISCONNECT, handleDisconnect);
+      wsService.unsubscribe(WEBSOCKET_CONFIG.EVENTS.ERROR, handleError);
     };
   }, [showNotification]);
 
+  const contextValue: AppContextType = {
+    state,
+    dispatch,
+    showNotification,
+    toggleTheme,
+    toggleSidebar,
+    setChartLayout,
+    clearNotifications
+  };
+
   return (
-    <AppContext.Provider 
-      value={{ 
-        state, 
-        dispatch, 
-        showNotification, 
-        toggleTheme, 
-        toggleSidebar, 
-        setChartLayout,
-        clearNotifications
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
@@ -246,7 +230,7 @@ export const useApp = () => {
 
 export const useNotification = () => {
   const { showNotification } = useApp();
-  return { showNotification };
+  return showNotification;
 };
 
 export default AppContext;

@@ -15,7 +15,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { observer } from 'mobx-react-lite';
-import { useStore } from '@/context/StoreContext';
+import { useStores } from '../../stores/StoreProvider';
 
 const registerSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -41,7 +41,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export const RegisterForm: FC = observer(() => {
   const navigate = useNavigate();
-  const { authStore } = useStore();
+  const { authStore } = useStores();
 
   const {
     control,
@@ -233,3 +233,4 @@ export const RegisterForm: FC = observer(() => {
     </Paper>
   );
 });
+

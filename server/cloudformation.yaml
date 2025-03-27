@@ -1,0 +1,354 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Algo360FX API Server Infrastructure'
+
+Parameters:
+  DeploymentBucket:
+    Type: String
+    Description: Name of the S3 bucket containing deployment artifacts
+    Default: algo360fx-deployment
+
+Resources:
+  Algo360FXSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security group for Algo360FX API
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  Algo360FXInstanceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: Algo360FXInstancePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub arn:aws:s3:::${DeploymentBucket}
+                  - !Sub arn:aws:s3:::${DeploymentBucket}/*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/algo360fx/*
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/algo360fx/*/log-stream:*
+
+  Algo360FXInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref Algo360FXInstanceRole
+      InstanceProfileName: algo360fx-instance-profile
+
+  Algo360FXLaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
+    DependsOn: Algo360FXInstanceProfile
+    Properties:
+      LaunchTemplateName: algo360fx-api-template
+      LaunchTemplateData:
+        ImageId: ami-0df7a207adb9748c7  # Amazon Linux 2023 with Node.js 18
+        InstanceType: t2.micro
+        SecurityGroupIds: 
+          - !GetAtt Algo360FXSecurityGroup.GroupId
+        IamInstanceProfile:
+          Name: !Ref Algo360FXInstanceProfile
+        UserData: 
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            
+            # Setup logging
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+            
+            # Function to log messages with timestamps
+            log() {
+                local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+                echo -e "[$timestamp] $1" | tee -a /var/log/user-data.log
+                logger -t user-data "$1"
+            }
+            
+            # Function to check command status
+            check_status() {
+                if [ $? -eq 0 ]; then
+                    log "✓ $1 succeeded"
+                    return 0
+                else
+                    log "✗ $1 failed with exit code $?"
+                    if [ -n "$2" ]; then
+                        log "Error details: $2"
+                    fi
+                    return 1
+                fi
+            }
+
+            # Function to capture command output
+            run_with_log() {
+                local cmd="$1"
+                local desc="$2"
+                local output
+                local exit_code
+                
+                log "Running: $desc"
+                log "Command: $cmd"
+                
+                output=$($cmd 2>&1)
+                exit_code=$?
+                
+                if [ $exit_code -ne 0 ]; then
+                    log "✗ $desc failed with exit code $exit_code"
+                    log "Command output:"
+                    log "$output"
+                    return $exit_code
+                else
+                    log "✓ $desc succeeded"
+                    if [ -n "$output" ]; then
+                        log "Command output:"
+                        log "$output"
+                    fi
+                    return 0
+                fi
+            }
+
+            # Create log file
+            touch /var/log/user-data.log
+            chmod 644 /var/log/user-data.log
+            
+            log "Starting user data script..."
+            
+            # Check internet connectivity
+            if ! ping -c 1 amazon.com &>/dev/null; then
+                log "✗ No internet connectivity"
+                log "Network configuration:"
+                ip addr show
+                log "Route table:"
+                ip route
+                log "DNS configuration:"
+                cat /etc/resolv.conf
+                exit 1
+            fi
+            
+            # Update system
+            log "Updating system packages..."
+            run_with_log "yum update -y" "System update" || exit 1
+            
+            # Check Node.js installation
+            node_version=$(node --version 2>&1)
+            check_status "Node.js version check" "$node_version" || exit 1
+            log "Node.js version: $node_version"
+            
+            # Install development tools
+            log "Installing development tools..."
+            run_with_log "yum groupinstall -y 'Development Tools'" "Development tools installation" || exit 1
+            
+            # Install AWS CLI
+            log "Installing AWS CLI..."
+            run_with_log "curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip'" "AWS CLI download" || exit 1
+            run_with_log "yum install -y unzip" "unzip installation" || exit 1
+            run_with_log "unzip awscliv2.zip" "AWS CLI unzip" || exit 1
+            run_with_log "./aws/install" "AWS CLI installation" || exit 1
+            
+            # Check AWS CLI installation
+            aws_version=$(aws --version 2>&1)
+            check_status "AWS CLI version check" "$aws_version" || exit 1
+            log "AWS CLI version: $aws_version"
+            
+            # Install and configure CloudWatch agent
+            log "Installing CloudWatch agent..."
+            run_with_log "yum install -y amazon-cloudwatch-agent" "CloudWatch agent installation" || exit 1
+            
+            # Configure CloudWatch agent
+            log "Configuring CloudWatch agent..."
+            cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json << 'EOL'
+            {
+                "agent": {
+                    "run_as_user": "root"
+                },
+                "logs": {
+                    "logs_collected": {
+                        "files": {
+                            "collect_list": [
+                                {
+                                    "file_path": "/var/log/user-data.log",
+                                    "log_group_name": "/algo360fx/user-data",
+                                    "log_stream_name": "{instance_id}",
+                                    "timezone": "UTC"
+                                },
+                                {
+                                    "file_path": "/var/log/algo360fx.log",
+                                    "log_group_name": "/algo360fx/application",
+                                    "log_stream_name": "{instance_id}",
+                                    "timezone": "UTC"
+                                },
+                                {
+                                    "file_path": "/var/log/algo360fx.error.log",
+                                    "log_group_name": "/algo360fx/error",
+                                    "log_stream_name": "{instance_id}",
+                                    "timezone": "UTC"
+                                },
+                                {
+                                    "file_path": "/var/log/cloud-init-output.log",
+                                    "log_group_name": "/algo360fx/cloud-init",
+                                    "log_stream_name": "{instance_id}",
+                                    "timezone": "UTC"
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+            EOL
+            
+            # Start CloudWatch agent
+            log "Starting CloudWatch agent..."
+            run_with_log "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json" "CloudWatch agent configuration" || exit 1
+            run_with_log "systemctl enable amazon-cloudwatch-agent" "CloudWatch agent enable" || exit 1
+            run_with_log "systemctl start amazon-cloudwatch-agent" "CloudWatch agent start" || exit 1
+            
+            # Check CloudWatch agent status
+            sleep 5
+            if ! systemctl is-active --quiet amazon-cloudwatch-agent; then
+                log "✗ CloudWatch agent failed to start"
+                log "CloudWatch agent status:"
+                systemctl status amazon-cloudwatch-agent
+                log "CloudWatch agent logs:"
+                journalctl -u amazon-cloudwatch-agent
+                exit 1
+            fi
+            
+            # Create app directory
+            log "Creating app directory..."
+            mkdir -p /opt/algo360fx
+            cd /opt/algo360fx || {
+                log "✗ Failed to change to app directory"
+                exit 1
+            }
+            
+            # Download and extract application
+            log "Downloading application..."
+            if ! aws s3 cp s3://algo360fx-deployment/app.zip .; then
+                log "✗ Failed to download app.zip"
+                log "AWS S3 error output:"
+                aws s3 cp s3://algo360fx-deployment/app.zip . --debug
+                exit 1
+            fi
+            
+            if ! unzip app.zip; then
+                log "✗ Failed to unzip app.zip"
+                log "Unzip error output:"
+                unzip -l app.zip
+                exit 1
+            fi
+            
+            # Install dependencies
+            log "Installing dependencies..."
+            if ! npm install; then
+                log "✗ Failed to install dependencies"
+                log "npm install output:"
+                cat npm-debug.log || true
+                exit 1
+            fi
+            
+            # Build application
+            log "Building application..."
+            if ! npm run build; then
+                log "✗ Failed to build application"
+                log "Build output:"
+                cat npm-debug.log || true
+                exit 1
+            fi
+            
+            # Create systemd service
+            log "Creating systemd service..."
+            cat > /etc/systemd/system/algo360fx.service << 'EOL'
+            [Unit]
+            Description=Algo360FX Trading Platform
+            After=network.target
+            
+            [Service]
+            Type=simple
+            User=root
+            WorkingDirectory=/opt/algo360fx
+            Environment=NODE_ENV=production
+            Environment=PORT=80
+            ExecStart=/usr/bin/node dist/index.js
+            Restart=always
+            RestartSec=10
+            StandardOutput=append:/var/log/algo360fx.log
+            StandardError=append:/var/log/algo360fx.error.log
+            
+            [Install]
+            WantedBy=multi-user.target
+            EOL
+            
+            # Start service
+            log "Starting Algo360FX service..."
+            run_with_log "systemctl daemon-reload" "systemd reload" || exit 1
+            run_with_log "systemctl enable algo360fx" "service enable" || exit 1
+            run_with_log "systemctl start algo360fx" "service start" || exit 1
+            
+            # Check service status
+            sleep 5
+            if systemctl is-active --quiet algo360fx; then
+                log "✓ Algo360FX service is running"
+                systemctl status algo360fx >> /var/log/user-data.log
+                journalctl -u algo360fx >> /var/log/user-data.log
+            else
+                log "✗ Algo360FX service failed to start"
+                log "Service status:"
+                systemctl status algo360fx >> /var/log/user-data.log
+                log "Service logs:"
+                journalctl -u algo360fx >> /var/log/user-data.log
+                exit 1
+            fi
+            
+            log "User data script completed"
+
+  Algo360FXEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: Algo360FXLaunchTemplate
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref Algo360FXLaunchTemplate
+        Version: !GetAtt Algo360FXLaunchTemplate.LatestVersionNumber
+      Tags:
+        - Key: Name
+          Value: Algo360FX-API
+
+Outputs:
+  InstanceId:
+    Description: ID of the EC2 instance
+    Value: !Ref Algo360FXEC2Instance
+  PublicDNS:
+    Description: Public DNSName of the EC2 instance
+    Value: !GetAtt Algo360FXEC2Instance.PublicDnsName
+  PublicIP:
+    Description: Public IP address of the EC2 instance
+    Value: !GetAtt Algo360FXEC2Instance.PublicIp

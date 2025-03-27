@@ -10,7 +10,7 @@
     "milliparsec": "3.0.0"
   },
   "dependencies": {
-    "@aws-amplify/ui-react": "^6.8.1",
+    "@aws-amplify/ui-react": "^6.9.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@monaco-editor/react": "^4.6.0",
@@ -43,6 +43,7 @@
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.13",
     "@visx/visx": "^3.12.0",
+    "aws-amplify": "^6.12.1",
     "axios": "^1.7.4",
     "chart.js": "^4.4.7",
     "copy-webpack-plugin": "^11.0.0",

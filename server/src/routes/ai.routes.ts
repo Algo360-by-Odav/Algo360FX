@@ -172,4 +172,27 @@ router.post('/market-analysis', auth, asyncHandler(async (req: AuthRequest, res:
   }
 }));
 
+// General AI completion endpoint
+router.post('/completion', auth, asyncHandler(async (req: AuthRequest, res: Response) => {
+  try {
+    const { prompt } = req.body;
+    
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'Valid prompt is required' });
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1000,
+      temperature: 0.7,
+    });
+
+    return res.json({ content: completion.choices[0]?.message?.content || '' });
+  } catch (error) {
+    console.error('AI completion error:', error);
+    return res.status(500).json({ error: 'Failed to generate AI response' });
+  }
+}));
+
 export { router as aiRouter };

@@ -1,60 +1,38 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import tsconfigPaths from 'vite-tsconfig-paths';
-import { resolve } from 'path';
+import path from 'path';
 
 export default defineConfig({
-  plugins: [
-    react(),
-    tsconfigPaths()
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
-      '@mui/material': resolve(__dirname, 'node_modules/@mui/material'),
-      '@mui/icons-material': resolve(__dirname, 'node_modules/@mui/icons-material'),
-      'aws-amplify': resolve(__dirname, 'node_modules/aws-amplify')
+      '@': path.resolve(__dirname, './src'),
     },
-    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
-  },
-  define: {
-    'process.env': {
-      NODE_ENV: JSON.stringify(process.env.NODE_ENV || 'development'),
-      VITE_AWS_REGION: JSON.stringify(process.env.VITE_AWS_REGION),
-      VITE_API_GATEWAY_URL: JSON.stringify(process.env.VITE_API_GATEWAY_URL),
-      VITE_COGNITO_USER_POOL_ID: JSON.stringify(process.env.VITE_COGNITO_USER_POOL_ID),
-      VITE_COGNITO_CLIENT_ID: JSON.stringify(process.env.VITE_COGNITO_CLIENT_ID),
-      VITE_COGNITO_CLIENT_SECRET: JSON.stringify(process.env.VITE_COGNITO_CLIENT_SECRET)
-    }
   },
   server: {
-    port: 5173,
-    host: true,
-    fs: {
-      strict: false,
-      allow: ['..']
-    }
+    port: 5174,
+    strictPort: true,
+    hmr: true,
+    headers: {
+      'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+        "style-src 'self' 'unsafe-inline'",
+        "connect-src 'self' ws://localhost:* http://localhost:*",
+        "img-src 'self' data: https:",
+        "font-src 'self' data:",
+      ].join('; ')
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
   },
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      '@mui/material',
-      '@mui/icons-material',
-      'aws-amplify',
-      'notistack'
-    ],
-    esbuildOptions: {
-      target: 'es2020'
-    }
+  define: {
+    'import.meta.env.VITE_API_URL': JSON.stringify('http://localhost:3001'),
+    'import.meta.env.VITE_WS_URL': JSON.stringify('ws://localhost:3001/ws'),
+    'import.meta.env.VITE_MT5_BRIDGE_URL': JSON.stringify('ws://localhost:5000'),
   },
-  build: {
-    target: 'es2020',
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html')
-      }
-    }
-  }
 });

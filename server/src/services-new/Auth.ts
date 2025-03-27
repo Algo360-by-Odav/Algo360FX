@@ -1,7 +1,8 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils-new/jwt';
 import { User, CreateUserInput, UpdateUserInput, AuthResponse } from '../types-new/User';
+import { PositionType, PositionStatus } from '../types-new/Position';
 import { AuthError } from '../utils-new/errors';
 import { UserModel } from '../models-new/User';
 
@@ -12,6 +13,28 @@ export class AuthService {
     this.prisma = prisma || new PrismaClient();
   }
 
+  private transformPosition(position: any) {
+    return {
+      ...position,
+      type: position.type as PositionType,
+      status: position.status as PositionStatus
+    };
+  }
+
+  private transformPortfolio(portfolio: any) {
+    return {
+      ...portfolio,
+      positions: portfolio.positions?.map((pos: any) => this.transformPosition(pos)) || []
+    };
+  }
+
+  private transformUser(user: any): User {
+    return {
+      ...user,
+      portfolios: user.portfolios?.map((p: any) => this.transformPortfolio(p)) || []
+    };
+  }
+
   async register(input: CreateUserInput): Promise<AuthResponse> {
     const existingUser = await UserModel.findByEmail(input.email);
 
@@ -20,23 +43,30 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(input.password, 10);
-    const user = await UserModel.create({
-      ...input,
+    const userData = {
+      email: input.email,
       password: hashedPassword,
-      username: input.username || input.email.split('@')[0]
-    });
+      username: input.username || input.email.split('@')[0],
+      firstName: input.firstName,
+      lastName: input.lastName,
+      role: input.role,
+      preferences: input.preferences || { theme: 'light' }
+    };
+
+    const user = await UserModel.create(userData);
+    const transformedUser = this.transformUser(user);
 
     return {
-      user,
-      accessToken: generateAccessToken(user),
-      refreshToken: generateRefreshToken(user)
+      user: transformedUser,
+      accessToken: generateAccessToken(transformedUser),
+      refreshToken: generateRefreshToken(transformedUser)
     };
   }
 
   async login(email: string, password: string): Promise<AuthResponse> {
     const user = await UserModel.findByEmail(email);
 
-    if (!user) {
+    if (!user || !user.password) {
       throw new AuthError('Invalid credentials');
     }
 
@@ -45,10 +75,11 @@ export class AuthService {
       throw new AuthError('Invalid credentials');
     }
 
+    const transformedUser = this.transformUser(user);
     return {
-      user,
-      accessToken: generateAccessToken(user),
-      refreshToken: generateRefreshToken(user)
+      user: transformedUser,
+      accessToken: generateAccessToken(transformedUser),
+      refreshToken: generateRefreshToken(transformedUser)
     };
   }
 
@@ -65,11 +96,12 @@ export class AuthService {
     }
 
     const updatedUser = await UserModel.updateTokenVersion(user.id);
+    const transformedUser = this.transformUser(updatedUser);
 
     return {
-      user: updatedUser,
-      accessToken: generateAccessToken(updatedUser),
-      refreshToken: generateRefreshToken(updatedUser)
+      user: transformedUser,
+      accessToken: generateAccessToken(transformedUser),
+      refreshToken: generateRefreshToken(transformedUser)
     };
   }
 
@@ -80,7 +112,7 @@ export class AuthService {
       throw new AuthError('User not found');
     }
 
-    return user;
+    return this.transformUser(user);
   }
 
   async updateUser(userId: string, input: UpdateUserInput): Promise<User> {
@@ -90,11 +122,23 @@ export class AuthService {
       throw new AuthError('User not found');
     }
 
+    const updateData: Prisma.UserUpdateInput = {
+      email: input.email,
+      username: input.username,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      role: input.role,
+      emailVerified: input.emailVerified,
+      tokenVersion: input.tokenVersion,
+      preferences: input.preferences || Prisma.JsonNull
+    };
+
     if (input.password) {
-      input.password = await bcrypt.hash(input.password, 10);
+      updateData.password = await bcrypt.hash(input.password, 10);
     }
 
-    return UserModel.update(userId, input);
+    const updatedUser = await UserModel.update(userId, updateData);
+    return this.transformUser(updatedUser);
   }
 
   async requestPasswordReset(email: string): Promise<void> {
@@ -131,7 +175,7 @@ export class AuthService {
   async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
     const user = await UserModel.findById(userId);
 
-    if (!user) {
+    if (!user || !user.password) {
       throw new AuthError('User not found');
     }
 

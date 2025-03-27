@@ -22,6 +22,13 @@ export interface AuthResponse {
 export const authService = {
   signIn: async (username: string, password: string): Promise<AuthResponse> => {
     try {
+      // First try to sign out any existing user
+      try {
+        await signOut();
+      } catch (error) {
+        // Ignore signOut errors
+      }
+
       const { isSignedIn, nextStep } = await signIn({ username, password });
       return {
         success: isSignedIn,
@@ -38,6 +45,13 @@ export const authService = {
 
   signUp: async (username: string, password: string, email: string): Promise<AuthResponse> => {
     try {
+      // First try to sign out any existing user
+      try {
+        await signOut();
+      } catch (error) {
+        // Ignore signOut errors
+      }
+
       const signUpInput: SignUpInput = {
         username,
         password,
@@ -99,19 +113,11 @@ export const authService = {
     }
   },
 
-  getCurrentUser: async (): Promise<AuthResponse> => {
+  getCurrentUser: async (): Promise<any> => {
     try {
-      const user = await getCurrentUser();
-      return {
-        success: true,
-        user
-      };
-    } catch (error: any) {
-      console.error('Get current user error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to get current user'
-      };
+      return await getCurrentUser();
+    } catch (error) {
+      return null;
     }
   }
 };

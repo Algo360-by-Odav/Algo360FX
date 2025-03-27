@@ -1,0 +1,20 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-algo360fx-dev-a579c-authRole",
+      "UnauthRoleArn": "arn:aws:iam::442426850920:role/amplify-algo360fx-dev-a579c-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::442426850920:role/amplify-algo360fx-dev-a579c-authRole",
+      "Region": "ap-southeast-1",
+      "DeploymentBucketName": "amplify-algo360fx-dev-a579c-deployment",
+      "UnauthRoleName": "amplify-algo360fx-dev-a579c-unauthRole",
+      "StackName": "amplify-algo360fx-dev-a579c",
+      "StackId": "arn:aws:cloudformation:ap-southeast-1:442426850920:stack/amplify-algo360fx-dev-a579c/61d6d330-d840-11ef-afa0-026dc4f40f83",
+      "AmplifyAppId": "d32ocfvx6ff7w4"
+    },
+    "categories": {
+      "auth": {
+        "algo360fx6d083509": {}
+      }
+    }
+  }
+}

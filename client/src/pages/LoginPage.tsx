@@ -13,11 +13,11 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { useStore } from '@/context/StoreContext';
+import { useStores } from '../stores/StoreProvider';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { authStore } = useStore();
+  const { authStore } = useStores();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -149,3 +149,4 @@ const LoginPage: React.FC = () => {
 };
 
 export default LoginPage;
+

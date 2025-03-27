@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '@/context/StoreContext';
+import { useStores } from '../../stores/StoreProvider';
 
 interface LoginFormData {
   email: string;
@@ -19,7 +19,7 @@ interface LoginFormData {
 
 export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
-  const { authStore } = useStore();
+  const { authStore } = useStores();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>();
 
   const onSubmit = async (data: LoginFormData) => {
@@ -110,3 +110,4 @@ export const LoginForm: React.FC = () => {
     </Paper>
   );
 };
+

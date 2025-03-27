@@ -12,7 +12,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 export const config: Config = {
-    port: process.env.PORT || 3000,
+    port: process.env.PORT || 3001,
     database: {
         url: process.env.DATABASE_URL,
     },

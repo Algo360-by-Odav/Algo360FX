@@ -8,7 +8,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
-import { useStore } from '@/context/StoreContext';
+import { useStores } from '../../stores/StoreProvider';
 import { useSnackbar } from 'notistack';
 
 interface ForgotPasswordFormData {
@@ -17,7 +17,7 @@ interface ForgotPasswordFormData {
 
 export const ForgotPasswordForm: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
-  const { authStore } = useStore();
+  const { authStore } = useStores();
   const { register, handleSubmit, formState: { errors } } = useForm<ForgotPasswordFormData>();
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
@@ -77,3 +77,4 @@ export const ForgotPasswordForm: React.FC = () => {
     </Box>
   );
 };
+

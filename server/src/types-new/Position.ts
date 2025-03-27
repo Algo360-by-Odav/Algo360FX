@@ -11,8 +11,7 @@ export enum PositionType {
 export enum PositionStatus {
   OPEN = 'OPEN',
   CLOSED = 'CLOSED',
-  PENDING = 'PENDING',
-  CANCELLED = 'CANCELLED'
+  PENDING = 'PENDING'
 }
 
 export interface PositionMetadata {
@@ -30,7 +29,8 @@ export interface PositionMetadata {
 
 export interface Position {
   id: string;
-  userId: string;
+  portfolioId: string;
+  strategyId: string;
   symbol: string;
   type: PositionType;
   status: PositionStatus;
@@ -40,8 +40,6 @@ export interface Position {
   exitPrice: number | null;
   size: number;
   profit: number | null;
-  portfolioId: string;
-  strategyId: string | null;
   stopLoss: number | null;
   takeProfit: number | null;
   metadata: InputJsonValue | null;
@@ -50,15 +48,14 @@ export interface Position {
 }
 
 export interface PositionCreateInput {
-  userId: string;
+  portfolioId: string;
+  strategyId: string;
   symbol: string;
   type: PositionType;
   status: PositionStatus;
   openTime: Date;
   entryPrice: number;
   size: number;
-  portfolioId: string;
-  strategyId?: string | null;
   stopLoss?: number | null;
   takeProfit?: number | null;
   metadata?: InputJsonValue | null;
@@ -78,7 +75,6 @@ export interface PositionUpdateInput {
 
 export interface PositionWhereInput {
   id?: string;
-  userId?: string;
   strategyId?: string;
   portfolioId?: string;
   symbol?: string;
@@ -91,7 +87,6 @@ export interface PositionWhereUniqueInput {
 }
 
 export interface CreatePositionInput {
-  userId: string;
   strategyId?: string;
   symbol: string;
   type: PositionType;
@@ -118,7 +113,6 @@ export interface UpdatePositionInput {
 }
 
 export interface PositionFilters {
-  userId?: string;
   strategyId?: string;
   symbol?: string;
   type?: PositionType;

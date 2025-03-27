@@ -1,70 +1,154 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Container,
   Typography,
   Grid,
   Paper,
   Box,
-  Button
+  Button,
+  Card,
+  CardContent,
+  TableContainer,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TablePagination,
+  IconButton,
+  Tooltip,
+  useTheme,
 } from '@mui/material';
-import { useApp } from '@/context/AppContext';
-import { privateApi } from '@/config/api';
+import {
+  TrendingUp,
+  TrendingDown,
+  Refresh as RefreshIcon,
+  AccountBalance as AccountIcon,
+  ShowChart as ChartIcon,
+  AttachMoney as MoneyIcon,
+  Timeline as TimelineIcon,
+  Analytics as AnalyticsIcon,
+} from '@mui/icons-material';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as ChartTooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import { observer } from 'mobx-react-lite';
+import PortfolioAnalytics from '@/components/portfolio/PortfolioAnalytics';
 
-interface Asset {
-  symbol: string;
-  allocation: number;
-  currentPrice: number;
-  averagePrice: number;
-  quantity: number;
-  pnl: number;
-  pnlPercentage: number;
-}
+// Mock data
+const mockPortfolioData = {
+  summary: {
+    totalValue: 125750.25,
+    totalPnl: 12575.50,
+    totalPnlPercentage: 11.12,
+    cashBalance: 25750.25,
+    investedAmount: 100000,
+    numberOfAssets: 8,
+  },
+  assets: [
+    {
+      symbol: 'EURUSD',
+      allocation: 25.5,
+      currentPrice: 1.0925,
+      averagePrice: 1.0850,
+      quantity: 100000,
+      pnl: 750.00,
+      pnlPercentage: 6.89,
+    },
+    {
+      symbol: 'GBPUSD',
+      allocation: 20.3,
+      currentPrice: 1.2725,
+      averagePrice: 1.2650,
+      quantity: 75000,
+      pnl: 562.50,
+      pnlPercentage: 5.93,
+    },
+    {
+      symbol: 'USDJPY',
+      allocation: 18.7,
+      currentPrice: 148.35,
+      averagePrice: 147.85,
+      quantity: 50000,
+      pnl: -250.00,
+      pnlPercentage: -3.33,
+    },
+    {
+      symbol: 'AUDUSD',
+      allocation: 15.2,
+      currentPrice: 0.6585,
+      averagePrice: 0.6525,
+      quantity: 60000,
+      pnl: 360.00,
+      pnlPercentage: 4.80,
+    },
+  ],
+  chartData: [
+    { date: '2024-01-01', value: 100000 },
+    { date: '2024-01-08', value: 102500 },
+    { date: '2024-01-15', value: 108750 },
+    { date: '2024-01-22', value: 115000 },
+    { date: '2024-01-29', value: 125750 },
+  ],
+  dailyReturns: [
+    { range: '-2% to -1%', frequency: 5 },
+    { range: '-1% to 0%', frequency: 15 },
+    { range: '0% to 1%', frequency: 20 },
+    { range: '1% to 2%', frequency: 8 },
+    { range: '2% to 3%', frequency: 2 },
+  ],
+  riskMetrics: {
+    sharpeRatio: 1.85,
+    volatility: 12.5,
+    beta: 0.92,
+    alpha: 3.2,
+    maxDrawdown: -15.3,
+    informationRatio: 0.75,
+    sortinoRatio: 2.1,
+    trackingError: 4.2,
+  },
+  correlations: [
+    { asset1: 'EURUSD', asset2: 'GBPUSD', correlation: 0.85 },
+    { asset1: 'EURUSD', asset2: 'USDJPY', correlation: -0.32 },
+    { asset1: 'GBPUSD', asset2: 'USDJPY', correlation: -0.28 },
+    { asset1: 'AUDUSD', asset2: 'EURUSD', correlation: 0.65 },
+  ],
+  performance: {
+    daily: 1.25,
+    weekly: 3.75,
+    monthly: 11.12,
+    quarterly: 15.8,
+    ytd: 25.75,
+    yearly: 32.5,
+  }
+};
 
-interface PortfolioSummary {
-  totalValue: number;
-  totalPnl: number;
-  totalPnlPercentage: number;
-  cashBalance: number;
-  investedAmount: number;
-  numberOfAssets: number;
-}
+const PortfolioPage = observer(() => {
+  const theme = useTheme();
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
-const PortfolioPage: React.FC = () => {
-  const { showNotification } = useApp();
-  const [loading, setLoading] = React.useState(true);
-  const [assets, setAssets] = React.useState<Asset[]>([]);
-  const [summary, setSummary] = React.useState<PortfolioSummary | null>(null);
-  const [currentPage, setCurrentPage] = React.useState(0);
-  const [itemsPerPage, setItemsPerPage] = React.useState(10);
-
-  const fetchPortfolioData = async () => {
-    try {
-      setLoading(true);
-      const [assetsResponse, summaryResponse] = await Promise.all([
-        privateApi.get('/portfolio/assets'),
-        privateApi.get('/portfolio/summary')
-      ]);
-
-      setAssets(assetsResponse.data);
-      setSummary(summaryResponse.data);
-    } catch (error: any) {
-      showNotification(
-        error.response?.data?.message || 'Failed to fetch portfolio data',
-        'error'
-      );
-    } finally {
-      setLoading(false);
-    }
+  const handleRefresh = async () => {
+    setLoading(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLoading(false);
   };
-
-  React.useEffect(() => {
-    fetchPortfolioData();
-  }, []);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value);
   };
 
@@ -72,30 +156,9 @@ const PortfolioPage: React.FC = () => {
     return new Intl.NumberFormat('en-US', {
       style: 'percent',
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(value / 100);
   };
-
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
-
-  const handleItemsPerPageChange = (newItemsPerPage: number) => {
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(0);
-  };
-
-  if (loading && !summary) {
-    return (
-      <Grid container sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <Grid item>
-          <Typography variant="h4" component="div">
-            Loading...
-          </Typography>
-        </Grid>
-      </Grid>
-    );
-  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -103,219 +166,205 @@ const PortfolioPage: React.FC = () => {
         <Typography variant="h4" component="h1">
           Portfolio Overview
         </Typography>
+        <Box>
+          <Button
+            variant="contained"
+            startIcon={<AnalyticsIcon />}
+            onClick={() => setAnalyticsOpen(true)}
+            sx={{ mr: 2 }}
+          >
+            Analytics
+          </Button>
+          <IconButton onClick={handleRefresh} disabled={loading}>
+            <RefreshIcon />
+          </IconButton>
+        </Box>
       </Box>
 
-      {summary && (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper>
-              <Box sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="h6" component="div">
-                    Total Value
-                  </Typography>
-                </Box>
-                <Typography variant="h4" component="div" sx={{ mb: 1 }}>
-                  {formatCurrency(summary.totalValue)}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Cash: {formatCurrency(summary.cashBalance)}
-                </Typography>
+      <Grid container spacing={3}>
+        {/* Summary Cards */}
+        <Grid item xs={12} md={6} lg={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <AccountIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">Total Value</Typography>
               </Box>
-            </Paper>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper>
-              <Box sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="h6" component="div">
-                    Total P&L
-                  </Typography>
-                </Box>
-                <Typography 
-                  variant="h4" 
-                  component="div" 
-                  sx={{ 
-                    mb: 1,
-                    color: summary.totalPnl >= 0 
-                      ? 'green' 
-                      : 'red'
-                  }}
-                >
-                  {formatCurrency(summary.totalPnl)}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {formatPercentage(summary.totalPnlPercentage)}
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper>
-              <Box sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="h6" component="div">
-                    Invested Amount
-                  </Typography>
-                </Box>
-                <Typography variant="h4" component="div" sx={{ mb: 1 }}>
-                  {formatCurrency(summary.investedAmount)}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {summary.numberOfAssets} Assets
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
+              <Typography variant="h4" component="div" gutterBottom>
+                {formatCurrency(mockPortfolioData.summary.totalValue)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Cash: {formatCurrency(mockPortfolioData.summary.cashBalance)}
+              </Typography>
+            </CardContent>
+          </Card>
         </Grid>
-      )}
 
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <Box sx={{ p: 2 }}>
-          <Grid container>
-            <Grid item xs={12}>
-              <Typography variant="h6" component="div">
-                Assets
+        <Grid item xs={12} md={6} lg={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <MoneyIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">Total P&L</Typography>
+              </Box>
+              <Typography
+                variant="h4"
+                component="div"
+                gutterBottom
+                color={mockPortfolioData.summary.totalPnl >= 0 ? 'success.main' : 'error.main'}
+              >
+                {formatCurrency(mockPortfolioData.summary.totalPnl)}
               </Typography>
-            </Grid>
-          </Grid>
-          <Grid container>
-            <Grid item xs={12}>
-              <Grid container>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body1" component="div">
-                    Symbol
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body1" component="div">
-                    Allocation
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body1" component="div">
-                    Current Price
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body1" component="div">
-                    Average Price
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body1" component="div">
-                    Quantity
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body1" component="div">
-                    P&L
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body1" component="div">
-                    P&L %
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Grid>
-            {assets
-              .slice(currentPage * itemsPerPage, currentPage * itemsPerPage + itemsPerPage)
-              .map((asset) => (
-                <Grid container key={asset.symbol}>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <Typography variant="body1" component="div">
-                      {asset.symbol}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <Typography variant="body1" component="div">
-                      {formatPercentage(asset.allocation)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <Typography variant="body1" component="div">
-                      {formatCurrency(asset.currentPrice)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <Typography variant="body1" component="div">
-                      {formatCurrency(asset.averagePrice)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <Typography variant="body1" component="div">
-                      {asset.quantity}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <Typography 
-                      variant="body1" 
-                      component="div"
-                      sx={{ 
-                        color: asset.pnl >= 0 
-                          ? 'green' 
-                          : 'red' 
-                      }}
-                    >
-                      {formatCurrency(asset.pnl)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <Typography 
-                      variant="body1" 
-                      component="div"
-                      sx={{ 
-                        color: asset.pnlPercentage >= 0 
-                          ? 'green' 
-                          : 'red' 
-                      }}
-                    >
-                      {formatPercentage(asset.pnlPercentage)}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              ))}
-          </Grid>
-        </Box>
-        <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2">
-              Rows per page:
-              <select
-                value={itemsPerPage}
-                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                style={{ marginLeft: '8px' }}
+              <Typography
+                variant="body2"
+                color={mockPortfolioData.summary.totalPnlPercentage >= 0 ? 'success.main' : 'error.main'}
               >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-              </select>
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                disabled={currentPage === 0}
-                onClick={() => handlePageChange(currentPage - 1)}
-              >
-                Previous
-              </Button>
-              <Typography variant="body2" sx={{ alignSelf: 'center' }}>
-                Page {currentPage + 1} of {Math.ceil(assets.length / itemsPerPage)}
+                {formatPercentage(mockPortfolioData.summary.totalPnlPercentage)}
               </Typography>
-              <Button
-                disabled={currentPage >= Math.ceil(assets.length / itemsPerPage) - 1}
-                onClick={() => handlePageChange(currentPage + 1)}
-              >
-                Next
-              </Button>
-            </Box>
-          </Box>
-        </Box>
-      </Paper>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={6} lg={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <TimelineIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">Invested Amount</Typography>
+              </Box>
+              <Typography variant="h4" component="div" gutterBottom>
+                {formatCurrency(mockPortfolioData.summary.investedAmount)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {mockPortfolioData.summary.numberOfAssets} Assets
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={6} lg={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <TrendingUp sx={{ mr: 1 }} />
+                <Typography variant="h6">Performance</Typography>
+              </Box>
+              <Typography variant="h4" component="div" gutterBottom color="success.main">
+                {formatPercentage(25.75)} {/* YTD Return */}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Year to Date
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Portfolio Chart */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Portfolio Value</Typography>
+              <Box sx={{ height: 400 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={mockPortfolioData.chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                    />
+                    <YAxis
+                      tickFormatter={(value) => formatCurrency(value)}
+                    />
+                    <ChartTooltip
+                      formatter={(value: number) => [formatCurrency(value), 'Portfolio Value']}
+                      labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke={theme.palette.primary.main}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Assets Table */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Assets</Typography>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Symbol</TableCell>
+                      <TableCell align="right">Allocation</TableCell>
+                      <TableCell align="right">Current Price</TableCell>
+                      <TableCell align="right">Average Price</TableCell>
+                      <TableCell align="right">Quantity</TableCell>
+                      <TableCell align="right">P&L</TableCell>
+                      <TableCell align="right">P&L %</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {mockPortfolioData.assets.map((asset) => (
+                      <TableRow key={asset.symbol}>
+                        <TableCell component="th" scope="row">
+                          {asset.symbol}
+                        </TableCell>
+                        <TableCell align="right">{formatPercentage(asset.allocation)}</TableCell>
+                        <TableCell align="right">{asset.currentPrice.toFixed(4)}</TableCell>
+                        <TableCell align="right">{asset.averagePrice.toFixed(4)}</TableCell>
+                        <TableCell align="right">{asset.quantity.toLocaleString()}</TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            color: asset.pnl >= 0 ? 'success.main' : 'error.main',
+                          }}
+                        >
+                          {formatCurrency(asset.pnl)}
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            color: asset.pnlPercentage >= 0 ? 'success.main' : 'error.main',
+                          }}
+                        >
+                          {formatPercentage(asset.pnlPercentage)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25]}
+                component="div"
+                count={mockPortfolioData.assets.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(_, newPage) => setPage(newPage)}
+                onRowsPerPageChange={(event) => {
+                  setRowsPerPage(parseInt(event.target.value, 10));
+                  setPage(0);
+                }}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+      <PortfolioAnalytics
+        open={analyticsOpen}
+        onClose={() => setAnalyticsOpen(false)}
+        portfolioData={mockPortfolioData}
+      />
     </Container>
   );
-};
+});
 
 export default PortfolioPage;

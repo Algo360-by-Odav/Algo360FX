@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
+import { API_URL } from './index';
 
 // Types for API responses
 interface ApiResponse<T = any> {
@@ -16,7 +17,7 @@ interface ErrorResponse {
 // Create Axios instances
 const createAxiosInstance = (options: { withAuth?: boolean } = {}): AxiosInstance => {
   const instance = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001',
+    baseURL: API_URL,
     timeout: 30000, // 30 seconds
     headers: {
       'Content-Type': 'application/json',
@@ -56,7 +57,7 @@ const createAxiosInstance = (options: { withAuth?: boolean } = {}): AxiosInstanc
           const refreshToken = localStorage.getItem('refreshToken');
           if (refreshToken && originalRequest) {
             const response = await axios.post(
-              `${process.env.REACT_APP_API_URL}/auth/refresh-token`,
+              `${API_URL}/auth/refresh-token`,
               { refreshToken }
             );
 

@@ -112,4 +112,44 @@ router.get('/:id/risk', authenticateToken, async (req, res) => {
   }
 });
 
+// Get portfolio performance export
+router.get('/:id/performance/export', authenticateToken, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Start date and end date are required' });
+    }
+
+    const portfolio = await PortfolioModel.getPortfolioPerformance(
+      req.params.id,
+      new Date(startDate as string),
+      new Date(endDate as string)
+    );
+
+    // Convert data to CSV format
+    const csvRows = [
+      // Headers
+      ['Date', 'Balance', 'Daily PnL'].join(','),
+      // Data rows
+      ...portfolio.performance.map((p, i) => {
+        const prevBalance = i > 0 ? portfolio.performance[i - 1].balance : portfolio.performance[0].balance;
+        const dailyPnL = p.balance - prevBalance;
+        return [p.date, p.balance.toFixed(2), dailyPnL.toFixed(2)].join(',');
+      })
+    ];
+
+    const csvContent = csvRows.join('\n');
+
+    // Set headers for file download
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=portfolio-performance-${new Date().toISOString()}.csv`);
+
+    res.send(csvContent);
+  } catch (error) {
+    console.error('Error exporting portfolio performance:', error);
+    res.status(500).json({ error: 'Failed to export portfolio performance' });
+  }
+});
+
 export default router;

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { UserModel } from '../models-new/User';
 import { authenticateToken, validateRequest } from '../middleware';
+import { User, UserPreferences } from '../types-new/User';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ router.get('/preferences', authenticateToken, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json(user.preferences || {});
+    res.json(user.preferences || { theme: 'light' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user preferences' });
   }
@@ -43,51 +44,56 @@ router.get('/preferences', authenticateToken, async (req, res) => {
 // Update user preferences
 router.put('/preferences', authenticateToken, validateRequest, async (req, res) => {
   try {
-    const user = await UserModel.update(req.user!.id, { preferences: req.body });
-    res.json(user.preferences || {});
+    const preferences = req.body as UserPreferences;
+    const user = await UserModel.update(req.user!.id, { preferences });
+    res.json(user.preferences || { theme: 'light' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update user preferences' });
   }
 });
 
-// Get user notifications
-router.get('/notifications', authenticateToken, async (req, res) => {
+// Get user portfolio summary
+router.get('/portfolio/summary', authenticateToken, async (req, res) => {
   try {
     const user = await UserModel.findById(req.user!.id);
-    res.json(user.notifications || []);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const portfolioSummary = user.portfolios?.map(portfolio => ({
+      id: portfolio.id,
+      name: portfolio.name,
+      balance: portfolio.balance,
+      currency: portfolio.currency,
+      positionCount: portfolio.positions.length,
+      totalProfit: portfolio.positions.reduce((sum, pos) => sum + (pos.profit || 0), 0)
+    })) || [];
+
+    res.json(portfolioSummary);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch user notifications' });
+    res.status(500).json({ error: 'Failed to fetch portfolio summary' });
   }
 });
 
-// Mark notification as read
-router.put('/notifications/:id/read', authenticateToken, async (req, res) => {
+// Get user strategy summary
+router.get('/strategy/summary', authenticateToken, async (req, res) => {
   try {
-    await UserModel.update(req.params.id, { read: true });
-    res.status(204).send();
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to mark notification as read' });
-  }
-});
-
-// Delete notification
-router.delete('/notifications/:id', authenticateToken, async (req, res) => {
-  try {
-    await UserModel.delete(req.params.id);
-    res.status(204).send();
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete notification' });
-  }
-});
-
-// Get user activity log
-router.get('/activity', authenticateToken, async (req, res) => {
-  try {
-    const { limit = 10, offset = 0 } = req.query;
     const user = await UserModel.findById(req.user!.id);
-    res.json(user.activity || []);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const strategySummary = user.strategies?.map(strategy => ({
+      id: strategy.id,
+      name: strategy.name,
+      type: strategy.type,
+      isActive: strategy.isActive,
+      performance: strategy.performance
+    })) || [];
+
+    res.json(strategySummary);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch user activity log' });
+    res.status(500).json({ error: 'Failed to fetch strategy summary' });
   }
 });
 
@@ -95,7 +101,20 @@ router.get('/activity', authenticateToken, async (req, res) => {
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const user = await UserModel.findById(req.user!.id);
-    res.json(user.stats || {});
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const stats = {
+      totalPortfolios: user.portfolios?.length || 0,
+      totalStrategies: user.strategies?.length || 0,
+      totalPositions: user.portfolios?.reduce((sum, p) => sum + p.positions.length, 0) || 0,
+      activePositions: user.portfolios?.reduce((sum, p) => sum + p.positions.filter(pos => !pos.closeTime).length, 0) || 0,
+      totalProfit: user.portfolios?.reduce((sum, p) => 
+        sum + p.positions.reduce((pSum, pos) => pSum + (pos.profit || 0), 0), 0) || 0
+    };
+
+    res.json(stats);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user statistics' });
   }

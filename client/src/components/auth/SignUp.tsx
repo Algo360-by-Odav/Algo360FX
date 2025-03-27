@@ -15,6 +15,7 @@ const SignUp: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +24,7 @@ const SignUp: React.FC = () => {
       return;
     }
 
+    setIsLoading(true);
     try {
       const response = await authService.signUp(email, password, email);
       if (response.success) {
@@ -33,25 +35,45 @@ const SignUp: React.FC = () => {
       }
     } catch (error: any) {
       enqueueSnackbar(error.message || 'Sign up failed', { variant: 'error' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleVerification = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
+      // First, try to sign out any existing session
+      await authService.signOut();
+      
       const response = await authService.confirmSignUp(email, verificationCode);
       if (response.success) {
         enqueueSnackbar('Email verified successfully', { variant: 'success' });
-        const signInResponse = await authService.signIn(email, password);
-        if (signInResponse.success) {
-          login();
-          navigate('/dashboard');
+        
+        // Sign in the user after successful verification
+        try {
+          const signInResponse = await authService.signIn(email, password);
+          if (signInResponse.success) {
+            await login(); // Wait for login to complete
+            navigate('/dashboard', { replace: true }); // Use replace to prevent going back to signup
+          } else {
+            // If sign in fails, redirect to login page
+            enqueueSnackbar('Please sign in with your credentials', { variant: 'info' });
+            navigate('/login', { replace: true });
+          }
+        } catch (signInError: any) {
+          console.error('Sign in error:', signInError);
+          enqueueSnackbar('Please sign in with your credentials', { variant: 'info' });
+          navigate('/login', { replace: true });
         }
       } else {
         enqueueSnackbar(response.message || 'Verification failed', { variant: 'error' });
       }
     } catch (error: any) {
       enqueueSnackbar(error.message || 'Verification failed', { variant: 'error' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -82,6 +104,7 @@ const SignUp: React.FC = () => {
                 autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
               />
               <TextField
                 margin="normal"
@@ -94,6 +117,7 @@ const SignUp: React.FC = () => {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
               />
               <TextField
                 margin="normal"
@@ -106,6 +130,7 @@ const SignUp: React.FC = () => {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={isLoading}
               />
             </>
           ) : (
@@ -118,10 +143,25 @@ const SignUp: React.FC = () => {
               id="verificationCode"
               value={verificationCode}
               onChange={(e) => setVerificationCode(e.target.value)}
+              disabled={isLoading}
             />
           )}
-          <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
-            {isVerifying ? 'Verify' : 'Sign Up'}
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Processing...' : isVerifying ? 'Verify' : 'Sign Up'}
+          </Button>
+          <Button
+            fullWidth
+            variant="text"
+            onClick={() => navigate('/login')}
+            disabled={isLoading}
+          >
+            Already have an account? Sign In
           </Button>
         </Box>
       </Box>

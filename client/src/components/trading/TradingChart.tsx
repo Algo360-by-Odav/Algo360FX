@@ -1,88 +1,53 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { createChart, IChartApi, ISeriesApi, LineData } from 'lightweight-charts';
 import { Box } from '@mui/material';
-import { createChart, IChartApi, Time } from 'lightweight-charts';
-import { useStore } from '@/context/StoreContext';
+import { observer } from 'mobx-react-lite';
+import { priceService, PriceUpdate } from '../../services/priceService';
 
-interface ChartData {
-  time: Time;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume?: number;
+interface TradingChartProps {
+  symbol: string;
 }
 
-const TradingChart = () => {
-  const { tradingStore } = useStore();
+const TradingChart: React.FC<TradingChartProps> = observer(({ symbol }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<'candlestick'> | null>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
+    // Create chart instance
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
-      height: 400,
+      height: 500,
       layout: {
-        background: { color: '#ffffff' },
-        textColor: '#333',
+        background: { color: '#131722' },
+        textColor: '#d1d4dc',
       },
       grid: {
-        vertLines: { color: '#f0f0f0' },
-        horzLines: { color: '#f0f0f0' },
-      },
-      crosshair: {
-        mode: 0,
-      },
-      rightPriceScale: {
-        borderColor: '#f0f0f0',
+        vertLines: { color: '#1f2937' },
+        horzLines: { color: '#1f2937' },
       },
       timeScale: {
-        borderColor: '#f0f0f0',
+        timeVisible: true,
+        secondsVisible: false,
       },
     });
-
-    const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#4caf50',
-      downColor: '#ef5350',
-      borderVisible: false,
-      wickUpColor: '#4caf50',
-      wickDownColor: '#ef5350',
-    });
-
-    const volumeSeries = chart.addHistogramSeries({
-      color: '#26a69a',
-      priceFormat: {
-        type: 'volume',
-      },
-      priceScaleId: '',
-    });
-
-    volumeSeries.priceScale().applyOptions({
-      scaleMargins: {
-        top: 0.8,
-        bottom: 0,
-      },
-    });
-
-    const formattedData: ChartData[] = tradingStore.historicalData.map((item) => ({
-      time: item.time as Time,
-      open: item.open,
-      high: item.high,
-      low: item.low,
-      close: item.close,
-      volume: item.volume,
-    }));
-
-    candlestickSeries.setData(formattedData);
-    volumeSeries.setData(formattedData.map(item => ({
-      time: item.time,
-      value: item.volume || 0,
-      color: item.close >= item.open ? '#4caf50' : '#ef5350',
-    })));
 
     chartRef.current = chart;
 
+    // Create candlestick series
+    const candlestickSeries = chart.addCandlestickSeries({
+      upColor: '#26a69a',
+      downColor: '#ef5350',
+      borderVisible: false,
+      wickUpColor: '#26a69a',
+      wickDownColor: '#ef5350',
+    });
+
+    seriesRef.current = candlestickSeries;
+
+    // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
@@ -93,15 +58,48 @@ const TradingChart = () => {
 
     window.addEventListener('resize', handleResize);
 
+    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
       if (chartRef.current) {
         chartRef.current.remove();
       }
     };
-  }, [tradingStore.historicalData]);
+  }, []);
 
-  return <Box ref={chartContainerRef} sx={{ width: '100%', height: 400 }} />;
-};
+  useEffect(() => {
+    if (!seriesRef.current) return;
+
+    const handlePriceUpdate = (update: PriceUpdate) => {
+      const time = new Date(update.timestamp).getTime() / 1000;
+      seriesRef.current?.update({
+        time,
+        open: update.bid,
+        high: update.ask,
+        low: update.bid,
+        close: update.ask,
+      });
+    };
+
+    priceService.subscribe(symbol, handlePriceUpdate);
+
+    return () => {
+      priceService.unsubscribe(symbol, handlePriceUpdate);
+    };
+  }, [symbol]);
+
+  return (
+    <Box
+      ref={chartContainerRef}
+      sx={{
+        width: '100%',
+        height: '100%',
+        '& .tv-lightweight-charts': {
+          width: '100% !important',
+        },
+      }}
+    />
+  );
+});
 
 export default TradingChart;

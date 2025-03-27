@@ -8,26 +8,26 @@ datasource db {
 }
 
 model User {
-  id            String           @id @default(uuid())
-  email         String           @unique
+  id            String          @id @default(uuid())
+  email         String          @unique
   password      String
-  username      String           @unique
+  username      String          @unique
   firstName     String?
   lastName      String?
-  emailVerified Boolean          @default(false)
-  tokenVersion  Int              @default(0)
-  role          Role             @default(USER)
-  preferences   Json?            @default("{\"theme\": \"light\"}")
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  portfolios    Portfolio[]
-  signals       Signal[]
-  trades        Trade[]
+  emailVerified Boolean         @default(false)
+  tokenVersion  Int             @default(0)
+  role          Role            @default(USER)
+  preferences   Json?           @default("{\"theme\": \"light\"}")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  aiResponses   AIResponse[]
   analytics     Analytics[]
   documentation Documentation[]
   marketData    MarketData[]
-  aiResponses   AIResponse[]
+  portfolios    Portfolio[]
+  signals       Signal[]
   strategies    Strategy[]
+  trades        Trade[]
 }
 
 model Trade {
@@ -66,34 +66,34 @@ model Portfolio {
   id          String     @id @default(uuid())
   userId      String
   name        String
-  description String?
   balance     Float      @default(0)
   currency    String     @default("USD")
-  metadata    Json?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  description String?
+  metadata    Json?
   user        User       @relation(fields: [userId], references: [id])
   positions   Position[]
 }
 
 model Position {
   id          String    @id @default(uuid())
-  portfolioId String
-  strategyId  String
   symbol      String
-  type        String    // LONG or SHORT
-  size        Float
-  entryPrice  Float
-  exitPrice   Float?
-  stopLoss    Float?
-  takeProfit  Float?
-  status      String    // OPEN, CLOSED, PENDING
+  type        String
   openTime    DateTime
   closeTime   DateTime?
   profit      Float?
-  metadata    Json?
+  status      String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  entryPrice  Float
+  exitPrice   Float?
+  metadata    Json?
+  portfolioId String
+  size        Float
+  stopLoss    Float?
+  strategyId  String
+  takeProfit  Float?
   portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
   strategy    Strategy  @relation(fields: [strategyId], references: [id])
 
@@ -104,18 +104,18 @@ model Position {
 }
 
 model Analytics {
-  id               String        @id @default(uuid())
-  name             String
-  description      String
-  category         String
-  type             AnalyticsType
-  data             Json
-  parameters       Json?         @default("{}")
-  createdBy        String
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  user             User          @relation(fields: [createdBy], references: [id])
-  strategies       Strategy[]    @relation("AnalyticsToStrategy")
+  id          String        @id @default(uuid())
+  name        String
+  description String
+  category    String
+  type        AnalyticsType
+  data        Json
+  parameters  Json?         @default("{}")
+  createdBy   String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [createdBy], references: [id])
+  strategies  Strategy[]    @relation("AnalyticsToStrategy")
 
   @@index([name])
   @@index([category])
@@ -123,35 +123,35 @@ model Analytics {
 
 model Strategy {
   id          String      @id @default(uuid())
-  userId      String
   name        String
   description String
-  type        String
-  parameters  Json
-  isActive    Boolean     @default(true)
-  performance Json?
-  metadata    Json?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  isActive    Boolean     @default(true)
+  metadata    Json?
+  parameters  Json
+  performance Json?
+  type        String
+  userId      String
+  positions   Position[]
   user        User        @relation(fields: [userId], references: [id])
   analytics   Analytics[] @relation("AnalyticsToStrategy")
-  positions   Position[]
 
   @@index([userId])
 }
 
 model Documentation {
-  id          String           @id @default(uuid())
-  title       String
-  content     String
-  category    String
-  tags        String[]
-  createdBy   String
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  user        User             @relation(fields: [createdBy], references: [id])
-  relatedDocs Documentation[]  @relation("RelatedDocumentation")
-  relatedTo   Documentation[]  @relation("RelatedDocumentation")
+  id              String          @id @default(uuid())
+  title           String
+  content         String
+  category        String
+  tags            String[]
+  createdBy       String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  user            User            @relation(fields: [createdBy], references: [id])
+  Documentation_A Documentation[] @relation("RelatedDocumentation")
+  Documentation_B Documentation[] @relation("RelatedDocumentation")
 
   @@index([title])
   @@index([category])
@@ -159,19 +159,19 @@ model Documentation {
 }
 
 model MarketData {
-  id                String   @id @default(uuid())
-  symbol            String
-  timeframe         String   @default("1h")
-  data              Json
-  sentiment         Json?
-  news              Json?
-  correlations      Json?
-  volatility        Json?
-  lastUpdated       DateTime @default(now())
-  createdBy         String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [createdBy], references: [id])
+  id           String   @id @default(uuid())
+  symbol       String
+  timeframe    String   @default("1h")
+  data         Json
+  sentiment    Json?
+  news         Json?
+  correlations Json?
+  volatility   Json?
+  lastUpdated  DateTime @default(now())
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [createdBy], references: [id])
 
   @@unique([symbol, timeframe])
   @@index([symbol])
@@ -180,14 +180,14 @@ model MarketData {
 }
 
 model AIResponse {
-  id          String   @id @default(uuid())
-  prompt      String   @db.Text
-  response    String   @db.Text
-  model       String
-  createdBy   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [createdBy], references: [id])
+  id        String   @id @default(uuid())
+  prompt    String
+  response  String
+  model     String
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [createdBy], references: [id])
 
   @@unique([prompt, model])
   @@index([model])

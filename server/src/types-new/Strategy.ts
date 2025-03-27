@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { TimeFrame } from './MarketData';
 import { Position } from './Position';
 import { User } from './User';
-import { InputJsonValue, JsonValue } from '@prisma/client/runtime/library';
+import { JsonValue } from '@prisma/client/runtime/library';
 
 export enum StrategyType {
   TREND_FOLLOWING = 'TREND_FOLLOWING',
@@ -44,10 +44,10 @@ export interface Strategy {
   name: string;
   type: string;
   description: string;
-  parameters: InputJsonValue;
+  parameters: JsonValue;
   isActive: boolean;
-  performance: InputJsonValue | null;
-  metadata: InputJsonValue | null;
+  performance: JsonValue | null;
+  metadata: JsonValue | null;
   createdAt: Date;
   updatedAt: Date;
   lastExecuted?: Date;
@@ -64,21 +64,21 @@ export type StrategyCreateInput = {
   name: string;
   type: string;
   description: string;
-  parameters: InputJsonValue;
+  parameters: JsonValue;
   userId: string;
   isActive?: boolean;
-  performance?: InputJsonValue | null;
-  metadata?: InputJsonValue | null;
+  performance?: JsonValue | null;
+  metadata?: JsonValue | null;
 };
 
 export type StrategyUpdateInput = {
   name?: string;
   type?: string;
   description?: string;
-  parameters?: InputJsonValue;
+  parameters?: JsonValue;
   isActive?: boolean;
-  performance?: InputJsonValue | null;
-  metadata?: InputJsonValue | null;
+  performance?: JsonValue | null;
+  metadata?: JsonValue | null;
 };
 
 export type StrategyWhereInput = {

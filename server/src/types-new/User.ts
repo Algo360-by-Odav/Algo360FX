@@ -1,11 +1,10 @@
 import { Prisma, Role } from '@prisma/client';
-import { Position } from './Position';
+import { Position, PositionType, PositionStatus } from './Position';
 import { Strategy } from './Strategy';
 
 export type UserRole = 'USER' | 'ADMIN';
 
 export interface UserPreferences {
-  [key: string]: any;
   theme?: 'light' | 'dark';
   notifications?: {
     email?: boolean;
@@ -26,21 +25,52 @@ export interface UserPreferences {
   };
 }
 
+export interface Portfolio {
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  balance: number;
+  currency: string;
+  metadata: Prisma.JsonValue | null;
+  positions: {
+    id: string;
+    portfolioId: string;
+    strategyId: string;
+    symbol: string;
+    type: PositionType;
+    status: PositionStatus;
+    openTime: Date;
+    closeTime: Date | null;
+    entryPrice: number;
+    exitPrice: number | null;
+    size: number;
+    profit: number | null;
+    stopLoss: number | null;
+    takeProfit: number | null;
+    metadata: Prisma.JsonValue | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface User {
   id: string;
   email: string;
   username: string;
-  password?: string;
+  password: string;
   firstName: string | null;
   lastName: string | null;
   emailVerified: boolean;
   tokenVersion: number;
   role: Role;
-  preferences: Prisma.JsonValue;
+  preferences: Prisma.JsonValue | null;
   createdAt: Date;
   updatedAt: Date;
   strategies?: Strategy[];
-  portfolios?: Position[];
+  portfolios?: Portfolio[];
 }
 
 export interface UserWithRelations extends User {

@@ -2,7 +2,8 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { connectDB, disconnectDB } from './config/database';
-import { Config } from './config/config';
+import { initializeRedis, closeRedis } from './config/redis';
+import { config } from './config/config';
 import app from './app';
 import logger from './utils/logger';
 import { TradingWebSocketServer } from './websocket/trading';
@@ -26,6 +27,16 @@ async function startServer() {
     await connectDB();
     logger.info('Connected to database successfully');
 
+    // Initialize Redis (optional in development)
+    try {
+      await initializeRedis();
+    } catch (error) {
+      if (process.env.NODE_ENV === 'production') {
+        throw error;
+      }
+      logger.warn('Failed to connect to Redis. Running without Redis in development mode.');
+    }
+
     // Initialize WebSocket server
     await tradingWs.initialize();
     logger.info('WebSocket server initialized');
@@ -46,6 +57,10 @@ async function startServer() {
           // Close WebSocket connections
           await tradingWs.close();
           logger.info('Closed WebSocket connections');
+
+          // Close Redis connection
+          await closeRedis();
+          logger.info('Closed Redis connection');
 
           // Disconnect from database
           await disconnectDB();

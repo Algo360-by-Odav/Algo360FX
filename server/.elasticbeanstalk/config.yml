@@ -1,13 +1,9 @@
 branch-defaults:
-  security-updates:
-    environment: Algo360fx-env
+  default:
+    environment: prod2
     group_suffix: null
-
-deploy:
-  artifact: dist.zip
-
 global:
-  application_name: Algo360FX
+  application_name: algo360fx-api-v2
   branch: null
   default_ec2_keyname: null
   default_platform: Node.js 18
@@ -18,5 +14,5 @@ global:
   platform_version: null
   profile: null
   repository: null
-  sc: git
+  sc: null
   workspace_type: Application
