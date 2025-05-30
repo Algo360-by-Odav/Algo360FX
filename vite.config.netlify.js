@@ -36,13 +36,40 @@ export default defineConfig({
       ],
       output: {
         // Manual chunking for better performance
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'material-ui': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
-          'charts': ['chart.js', 'react-chartjs-2', '@mui/x-charts'],
-          'ai-features': ['client/src/components/chat'],
-          'wallet-features': ['client/src/components/wallet'],
-          'trading-features': ['client/src/components/trading'],
+        manualChunks: (id) => {
+          // Vendor dependencies
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-react';
+            }
+            if (id.includes('@mui') || id.includes('@emotion')) {
+              return 'vendor-mui';
+            }
+            if (id.includes('chart.js') || id.includes('chartjs-') || id.includes('x-charts')) {
+              return 'vendor-charts';
+            }
+            return 'vendor-other';
+          }
+          
+          // Application code
+          if (id.includes('/components/chat/')) {
+            return 'app-ai-features';
+          }
+          if (id.includes('/components/wallet/')) {
+            return 'app-wallet-features';
+          }
+          if (id.includes('/components/trading/') || id.includes('/pages/advanced')) {
+            return 'app-trading-features';
+          }
+          if (id.includes('/components/nft/')) {
+            return 'app-nft-features';
+          }
+          if (id.includes('/components/marketplace/')) {
+            return 'app-marketplace';
+          }
+          
+          // Default chunk
+          return null;
         }
       }
     },
