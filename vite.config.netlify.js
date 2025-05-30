@@ -22,6 +22,7 @@ export default defineConfig({
         'chartjs-adapter-date-fns',
         '@stripe/stripe-js',
         'file-saver',
+        '@ethersproject/providers',
       ],
     },
   },
