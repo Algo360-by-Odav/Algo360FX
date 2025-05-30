@@ -25,15 +25,13 @@ import {
   Tooltip as ChartTooltip,
   Legend,
   ArcElement,
-  TimeScale,
   LineElement,
   PointElement,
 } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../stores/StoreProvider';
-import { format, subDays } from 'date-fns';
-import 'chartjs-adapter-date-fns';
+import { format, subDays, parseISO } from 'date-fns';
 import {
   calculateCorrelation,
   extractCommonWords,
@@ -51,7 +49,6 @@ ChartJS.register(
   ChartTooltip,
   Legend,
   ArcElement,
-  TimeScale,
   LineElement,
   PointElement
 );
