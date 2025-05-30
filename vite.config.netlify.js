@@ -23,6 +23,7 @@ export default defineConfig({
         '@stripe/stripe-js',
         'file-saver',
         '@ethersproject/providers',
+        '@ethersproject/contracts',
       ],
     },
   },
