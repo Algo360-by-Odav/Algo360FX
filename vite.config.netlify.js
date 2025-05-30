@@ -6,6 +6,10 @@ import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Set base path for deployment
+  base: '/',
+  // Set correct entry point
+  root: './',
   plugins: [
     react(),
     VitePWA({ 
