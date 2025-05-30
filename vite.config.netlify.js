@@ -8,25 +8,14 @@ import path from 'path';
 export default defineConfig({
   // Set base path for deployment
   base: '/',
-  // Set correct entry point
-  root: './',
-  plugins: [
-    react(),
-    VitePWA({ 
-      registerType: 'autoUpdate',
-      workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
-      },
-    })
-  ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './client/src'),
-    },
-  },
+  // Entry point configuration
   build: {
+    outDir: 'dist',
     chunkSizeWarningLimit: 4000, // 4MB
     rollupOptions: {
+      input: {
+        main: './index.html',
+      },
       // Externalize problematic dependencies
       external: [
         'chartjs-adapter-date-fns',
@@ -76,6 +65,20 @@ export default defineConfig({
           return null;
         }
       }
+    },
+  },
+  plugins: [
+    react(),
+    VitePWA({ 
+      registerType: 'autoUpdate',
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
+      },
+    })
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './client/src'),
     },
   },
 });
