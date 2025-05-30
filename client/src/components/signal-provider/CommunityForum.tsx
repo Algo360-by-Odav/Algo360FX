@@ -207,7 +207,7 @@ const generateMockComments = (topicId: number) => {
       author: 'Risk Manager',
       authorAvatar: 'R',
       date: '2025-05-21T10:20:00Z',
-      content: 'I recommend starting with 1% risk per trade until you get comfortable with how the provider operates. You can always increase it later once you've built confidence in their performance.',
+      content: "I recommend starting with 1% risk per trade until you get comfortable with how the provider operates. You can always increase it later once you've built confidence in their performance.",
       likes: 12,
       dislikes: 0,
     });
