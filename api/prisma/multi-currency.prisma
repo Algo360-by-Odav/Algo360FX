@@ -1,0 +1,53 @@
+// Multi-currency models for Prisma Schema
+// Include these models in your main schema.prisma file
+
+// Currency wallet model
+model CurrencyWallet {
+  id              String    @id @default(uuid())
+  userId          String
+  currency        String    // ISO currency code (e.g., USD, EUR, GBP)
+  balance         Float     @default(0)
+  isDefault       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id])
+  transactions    CurrencyTransaction[]
+  
+  @@unique([userId, currency])
+  @@map("currency_wallets")
+}
+
+// Currency transaction model
+model CurrencyTransaction {
+  id              String    @id @default(uuid())
+  walletId        String
+  amount          Float
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
+  description     String?
+  reference       String?
+  paymentMethodId String?
+  fromCurrency    String?   // Source currency for conversions
+  toCurrency      String?   // Target currency for conversions
+  exchangeRate    Float?    // Exchange rate used for conversions
+  fee             Float?    // Transaction fee
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  wallet          CurrencyWallet @relation(fields: [walletId], references: [id])
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  
+  @@map("currency_transactions")
+}
+
+// Exchange rate history model
+model ExchangeRate {
+  id              String    @id @default(uuid())
+  fromCurrency    String    // Source currency (e.g., USD)
+  toCurrency      String    // Target currency (e.g., EUR)
+  rate            Float     // Exchange rate (1 fromCurrency = rate toCurrency)
+  timestamp       DateTime  @default(now())
+  source          String?   // Data source for the exchange rate
+  
+  @@index([fromCurrency, toCurrency, timestamp])
+  @@map("exchange_rates")
+}

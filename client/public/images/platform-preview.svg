@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#1A2C42"/>
+  
+  <!-- Header -->
+  <rect width="1200" height="60" fill="#243B55"/>
+  
+  <!-- Sidebar -->
+  <rect x="0" y="60" width="200" height="740" fill="#243B55"/>
+  
+  <!-- Main chart area -->
+  <rect x="210" y="70" width="970" height="400" fill="#1E2A3B"/>
+  
+  <!-- Chart grid lines -->
+  <g stroke="#2A3F5F" stroke-width="1">
+    <line x1="210" y1="170" x2="1180" y2="170"/>
+    <line x1="210" y1="270" x2="1180" y2="270"/>
+    <line x1="210" y1="370" x2="1180" y2="370"/>
+  </g>
+  
+  <!-- Mock candlesticks -->
+  <g>
+    <!-- Generated using JavaScript to create random candlesticks -->
+    <path d="M230 270 L230 170 M235 220 L235 170 L225 170 L225 220 Z" fill="#4CAF50" stroke="#4CAF50"/>
+    <path d="M260 270 L260 370 M265 320 L265 370 L255 370 L255 320 Z" fill="#F44336" stroke="#F44336"/>
+    <path d="M290 270 L290 170 M295 220 L295 170 L285 170 L285 220 Z" fill="#4CAF50" stroke="#4CAF50"/>
+    <!-- Add more candlesticks here -->
+  </g>
+  
+  <!-- Order book -->
+  <rect x="210" y="480" width="480" height="300" fill="#1E2A3B"/>
+  <text x="220" y="500" fill="white" font-family="Arial" font-size="14">Order Book</text>
+  
+  <!-- Trades list -->
+  <rect x="700" y="480" width="480" height="300" fill="#1E2A3B"/>
+  <text x="710" y="500" fill="white" font-family="Arial" font-size="14">Recent Trades</text>
+  
+  <!-- Labels -->
+  <text x="220" y="90" fill="white" font-family="Arial" font-size="14">EUR/USD</text>
+  <text x="300" y="90" fill="#4CAF50" font-family="Arial" font-size="14">1.2345</text>
+  <text x="360" y="90" fill="#888888" font-family="Arial" font-size="14">+0.05%</text>
+  
+  <!-- Mock data rows -->
+  <g fill="#4CAF50">
+    <rect x="220" y="520" width="460" height="1"/>
+    <rect x="220" y="550" width="460" height="1"/>
+    <rect x="220" y="580" width="460" height="1"/>
+    <rect x="220" y="610" width="460" height="1"/>
+    <rect x="220" y="640" width="460" height="1"/>
+    <rect x="220" y="670" width="460" height="1"/>
+    <rect x="220" y="700" width="460" height="1"/>
+    <rect x="220" y="730" width="460" height="1"/>
+  </g>
+  
+  <g fill="#F44336">
+    <rect x="710" y="520" width="460" height="1"/>
+    <rect x="710" y="550" width="460" height="1"/>
+    <rect x="710" y="580" width="460" height="1"/>
+    <rect x="710" y="610" width="460" height="1"/>
+    <rect x="710" y="640" width="460" height="1"/>
+    <rect x="710" y="670" width="460" height="1"/>
+    <rect x="710" y="700" width="460" height="1"/>
+    <rect x="710" y="730" width="460" height="1"/>
+  </g>
+</svg>

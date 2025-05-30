@@ -1,0 +1,261 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+yarn.lock
+package-lock.json
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+.env.staging
+
+# Build Output
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+
+# TypeScript
+*.tsbuildinfo
+.tsbuildinfo
+*.d.ts
+!src/**/*.d.ts
+types/
+dist/
+tsconfig.tsbuildinfo
+.tscache/
+*.js.map
+
+# Testing
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+cypress/videos/
+cypress/screenshots/
+*.lcov
+
+# Test coverage
+.coverage/
+coverage.json
+/server/coverage/
+/client/coverage/
+test-report.xml
+coverage-report/
+coverage-final.json
+clover.xml
+
+# IDE and Editor Files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+*.code-workspace
+
+# Logs and Debugging
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+debug.log
+
+# Runtime Data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Cache and Temporary Files
+.cache/
+.temp/
+.tmp/
+*.tmp
+*.temp
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# MongoDB
+.cache/
+**/mongodb-binaries/
+*.lock
+mongodb-*.tgz
+mongosh-*.tgz
+mongod.log
+dump/
+data/db/
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+prisma/migrations/
+prisma/.env
+mongodb/
+.mongodb/
+
+# Certificates and Keys
+*.pem
+*.key
+*.crt
+*.csr
+*.srl
+*.p12
+*.pfx
+
+# SSL Certificates
+certs/
+.certs/
+ssl/
+.ssl/
+
+# Backups
+*.bak
+*.backup
+*.old
+*.orig
+*.swp
+
+# Platform Specific
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.directory
+
+# Package Managers
+.npm/
+.yarn/
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+
+# Build Tools
+.gradle/
+.maven/
+target/
+build/
+dist/
+
+# Documentation
+docs/_site/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+.docusaurus/
+
+# Trading Platform Specific
+trading-data/
+backtests/
+*.mt4
+*.mt5
+*.ex4
+*.ex5
+*.mq4
+*.mq5
+charts/
+signals/
+strategies/compiled/
+
+# AI/ML Models
+models/
+*.onnx
+*.h5
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.tfmodel
+*.tflite
+
+# Monitoring and Analytics
+.grafana/
+.prometheus/
+metrics/
+analytics/
+
+# Client-side
+.angular/
+.ionic/
+.webpack/
+.parcel-cache/
+storybook-static/
+
+# Vite
+*.timestamp-*.mjs
+.vite/
+vite.config.*.mjs
+vite.config.*.timestamp.mjs
+
+# MetaAPI
+.metaapi/
+**/.metaapi/
+*.bin
+MetaApi-*.bin
+MetaApi-*.json
+metaapi.*.log
+metaapi-*.log
+
+# Trading Data
+trading-data/
+historical-data/
+backtests/
+*.mt4
+*.mt5
+*.ex4
+*.ex5
+*.set
+
+# Misc
+.vercel
+.netlify
+.firebase/
+*.zip
+*.tar.gz
+*.rar
+.history/
+
+#amplify-do-not-edit-begin
+amplify/\#current-cloud-backend
+amplify/.config/local-*
+amplify/logs
+amplify/mock-data
+amplify/mock-api-resources
+amplify/backend/amplify-meta.json
+amplify/backend/.temp
+build/
+dist/
+node_modules/
+aws-exports.js
+awsconfiguration.json
+amplifyconfiguration.json
+amplifyconfiguration.dart
+amplify-build-config.json
+amplify-gradle-config.json
+amplifytools.xcconfig
+.secret-*
+**.sample
+#amplify-do-not-edit-end
+.qodo

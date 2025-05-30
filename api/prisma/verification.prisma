@@ -1,0 +1,21 @@
+// Verification models for Prisma Schema
+// Include these models in your main schema.prisma file
+
+// Withdrawal verification model
+model WithdrawalVerification {
+  id                String    @id @default(uuid())
+  userId            String
+  withdrawalId      String    // Reference to the transaction ID
+  verificationMethod String    // "EMAIL" or "SMS"
+  verificationCode  String    // Hashed verification code
+  isVerified        Boolean   @default(false)
+  attempts          Int       @default(0)
+  expiresAt         DateTime
+  verifiedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  user              User      @relation(fields: [userId], references: [id])
+  
+  @@index([withdrawalId])
+  @@index([userId, withdrawalId])
+  @@map("withdrawal_verifications")
+}

@@ -1,0 +1,10 @@
+// This is a minimal version of AppContext.tsx that doesn't use JSX or TypeScript features
+// It simply re-exports from the JavaScript version to avoid Vite React plugin errors
+
+// @ts-nocheck - Disable TypeScript checking for this file
+
+// Import from the JavaScript version
+import { AppContext, AppProvider, useApp } from './AppContext.js';
+
+// Re-export everything
+export { AppContext, AppProvider, useApp };

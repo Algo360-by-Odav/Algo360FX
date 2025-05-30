@@ -1,0 +1,43 @@
+# Redirect all API requests to the backend server
+/api/*  https://api.algo360fx.com/:splat  200
+/ws/*   wss://ws.algo360fx.com/:splat     101
+
+# Handle SPA routes
+/*      /index.html                        200
+
+# Redirect www to non-www
+http://www.algo360fx.com/*     https://algo360fx.com/:splat     301!
+https://www.algo360fx.com/*    https://algo360fx.com/:splat     301!
+
+# Redirect HTTP to HTTPS
+http://algo360fx.com/*         https://algo360fx.com/:splat     301!
+
+# Redirect old paths to new ones
+/dashboard.html    /dashboard    301
+/signals.html      /signals      301
+/portfolio.html    /portfolio    301
+/settings.html     /settings     301
+
+# Handle versioned documentation
+/docs/v1/*         /docs/v1/index.html     200
+/docs/v2/*         /docs/v2/index.html     200
+/docs/*            /docs/latest/index.html  200
+
+# Handle language-specific routes
+/en/*             /en/index.html           200
+/es/*             /es/index.html           200
+/zh/*             /zh/index.html           200
+
+# Error pages
+/404.html         /404                     404
+/500.html         /500                     500
+
+# Security headers for specific paths
+/assets/*         /assets/:splat           200
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=31536000, immutable
+
+/api/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization

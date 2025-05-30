@@ -1,0 +1,35 @@
+graph TB
+    A[Technical Architecture] --> B[Frontend]
+    A --> C[Backend]
+    A --> D[Data Processing]
+    A --> E[Infrastructure]
+
+    B --> B1[React]
+    B --> B2[MobX]
+    B --> B3[Material UI]
+    B --> B4[TradingView]
+
+    C --> C1[Node.js]
+    C --> C2[TypeScript]
+    C --> C3[WebSocket]
+    C --> C4[REST API]
+
+    D --> D1[Real-time Processing]
+    D --> D2[ML/AI Analysis]
+    D --> D3[Market Data]
+    D --> D4[Risk Analytics]
+
+    E --> E1[Cloud Infrastructure]
+    E --> E2[Load Balancing]
+    E --> E3[Data Security]
+    E --> E4[Monitoring]
+
+    classDef frontend fill:#e8eaf6,stroke:#1a237e
+    classDef backend fill:#e0f2f1,stroke:#004d40
+    classDef data fill:#fff3e0,stroke:#e65100
+    classDef infra fill:#fce4ec,stroke:#880e4f
+    
+    class B,B1,B2,B3,B4 frontend
+    class C,C1,C2,C3,C4 backend
+    class D,D1,D2,D3,D4 data
+    class E,E1,E2,E3,E4 infra

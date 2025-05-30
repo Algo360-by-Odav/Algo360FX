@@ -1,0 +1,242 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  username          String             @unique
+  password          String
+  firstName         String?
+  lastName          String?
+  isVerified        Boolean            @default(false)
+  role              Role               @default(USER)
+  preferences       Json?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  refreshTokens     RefreshToken[]
+  tradingStrategies TradingStrategy[]
+  portfolios        Portfolio[]
+  positions         Position[]
+  orders            Order[]
+  subscriptions     Subscription[]
+  purchases         Purchase[]
+  miningRigs        MiningRig[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model TradingStrategy {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  config      Json
+  isActive    Boolean   @default(false)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("trading_strategies")
+}
+
+model Portfolio {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  balance     Float      @default(0)
+  currency    String     @default("USD")
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  positions   Position[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("portfolios")
+}
+
+model Position {
+  id          String    @id @default(cuid())
+  symbol      String
+  quantity    Float
+  entryPrice  Float
+  currentPrice Float?
+  portfolioId String?
+  portfolio   Portfolio? @relation(fields: [portfolioId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  orders      Order[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("positions")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  type        OrderType
+  status      OrderStatus @default(PENDING)
+  symbol      String
+  quantity    Float
+  price       Float?
+  stopPrice   Float?
+  limitPrice  Float?
+  positionId  String?
+  position    Position?   @relation(fields: [positionId], references: [id])
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  executedAt  DateTime?
+
+  @@map("orders")
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+  STOP
+  STOP_LIMIT
+}
+
+enum OrderStatus {
+  PENDING
+  FILLED
+  PARTIALLY_FILLED
+  CANCELLED
+  REJECTED
+  EXPIRED
+}
+
+model MarketData {
+  id         String   @id @default(cuid())
+  symbol     String   @unique
+  name       String?
+  type       String   // forex, crypto, stock, etc.
+  price      Float
+  bid        Float?
+  ask        Float?
+  high       Float?
+  low        Float?
+  volume     Float?
+  change     Float?
+  changePercent Float?
+  lastUpdated DateTime @default(now())
+
+  @@map("market_data")
+}
+
+model Subscription {
+  id             String           @id @default(cuid())
+  planId         String
+  status         SubscriptionStatus @default(ACTIVE)
+  startDate      DateTime
+  endDate        DateTime?
+  autoRenew      Boolean          @default(true)
+  userId         String
+  user           User             @relation(fields: [userId], references: [id])
+  paymentMethod  String?
+  lastPaymentId  String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PAST_DUE
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  type        ProductType
+  price       Float
+  currency    String        @default("USD")
+  metadata    Json?
+  isActive    Boolean       @default(true)
+  purchases   Purchase[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("products")
+}
+
+enum ProductType {
+  EBOOK
+  COURSE
+  SIGNAL
+  STRATEGY
+  SUBSCRIPTION
+}
+
+model Purchase {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  amount      Float
+  currency    String    @default("USD")
+  status      PaymentStatus @default(PENDING)
+  paymentId   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("purchases")
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model MiningRig {
+  id          String    @id @default(cuid())
+  name        String
+  hashrate    Float
+  status      RigStatus @default(OFFLINE)
+  algorithm   String?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("mining_rigs")
+}
+
+enum RigStatus {
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+}
+
+enum Role {
+  USER
+  ADMIN
+}

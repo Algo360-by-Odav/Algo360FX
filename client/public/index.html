@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Algo360FX - Advanced Forex Trading Platform"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        connect-src 'self' ws: wss: https://*.amazonaws.com wss://*.amazonaws.com https://*.amazoncognito.com http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: https: blob:;
+        font-src 'self' data:;
+        frame-src 'self';
+        media-src 'self';
+        object-src 'none';
+      "
+    />
+    <link rel="apple-touch-icon" href="/logo192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>Algo360FX</title>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Algo360FX",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "1250"
+      },
+      "description": "Advanced algorithmic trading platform featuring forex, stocks, ETFs, and derivatives trading with real-time market data and analysis",
+      "featureList": [
+        "Real-time market data",
+        "Algorithmic trading capabilities",
+        "Multi-asset trading (Forex, Stocks, ETFs, Derivatives)",
+        "Advanced charting tools",
+        "Portfolio management",
+        "Risk analysis"
+      ],
+      "screenshot": "https://algo360fx.com/screenshot1.png",
+      "softwareVersion": "2.0.0",
+      "author": {
+        "@type": "Organization",
+        "name": "Algo360FX",
+        "url": "https://algo360fx.com",
+        "logo": "https://algo360fx.com/logo512.png"
+      },
+      "potentialAction": {
+        "@type": "ViewAction",
+        "target": "https://algo360fx.com/signup"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Algo360FX",
+      "url": "https://algo360fx.com",
+      "logo": "https://algo360fx.com/logo512.png",
+      "sameAs": [
+        "https://twitter.com/algo360fx",
+        "https://www.linkedin.com/company/algo360fx",
+        "https://github.com/algo360fx"
+      ],
+      "contactPoint": [
+        {
+          "@type": "ContactPoint",
+          "telephone": "+1-555-123-4567",
+          "contactType": "customer service",
+          "areaServed": ["US", "CA", "GB", "AU", "SG", "MY", "HK"],
+          "availableLanguage": [
+            "English",
+            "Chinese",
+            "Malay",
+            "Indonesian",
+            "Thai",
+            "Vietnamese",
+            "Japanese",
+            "Korean",
+            "Hindi",
+            "Arabic",
+            "Spanish",
+            "Portuguese"
+          ],
+          "hoursAvailable": "Mo-Fr 09:00-17:00"
+        },
+        {
+          "@type": "ContactPoint",
+          "telephone": "+60-3-1234-5678",
+          "contactType": "technical support",
+          "areaServed": ["MY", "SG", "ID", "TH", "VN", "PH"],
+          "availableLanguage": [
+            "English",
+            "Malay",
+            "Chinese",
+            "Indonesian",
+            "Thai",
+            "Vietnamese"
+          ],
+          "hoursAvailable": "Mo-Fr 09:00-18:00"
+        }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://algo360fx.com"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Trading",
+          "item": "https://algo360fx.com/trading"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Portfolio",
+          "item": "https://algo360fx.com/portfolio"
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "name": "Analysis",
+          "item": "https://algo360fx.com/analysis"
+        }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What trading instruments are available on Algo360FX?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Algo360FX offers a wide range of trading instruments including Forex pairs, Stocks (US, Asian, European markets), ETFs, Cryptocurrencies, Commodities, and Derivatives. We support major Malaysian stocks, structured warrants, and ETFs from Bursa Malaysia."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What Malaysian stocks and ETFs are available for trading?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We offer comprehensive coverage of Bursa Malaysia securities including: KLCI component stocks, Mid 70 stocks, Small Cap stocks, FTSE Bursa Malaysia ETFs, Islamic ETFs, and sector-specific ETFs. Major sectors include Banking (Maybank, CIMB, Public Bank), Telecommunications (Axiata, Digi, TM), Oil & Gas (Petronas), and Technology (MY E.G., Revenue Group)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How can I trade Malaysian structured warrants on Algo360FX?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Our platform supports trading of Malaysian structured warrants including call warrants (CW) and put warrants (PW) for major stocks, indices (KLCI), and commodities. We provide real-time warrant pricing, gearing ratios, and expiry information. Minimum lot size is 100 units with leverage up to 15x depending on the warrant type."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the trading hours for Malaysian markets?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Bursa Malaysia trading hours are: Pre-opening: 8:30am-9:00am, Morning session: 9:00am-12:30pm, Midday break: 12:30pm-2:30pm, Afternoon session: 2:30pm-5:00pm (Malaysia Time, GMT+8). Trading is closed on Malaysian public holidays."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the minimum requirements to start trading?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "To start trading, you need a verified account with minimum deposit requirements varying by account type: Basic ($100), Premium ($1000), or Professional ($5000). You'll also need a modern web browser with JavaScript enabled."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the fees for trading Malaysian securities?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "For Malaysian stocks: Brokerage fee: 0.1% to 0.5% (minimum RM8), Clearing fee: 0.03%, Stamp duty: 0.1% (maximum RM200). For structured warrants: Brokerage fee: 0.5% (minimum RM8). For ETFs: Brokerage fee: 0.3% (minimum RM8). All fees are subject to 6% Service Tax."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I comply with Bursa Malaysia's trading regulations?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Our platform automatically enforces Bursa Malaysia's trading rules including: Lot size requirements (100 shares), price limits (±30% for stocks, ±20% for warrants), short-selling restrictions, and margin requirements. We also provide real-time regulatory updates and compliance notifications."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What market analysis tools are available for Malaysian securities?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We offer comprehensive analysis tools including: Real-time KLCI index tracking, sector analysis, warrant pricing calculators, technical analysis with local market indicators, fundamental analysis with Malaysian company financials, and market sentiment analysis based on local news and events."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What trading features are available?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Our platform offers advanced charting, real-time market data, algorithmic trading capabilities, portfolio management, risk analysis tools, automated trading strategies, and comprehensive market analysis features."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Algo360FX available in my country?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Algo360FX is available in most countries across Asia Pacific, including Malaysia, Singapore, Indonesia, Thailand, Vietnam, Philippines, Hong Kong, Japan, and South Korea. We also serve clients in the US, UK, Canada, and Australia."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What customer support options are available?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We offer 24/5 customer support through live chat, email, and phone in multiple languages including English, Chinese, Malay, Indonesian, Thai, Vietnamese, Japanese, Korean, Hindi, Arabic, Spanish, and Portuguese."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What Islamic trading products are available on Algo360FX?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We offer a comprehensive suite of Shariah-compliant products including: FTSE Bursa Malaysia EMAS Shariah Index stocks, Islamic ETFs (MyETF MSCI Malaysia Islamic Dividend, MyETF Dow Jones Islamic Market Malaysia Titans 25), Islamic REITs, and Sukuk trading. All products are certified Shariah-compliant and regularly reviewed by our Shariah board."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Islamic trading differ from conventional trading on the platform?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Islamic trading accounts feature: No interest (riba) charges or payments, no overnight swap fees, instant execution to avoid gharar (uncertainty), and trading only in Shariah-compliant instruments. We provide specialized Islamic portfolio screening tools and Zakat calculation features."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the Shariah screening criteria for stocks?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We follow Bursa Malaysia's Shariah screening methodology: Business activity screening (avoiding non-halal activities) and financial ratio screening (debt ratio < 33%, cash/interest-bearing securities < 33%, accounts receivable/total assets < 49%). Our platform automatically filters stocks based on these criteria."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What regulatory licenses does Algo360FX hold?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We are licensed by Securities Commission Malaysia (SC) for dealing in securities and derivatives, Bank Negara Malaysia (BNM) for forex trading, and Labuan Financial Services Authority (LFSA) for digital assets. We also maintain compliance with PDPA 2010 for data protection."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Algo360FX ensure regulatory compliance?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We implement comprehensive compliance measures: Real-time trade monitoring, AML/CFT checks, risk management systems, regular audits, and automated regulatory reporting. Our platform enforces position limits, margin requirements, and trading restrictions as per regulatory guidelines."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the reporting requirements for Malaysian traders?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Malaysian traders must report: Large shareholding positions (>5%), insider trading declarations, contract note requirements, and annual trading summaries for tax purposes. Our platform generates automated reports and notifications to help maintain compliance."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What types of Islamic ETFs are available on Algo360FX?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We offer various Islamic ETFs: MyETF MSCI Malaysia Islamic Dividend (dividend-focused), MyETF Dow Jones Islamic Market Malaysia Titans 25 (large-cap Shariah), TradePlus MSCI Asia ex Japan Islamic REITs (property), and MyETF Thomson Reuters Asia Pacific ex-Japan Islamic Agribusiness (agriculture sector). Each ETF is certified Shariah-compliant and regularly reviewed by our Shariah board."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Sukuk trading work on the platform?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Our Sukuk trading platform supports various structures: Ijarah (lease-based), Murabahah (cost-plus), Musharakah (partnership), and Wakalah (agency). We provide real-time pricing, yield calculations, and credit ratings. Minimum investment starts at RM1,000 with detailed documentation of underlying assets and Shariah structures."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What Islamic derivatives and hedging instruments are available?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We offer Shariah-compliant derivatives: Wa'd (promise-based forwards), Islamic swaps based on commodity Murabahah, Islamic options using Urbun structure, and Islamic profit rate swaps. These instruments are designed for hedging purposes and comply with AAOIFI standards."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How are Islamic REITs different from conventional REITs?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Islamic REITs must comply with additional requirements: Property usage must be Shariah-compliant (no conventional banks, gambling, etc.), insurance must be Takaful, financing must be Islamic, and non-permissible rental income must be below 20%. Our platform automatically filters and monitors these requirements."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the specific features of Islamic money market instruments?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We offer Islamic money market instruments including: Commodity Murabahah deposits, Islamic commercial papers, Government Investment Issues (GII), and Islamic accepted bills. These instruments use various Shariah concepts like Mudarabah, Wakalah, and Tawarruq for liquidity management."
+          }
+        }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Course",
+      "name": "Algo360FX Trading Academy",
+      "description": "Comprehensive trading education program covering forex, stocks, ETFs, and algorithmic trading strategies",
+      "provider": {
+        "@type": "Organization",
+        "name": "Algo360FX",
+        "sameAs": "https://algo360fx.com"
+      },
+      "hasCourseInstance": [
+        {
+          "@type": "CourseInstance",
+          "name": "Forex Trading Fundamentals",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh", "ms", "id", "th", "vi"],
+          "duration": "P4W"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Algorithmic Trading Strategies",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh", "ms"],
+          "duration": "P6W"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Malaysian Market Analysis",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P3W"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Advanced Malaysian Warrant Trading",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P4W",
+          "description": "Master structured warrant trading, pricing models, and risk management strategies for Malaysian market"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "KLCI Technical Analysis Mastery",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P5W",
+          "description": "Advanced technical analysis specifically for KLCI stocks and indices"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Malaysian ETF Strategies",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P3W",
+          "description": "Advanced ETF trading strategies for Malaysian market including Islamic ETFs"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Quantitative Trading Systems",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P8W",
+          "description": "Build advanced algorithmic trading systems using machine learning and statistical analysis"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "High-Frequency Trading Architecture",
+          "courseMode": "online",
+          "inLanguage": ["en"],
+          "duration": "P10W",
+          "description": "Design and implement low-latency trading systems with advanced order execution"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Advanced Risk Management",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh", "ms"],
+          "duration": "P6W",
+          "description": "Master portfolio optimization, VaR analysis, and advanced hedging strategies"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Machine Learning in Trading",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P12W",
+          "description": "Apply deep learning and AI techniques to market prediction and trading strategies"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Islamic Trading Fundamentals",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "ar"],
+          "duration": "P4W",
+          "description": "Learn Shariah-compliant trading principles, Islamic financial instruments, and halal investment strategies"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Advanced Islamic Portfolio Management",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "ar"],
+          "duration": "P6W",
+          "description": "Master Shariah-compliant portfolio optimization, risk management, and Zakat calculations"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Banking Sector Analysis",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P5W",
+          "description": "Deep dive into Malaysian banking sector analysis, financial metrics, and valuation methods"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Technology Sector Trading",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P4W",
+          "description": "Advanced analysis of Malaysian technology stocks, growth metrics, and sector trends"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Oil & Gas Sector Mastery",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P5W",
+          "description": "Comprehensive analysis of Malaysian oil & gas sector, including upstream and downstream companies"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Property & REIT Analysis",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P4W",
+          "description": "Master property sector analysis, REIT valuations, and real estate market cycles"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Advanced Technical Analysis",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh", "ms"],
+          "duration": "P8W",
+          "description": "Master advanced chart patterns, indicators, and multi-timeframe analysis"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Neural Networks for Trading",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P10W",
+          "description": "Build and deploy neural networks for market prediction and trading"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Advanced Time Series Analysis",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P6W",
+          "description": "Master ARIMA, GARCH models, and advanced statistical forecasting"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Market Microstructure",
+          "courseMode": "online",
+          "inLanguage": ["en"],
+          "duration": "P8W",
+          "description": "Study order book dynamics, market making, and high-frequency trading patterns"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Options Trading Strategies",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P8W",
+          "description": "Master advanced options strategies, Greeks, and volatility trading"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Healthcare Sector Analysis",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P5W",
+          "description": "Comprehensive analysis of Malaysian healthcare sector, including hospitals, pharmaceuticals, and medical devices"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Plantation Sector Trading",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P4W",
+          "description": "Advanced analysis of plantation companies, commodity price impacts, and ESG considerations"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Telecommunications Analysis",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P4W",
+          "description": "Deep dive into telco sector analysis, 5G impact, and digital transformation"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Consumer Sector Mastery",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P4W",
+          "description": "Analysis of consumer staples and discretionary sectors, retail trends, and consumer behavior"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Industrial Manufacturing Analysis",
+          "courseMode": "online",
+          "inLanguage": ["en", "ms", "zh"],
+          "duration": "P5W",
+          "description": "Study of manufacturing sector, Industry 4.0, and supply chain dynamics"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Mean Reversion Strategies",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P6W",
+          "description": "Develop and backtest mean reversion algorithms using statistical arbitrage"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Momentum Trading Systems",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P6W",
+          "description": "Build trend-following and momentum-based trading systems with machine learning"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Market Making Algorithms",
+          "courseMode": "online",
+          "inLanguage": ["en"],
+          "duration": "P8W",
+          "description": "Design automated market making strategies with inventory management"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Pairs Trading Strategies",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P6W",
+          "description": "Develop statistical arbitrage strategies using cointegration and correlation"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Event-Driven Algorithms",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P7W",
+          "description": "Build trading systems based on news, earnings, and corporate events"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Arbitrage Trading Systems",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P8W",
+          "description": "Develop multi-market arbitrage strategies for stocks, futures, and options"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "NLP for Trading",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P8W",
+          "description": "Apply natural language processing to news and social media for trading signals"
+        },
+        {
+          "@type": "CourseInstance",
+          "name": "Reinforcement Learning Trading",
+          "courseMode": "online",
+          "inLanguage": ["en", "zh"],
+          "duration": "P10W",
+          "description": "Build adaptive trading systems using deep reinforcement learning"
+        }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Algo360FX Trading Platform",
+      "url": "https://algo360fx.com",
+      "applicationCategory": "BusinessApplication",
+      "browserRequirements": "Requires JavaScript. Requires HTML5.",
+      "permissions": "webcam, microphone, payment",
+      "operatingSystem": "All",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free trading platform with premium features available"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

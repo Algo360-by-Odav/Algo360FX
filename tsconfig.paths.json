@@ -1,0 +1,63 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      // Core Application
+      "@/*": ["src/*"],
+      "@app/*": ["src/app/*"],
+      "@config/*": ["src/config/*"],
+      "@constants/*": ["src/constants/*"],
+      "@types/*": ["src/types/*"],
+
+      // UI Components
+      "@components/*": ["src/components/*"],
+      "@layouts/*": ["src/layouts/*"],
+      "@pages/*": ["src/pages/*"],
+      "@theme/*": ["src/theme/*"],
+      "@styles/*": ["src/styles/*"],
+      "@assets/*": ["src/assets/*"],
+      "@icons/*": ["src/assets/icons/*"],
+
+      // Features
+      "@features/*": ["src/features/*"],
+      "@trading/*": ["src/features/trading/*"],
+      "@analysis/*": ["src/features/analysis/*"],
+      "@portfolio/*": ["src/features/portfolio/*"],
+      "@automation/*": ["src/features/automation/*"],
+
+      // State Management
+      "@store/*": ["src/store/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@context/*": ["src/context/*"],
+      "@reducers/*": ["src/reducers/*"],
+
+      // Data and Services
+      "@services/*": ["src/services/*"],
+      "@api/*": ["src/services/api/*"],
+      "@websocket/*": ["src/services/websocket/*"],
+      "@database/*": ["src/services/database/*"],
+
+      // Utils and Helpers
+      "@utils/*": ["src/utils/*"],
+      "@helpers/*": ["src/utils/helpers/*"],
+      "@formatters/*": ["src/utils/formatters/*"],
+      "@validators/*": ["src/utils/validators/*"],
+
+      // Testing
+      "@tests/*": ["src/tests/*"],
+      "@mocks/*": ["src/tests/mocks/*"],
+      "@fixtures/*": ["src/tests/fixtures/*"],
+
+      // Trading Specific
+      "@indicators/*": ["src/features/trading/indicators/*"],
+      "@strategies/*": ["src/features/trading/strategies/*"],
+      "@orders/*": ["src/features/trading/orders/*"],
+      "@charts/*": ["src/features/trading/charts/*"],
+
+      // Analytics and Reports
+      "@analytics/*": ["src/features/analytics/*"],
+      "@reports/*": ["src/features/reports/*"],
+      "@metrics/*": ["src/features/metrics/*"]
+    }
+  }
+}

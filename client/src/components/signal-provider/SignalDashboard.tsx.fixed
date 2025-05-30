@@ -1,0 +1,553 @@
+import React, { useState } from 'react';
+import { observer } from 'mobx-react-lite';
+import {
+  Box,
+  Grid,
+  Paper,
+  Typography,
+  Card,
+  CardContent,
+  Chip,
+  Avatar,
+  Button,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Switch,
+  FormControlLabel,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  ListItemText,
+  Divider,
+  SelectChangeEvent,
+} from '@mui/material';
+import {
+  CheckCircle,
+  Notifications,
+  Settings,
+  Star,
+} from '@mui/icons-material';
+import { useStores } from '../../stores/storeProviderJs';
+import SignalDetailsExpansion from './SignalDetailsExpansion';
+
+export const SignalDashboard = observer(({ filters }: { filters?: any }) => {
+  const { signalProviderStore } = useStores();
+  const providers = signalProviderStore.getProviders();
+  
+  // Get all active signals
+  const activeSignals = signalProviderStore.getActiveSignals();
+  
+  // State for dialogs
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<any>(null);
+  
+  // Alert settings
+  const [alertSettings, setAlertSettings] = useState({
+    newSignals: true,
+    signalUpdates: true,
+    performanceReports: true,
+    emailNotifications: true,
+    pushNotifications: true,
+    smsNotifications: false,
+  });
+  
+  // Provider settings
+  const [providerSettings, setProviderSettings] = useState({
+    autoTrade: false,
+    riskPerTrade: 2,
+    maxOpenTrades: 5,
+    tradingPairs: ['EUR/USD', 'GBP/USD', 'USD/JPY'],
+    delaySeconds: 0
+  });
+  
+  // Apply filters function
+  const getFilteredSignals = () => {
+    if (!filters) {
+      return activeSignals;
+    }
+    
+    let result = [...activeSignals];
+    
+    // Apply search filter
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase();
+      result = result.filter(signal => {
+        const provider = providers.find(p => p.id === signal.providerId);
+        return (
+          signal.pair.toLowerCase().includes(query) ||
+          (provider && provider.name.toLowerCase().includes(query))
+        );
+      });
+    }
+    
+    // Apply currency pair filter
+    if (filters.currencyPair && filters.currencyPair !== 'all') {
+      result = result.filter(signal => signal.pair === filters.currencyPair);
+    }
+    
+    // Apply risk level filter
+    if (filters.riskLevel && filters.riskLevel !== 'all') {
+      result = result.filter(signal => {
+        const provider = providers.find(p => p.id === signal.providerId);
+        return provider && provider.risk.riskLevel === filters.riskLevel;
+      });
+    }
+    
+    // Apply profitability filter
+    if (filters.profitability && filters.profitability !== 'all') {
+      result = result.filter(signal => {
+        if (filters.profitability === 'Profitable') return signal.profit > 0;
+        if (filters.profitability === 'Break-even') return signal.profit === 0;
+        if (filters.profitability === 'Loss') return signal.profit < 0;
+        return true;
+      });
+    }
+    
+    // Apply sorting
+    if (filters.sortBy) {
+      result.sort((a, b) => {
+        switch (filters.sortBy) {
+          case 'newest':
+            return new Date(b.openTime).getTime() - new Date(a.openTime).getTime();
+          case 'oldest':
+            return new Date(a.openTime).getTime() - new Date(b.openTime).getTime();
+          case 'profit-high':
+            return b.profit - a.profit;
+          case 'profit-low':
+            return a.profit - b.profit;
+          case 'risk-low':
+            return a.riskReward - b.riskReward;
+          case 'risk-high':
+            return b.riskReward - a.riskReward;
+          case 'win-rate':
+            const providerA = providers.find(p => p.id === a.providerId);
+            const providerB = providers.find(p => p.id === b.providerId);
+            return (providerB?.performance.winRate || 0) - (providerA?.performance.winRate || 0);
+          default:
+            return 0;
+        }
+      });
+    }
+    
+    return result;
+  };
+  
+  // Format currency for display
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+  
+  // Get risk level color
+  const getRiskLevelColor = (level: string) => {
+    switch (level) {
+      case 'Low':
+        return 'success';
+      case 'Medium':
+        return 'warning';
+      case 'High':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+  
+  // Handle alert settings change
+  const handleAlertSettingChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setAlertSettings({
+      ...alertSettings,
+      [event.target.name]: event.target.checked,
+    });
+  };
+  
+  // Handle provider settings change
+  const handleProviderSettingChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.type === 'checkbox' 
+      ? event.target.checked 
+      : event.target.type === 'number'
+        ? Number(event.target.value)
+        : event.target.value;
+        
+    setProviderSettings({
+      ...providerSettings,
+      [event.target.name]: value,
+    });
+  };
+  
+  // Handle trading pair selection
+  const handleTradingPairChange = (event: SelectChangeEvent<string[]>) => {
+    setProviderSettings({
+      ...providerSettings,
+      tradingPairs: event.target.value as string[]
+    });
+  };
+  
+  // Save alert settings
+  const saveAlertSettings = () => {
+    console.log('Alert settings saved:', alertSettings);
+    setAlertDialogOpen(false);
+  };
+  
+  // Save provider settings
+  const saveProviderSettings = () => {
+    console.log('Provider settings saved:', providerSettings);
+    setSettingsDialogOpen(false);
+  };
+  
+  return (
+    <Box sx={{ width: '100%' }}>
+      <Grid container spacing={3}>
+        {/* Subscribed Providers */}
+        {providers.map((provider) => (
+          <Grid item xs={12} key={provider.id}>
+            <Paper sx={{ p: 3 }}>
+              <Grid container spacing={3}>
+                {/* Provider Header */}
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Avatar
+                      sx={{ width: 64, height: 64, mr: 2, bgcolor: 'primary.main' }}
+                    >
+                      {provider.name[0]}
+                    </Avatar>
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="h6" color="primary">
+                          {provider.name}
+                        </Typography>
+                        {provider.verified && (
+                          <CheckCircle color="primary" sx={{ ml: 1, fontSize: 20 }} />
+                        )}
+                        <Chip
+                          label={provider.risk.riskLevel}
+                          color={getRiskLevelColor(provider.risk.riskLevel) as any}
+                          size="small"
+                          sx={{ ml: 2 }}
+                        />
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {provider.description}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <IconButton
+                        onClick={() => {
+                          setSelectedProvider(provider);
+                          setSettingsDialogOpen(true);
+                        }}
+                      >
+                        <Settings />
+                      </IconButton>
+                      <IconButton
+                        onClick={() => {
+                          setSelectedProvider(provider);
+                          setAlertDialogOpen(true);
+                        }}
+                      >
+                        <Notifications />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                </Grid>
+                
+                {/* Provider Stats */}
+                <Grid item xs={12} md={3}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Performance
+                      </Typography>
+                      <Typography variant="h4" color="success.main">
+                        +{provider.performance.totalReturn}%
+                      </Typography>
+                      <Typography variant="caption">
+                        Monthly: +{provider.performance.monthlyReturn}%
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                
+                <Grid item xs={12} md={3}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Win Rate
+                      </Typography>
+                      <Typography variant="h4">
+                        {provider.performance.winRate}%
+                      </Typography>
+                      <Typography variant="caption">
+                        Profit Factor: {provider.performance.profitFactor}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                
+                <Grid item xs={12} md={3}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Signals
+                      </Typography>
+                      <Typography variant="h4">
+                        {provider.performance.totalSignals}
+                      </Typography>
+                      <Typography variant="caption">
+                        {provider.performance.avgTradesPerMonth} per month
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                
+                <Grid item xs={12} md={3}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Subscribers
+                      </Typography>
+                      <Typography variant="h4">
+                        {provider.subscription.subscribers}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Star sx={{ color: 'gold', mr: 0.5 }} />
+                        <Typography variant="caption">
+                          {provider.subscription.rating} ({provider.subscription.reviews} reviews)
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Grid>
+        ))}
+        
+        {/* Signal Cards */}
+        <Grid container spacing={3}>
+          {getFilteredSignals().map((signal) => (
+            <Grid item xs={12} sm={6} md={4} key={signal.id}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Chip label={signal.pair} color="primary" />
+                    <Chip
+                      label={signal.direction === 'Buy' ? 'Buy' : 'Sell'}
+                      color={signal.direction === 'Buy' ? 'success' : 'error'}
+                    />
+                  </Box>
+                  
+                  <Typography variant="body2" gutterBottom>
+                    Entry: {signal.entryPrice}
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="body2">
+                      TP: {signal.takeProfit}
+                    </Typography>
+                    <Typography variant="body2">
+                      SL: {signal.stopLoss}
+                    </Typography>
+                  </Box>
+                  
+                  <Divider sx={{ my: 1 }} />
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Profit/Loss
+                      </Typography>
+                      <Typography variant="h6" color="primary">
+                        {formatCurrency(signal.profit)}
+                      </Typography>
+                    </Box>
+                    
+                    <Button
+                      variant="contained"
+                      size="small"
+                    >
+                      Copy Trade
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Grid>
+      
+      {/* Settings Dialog */}
+      <Dialog
+        open={settingsDialogOpen}
+        onClose={() => setSettingsDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedProvider ? `Settings - ${selectedProvider.name}` : 'Provider Settings'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Trading Settings
+            </Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={providerSettings.autoTrade}
+                      onChange={handleProviderSettingChange}
+                      name="autoTrade"
+                      color="primary"
+                    />
+                  }
+                  label="Auto-trade signals"
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Risk per trade (%)"
+                  type="number"
+                  value={providerSettings.riskPerTrade}
+                  onChange={handleProviderSettingChange}
+                  name="riskPerTrade"
+                  fullWidth
+                  InputProps={{
+                    inputProps: { min: 0.1, max: 10, step: 0.1 }
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Max open trades"
+                  type="number"
+                  value={providerSettings.maxOpenTrades}
+                  onChange={handleProviderSettingChange}
+                  name="maxOpenTrades"
+                  fullWidth
+                  InputProps={{
+                    inputProps: { min: 1, max: 20 }
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Trading pairs</InputLabel>
+                  <Select
+                    multiple
+                    value={providerSettings.tradingPairs}
+                    onChange={handleTradingPairChange}
+                    renderValue={(selected) => (selected as string[]).join(', ')}
+                  >
+                    <MenuItem value="EUR/USD">
+                      <Checkbox checked={providerSettings.tradingPairs.indexOf('EUR/USD') > -1} />
+                      <ListItemText primary="EUR/USD" />
+                    </MenuItem>
+                    <MenuItem value="GBP/USD">
+                      <Checkbox checked={providerSettings.tradingPairs.indexOf('GBP/USD') > -1} />
+                      <ListItemText primary="GBP/USD" />
+                    </MenuItem>
+                    <MenuItem value="USD/JPY">
+                      <Checkbox checked={providerSettings.tradingPairs.indexOf('USD/JPY') > -1} />
+                      <ListItemText primary="USD/JPY" />
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSettingsDialogOpen(false)}>Cancel</Button>
+          <Button onClick={saveProviderSettings} variant="contained" color="primary">
+            Save Settings
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Alerts Dialog */}
+      <Dialog
+        open={alertDialogOpen}
+        onClose={() => setAlertDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedProvider ? `Alerts - ${selectedProvider.name}` : 'Provider Alerts'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Alert Types
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={alertSettings.newSignals}
+                      onChange={handleAlertSettingChange}
+                      name="newSignals"
+                      color="primary"
+                    />
+                  }
+                  label="New Signals"
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={alertSettings.signalUpdates}
+                      onChange={handleAlertSettingChange}
+                      name="signalUpdates"
+                      color="primary"
+                    />
+                  }
+                  label="Signal Updates (TP/SL changes)"
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={alertSettings.performanceReports}
+                      onChange={handleAlertSettingChange}
+                      name="performanceReports"
+                      color="primary"
+                    />
+                  }
+                  label="Weekly Performance Reports"
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAlertDialogOpen(false)}>Cancel</Button>
+          <Button onClick={saveAlertSettings} variant="contained" color="primary">
+            Save Alert Settings
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+});
+
+export default SignalDashboard;

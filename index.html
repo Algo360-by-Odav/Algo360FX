@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <!-- Primary Meta Tags -->
+    <title>Algo360FX - Advanced Algorithmic Trading Platform</title>
+    <meta name="title" content="Algo360FX - Advanced Algorithmic Trading Platform">
+    <meta name="description" content="Professional-grade algorithmic trading platform with advanced analytics, real-time data, and AI-powered insights for forex trading.">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://algo360fx.com/">
+    <meta property="og:title" content="Algo360FX - Advanced Algorithmic Trading Platform">
+    <meta property="og:description" content="Professional-grade algorithmic trading platform with advanced analytics, real-time data, and AI-powered insights for forex trading.">
+    <meta property="og:image" content="/assets/meta-image.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://algo360fx.com/">
+    <meta property="twitter:title" content="Algo360FX - Advanced Algorithmic Trading Platform">
+    <meta property="twitter:description" content="Professional-grade algorithmic trading platform with advanced analytics, real-time data, and AI-powered insights for forex trading.">
+    <meta property="twitter:image" content="/assets/meta-image.png">
+
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon/favicon-16x16.png">
+    <link rel="manifest" href="/assets/site.webmanifest">
+    <link rel="mask-icon" href="/assets/favicon/safari-pinned-tab.svg" color="#5bbad5">
+    <meta name="msapplication-TileColor" content="#2b5797">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- Preload Critical Assets -->
+    <link rel="preload" href="/assets/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/src/main.tsx" as="script" type="module">
+    <link rel="modulepreload" href="/src/App.tsx">
+
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:;">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="/src/styles/index.css">
+    
+    <!-- App Scripts -->
+    <script type="module" src="/src/main.tsx"></script>
+</head>
+<body>
+    <!-- App Root -->
+    <div id="root"></div>
+
+    <!-- Loading State -->
+    <div id="loading" aria-hidden="true">
+        <div class="spinner">
+            <div class="bounce1"></div>
+            <div class="bounce2"></div>
+            <div class="bounce3"></div>
+        </div>
+    </div>
+
+    <!-- Error Boundary -->
+    <div id="error" style="display: none;">
+        <div class="error-content">
+            <h1>Oops! Something went wrong</h1>
+            <p>We're working to fix the issue. Please try refreshing the page.</p>
+            <button onclick="window.location.reload()">Refresh Page</button>
+        </div>
+    </div>
+
+    <!-- No Script Warning -->
+    <noscript>
+        <div class="noscript-warning">
+            <h1>JavaScript Required</h1>
+            <p>We're sorry but Algo360FX doesn't work properly without JavaScript enabled. Please enable it to continue.</p>
+        </div>
+    </noscript>
+
+    <!-- Inline Critical CSS -->
+    <style>
+        /* Loading Spinner */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner {
+            width: 70px;
+            text-align: center;
+        }
+        .spinner > div {
+            width: 18px;
+            height: 18px;
+            background-color: #333;
+            border-radius: 100%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .spinner .bounce1 { animation-delay: -0.32s; }
+        .spinner .bounce2 { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+        /* Error State */
+        #error {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .error-content {
+            text-align: center;
+            padding: 2rem;
+        }
+        /* NoScript Warning */
+        .noscript-warning {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            z-index: 10000;
+        }
+    </style>
+</body>
+</html>

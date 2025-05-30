@@ -1,0 +1,82 @@
+// Cryptocurrency models for Prisma Schema
+// Include these models in your main schema.prisma file
+
+// Cryptocurrency wallet model
+model CryptoWallet {
+  id                String    @id @default(uuid())
+  userId            String    
+  cryptoType        CryptoType
+  address           String?   // Public wallet address
+  balance           Float     @default(0)
+  pendingBalance    Float     @default(0)
+  privateKeyEncrypted String?  // Encrypted private key if storing locally (not recommended for production)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id])
+  transactions      CryptoTransaction[]
+  
+  @@unique([userId, cryptoType])
+  @@map("crypto_wallets")
+}
+
+// Cryptocurrency transaction model
+model CryptoTransaction {
+  id              String    @id @default(uuid())
+  cryptoWalletId  String
+  amount          Float
+  fee             Float     @default(0)
+  type            CryptoTransactionType
+  status          TransactionStatus @default(PENDING)
+  hash            String?   // Blockchain transaction hash
+  fromAddress     String?   // Source address
+  toAddress       String?   // Destination address
+  blockNumber     Int?      // Block number in the blockchain
+  confirmations   Int       @default(0)
+  description     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  cryptoWallet    CryptoWallet @relation(fields: [cryptoWalletId], references: [id])
+  
+  @@map("crypto_transactions")
+}
+
+// Cryptocurrency price history
+model CryptoPriceHistory {
+  id              String    @id @default(uuid())
+  cryptoType      CryptoType
+  priceUSD        Float
+  priceEUR        Float?
+  priceGBP        Float?
+  priceJPY        Float?
+  volume24h       Float?
+  marketCap       Float?
+  timestamp       DateTime  @default(now())
+  
+  @@index([cryptoType, timestamp])
+  @@map("crypto_price_history")
+}
+
+// Supported cryptocurrency types
+enum CryptoType {
+  BTC
+  ETH
+  USDT
+  BNB
+  SOL
+  ADA
+  XRP
+  DOT
+  DOGE
+  AVAX
+}
+
+// Cryptocurrency transaction types
+enum CryptoTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  SWAP
+  STAKING_REWARD
+  MINING_REWARD
+  FEE
+}
