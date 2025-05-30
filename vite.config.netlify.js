@@ -25,6 +25,7 @@ export default defineConfig({
         '@ethersproject/providers',
         '@ethersproject/contracts',
         '@microsoft/signalr',
+        'react-lazy-load-image-component',
       ],
     },
   },
