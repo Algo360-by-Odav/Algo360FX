@@ -1177,7 +1177,7 @@ const AdvancedTradingPage = observer(() => {
         )
       )
     ]);
-  };
+  },
 
   // Main render
   return React.createElement(Container, {
