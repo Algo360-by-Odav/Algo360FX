@@ -122,6 +122,7 @@
   "scripts": {
     "dev": "vite",
     "dev:safe": "vite --config vite.config.dev.js",
+    "prebuild": "node fix-ts-errors.js",
     "build": "cross-env NODE_ENV=production tsc -p tsconfig.node.json && tsc && vite build",
     "preview": "vite preview",
     "test": "jest",
