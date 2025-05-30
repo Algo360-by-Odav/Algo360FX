@@ -5,7 +5,7 @@ echo "Completely bypassing TypeScript checking for Netlify deployment..."
 
 # Ensure all dependencies are installed, particularly the missing ones
 echo "Installing missing dependencies..."
-npm install --silent three @mui/x-charts
+npm install --silent three @mui/x-charts chartjs-adapter-date-fns chart.js@3.9.1 react-chartjs-2 date-fns
 
 # Create a temporary package.json script for Netlify build
 sed -i 's/"build": "cross-env NODE_ENV=production tsc -p tsconfig.node.json && tsc && vite build"/"build": "cross-env NODE_ENV=production vite build"/g' package.json
