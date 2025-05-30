@@ -1,5 +1,5 @@
 [build]
-  command = "sed -i 's/};\s*\/\/ Main render/},\n\n  \/\/ Main render/g' client/src/pages/advancedTradingPageJs.js && npm run build"
+  command = "chmod +x netlify-build.sh && ./netlify-build.sh"
   publish = "dist"
 
 [build.environment]
