@@ -442,7 +442,6 @@ export const CommunityForum = observer(() => {
                                 display: 'inline',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
-                                display: '-webkit-box',
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
                               }}

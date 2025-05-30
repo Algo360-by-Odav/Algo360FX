@@ -975,7 +975,7 @@ const AdvancedTradingPage = observer(() => {
                   slowMA: selectedOptimizationResult.bestParams.slowMA
                 }
               };
-              advancedTradingStore.updateAlgorithm(updatedAlgorithm);
+              advancedTradingStore.updateAlgorithm(selectedAlgorithm.id, updatedAlgorithm);
               setIsOptimizationResultDialogOpen(false);
             }
           },

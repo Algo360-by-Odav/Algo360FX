@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Algo360FX Trading Platform
 
 ![Algo360FX Logo](./assets/logo.png)
@@ -179,3 +180,6 @@ For support, email support@algo360fx.com or join our Slack community.
 ## ⚠️ Disclaimer
 
 Trading forex carries a high level of risk and may not be suitable for all investors. Before deciding to trade foreign exchange you should carefully consider your investment objectives, level of experience, and risk appetite.
+=======
+# Algo360FX
+>>>>>>> c3eb3f288092a8af48474cf0a4a125032007df48
