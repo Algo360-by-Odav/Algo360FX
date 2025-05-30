@@ -20,6 +20,7 @@ export default defineConfig({
       // Externalize problematic dependencies
       external: [
         'chartjs-adapter-date-fns',
+        '@stripe/stripe-js',
       ],
     },
   },
