@@ -26,6 +26,7 @@ export default defineConfig({
         '@ethersproject/contracts',
         '@microsoft/signalr',
         'react-lazy-load-image-component',
+        'react-lazy-load-image-component/src/effects/blur.css',
       ],
     },
   },
