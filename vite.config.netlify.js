@@ -24,6 +24,7 @@ export default defineConfig({
         'file-saver',
         '@ethersproject/providers',
         '@ethersproject/contracts',
+        '@microsoft/signalr',
       ],
     },
   },
