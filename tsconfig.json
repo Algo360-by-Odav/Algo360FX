@@ -59,6 +59,7 @@
     "**/*.test.ts",
     "**/*.spec.tsx",
     "**/*.test.tsx",
+    "client/src/pages/advancedTradingPageJs.js",
     "vite.config.ts"
   ],
   "references": [
