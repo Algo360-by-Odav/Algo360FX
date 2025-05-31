@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Container,
   Grid,
@@ -27,6 +27,7 @@ import {
   ListItemText,
   Alert,
   Snackbar,
+  useTheme,
 } from '@mui/material';
 import {
   SmartToy as AIIcon,
@@ -43,7 +44,7 @@ import {
   Save as SaveIcon,
 } from '@mui/icons-material';
 import ChatInterface from '../components/chat/ChatInterface';
-import { initializeOpenAI } from '../services/openaiService';
+import { initializeOpenAI, setAIModel } from '../services/openaiService';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../stores/storeProviderJs';
 
@@ -66,13 +67,15 @@ interface PresetPrompt {
   icon: React.ReactNode;
 }
 
-const AIAgent: React.FC = observer(() => {
+// Define the component using standard naming convention for better compatibility
+const AIAgent: React.FC = observer(function AIAgent() {
   // Store access
   const { chatStore } = useStores();
   
   // State for API configuration
   const [apiKey, setApiKey] = useState('');
-  const [isConfigured, setIsConfigured] = useState(false);
+  // Force isConfigured to true for testing purposes
+  const [isConfigured, setIsConfigured] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
   
   // State for AI Agent features
@@ -91,9 +94,17 @@ const AIAgent: React.FC = observer(() => {
   // Available AI models
   const aiModels: AIModel[] = [
     {
+      id: 'gpt-4o',
+      name: 'GPT-4o',
+      description: 'Latest OpenAI model with enhanced reasoning and multimodal capabilities',
+      capabilities: ['Real-time market analysis', 'Advanced strategy development', 'Chart interpretation', 'Code generation'],
+      contextLength: 128000,
+      isAvailable: true
+    },
+    {
       id: 'gpt-4',
       name: 'GPT-4',
-      description: 'Advanced AI model with strong reasoning and knowledge capabilities',
+      description: 'Reliable OpenAI model with strong reasoning and knowledge capabilities',
       capabilities: ['Market analysis', 'Strategy development', 'Educational content', 'Code generation'],
       contextLength: 8192,
       isAvailable: true
@@ -103,55 +114,152 @@ const AIAgent: React.FC = observer(() => {
       name: 'GPT-3.5 Turbo',
       description: 'Fast and efficient model for general trading assistance',
       capabilities: ['Basic market analysis', 'Trading guidance', 'FAQ responses'],
-      contextLength: 4096,
+      contextLength: 16384,
       isAvailable: true
     },
     {
-      id: 'claude-3',
-      name: 'Claude 3',
-      description: 'Alternative AI model with strong reasoning capabilities',
+      id: 'claude-3-opus',
+      name: 'Claude 3 Opus',
+      description: 'Anthropics most advanced model with exceptional reasoning capabilities',
+      capabilities: ['Complex financial analysis', 'Advanced risk assessment', 'Nuanced market interpretation'],
+      contextLength: 200000,
+      isAvailable: true
+    },
+    {
+      id: 'claude-3-sonnet',
+      name: 'Claude 3 Sonnet',
+      description: 'Balanced Anthropic model combining power and efficiency',
       capabilities: ['Detailed analysis', 'Nuanced responses', 'Risk assessment'],
-      contextLength: 100000,
+      contextLength: 150000,
+      isAvailable: true
+    },
+    {
+      id: 'gemini-pro',
+      name: 'Gemini Pro',
+      description: 'Googles advanced AI model with strong analytical capabilities',
+      capabilities: ['Technical analysis', 'Pattern recognition', 'Market trend prediction'],
+      contextLength: 32000,
+      isAvailable: true
+    },
+    {
+      id: 'mistral-large',
+      name: 'Mistral Large',
+      description: 'Powerful open-weight model with excellent reasoning capabilities',
+      capabilities: ['Trading strategy analysis', 'Market forecasting', 'Risk evaluation'],
+      contextLength: 32000,
+      isAvailable: true
+    },
+    {
+      id: 'llama-3',
+      name: 'Llama 3',
+      description: 'Metas open model with strong performance for various trading tasks',
+      capabilities: ['General trading guidance', 'Market summaries', 'Basic strategy suggestions'],
+      contextLength: 8000,
       isAvailable: false
     }
   ];
   
   // Preset prompts for quick access
   const presetPrompts: PresetPrompt[] = [
+    // Market Analysis category
     {
-      id: 'market-analysis',
-      title: 'Market Analysis',
-      prompt: 'Analyze the current market conditions for major forex pairs and provide key support/resistance levels.',
+      id: 'market-analysis-overview',
+      title: 'Market Overview',
+      prompt: 'Provide a comprehensive analysis of the current global financial markets, focusing on major forex pairs, indices, and commodities. Include key levels and potential market movers for the next 24 hours.',
       category: 'analysis',
       icon: <TrendingUpIcon />
     },
     {
-      id: 'trading-strategy',
-      title: 'Trading Strategy',
-      prompt: 'Explain a risk-managed swing trading strategy suitable for the current market.',
+      id: 'support-resistance',
+      title: 'Support/Resistance Levels',
+      prompt: 'Analyze the key support and resistance levels for EUR/USD, GBP/USD, USD/JPY, and XAU/USD. Include both daily and weekly perspectives.',
+      category: 'analysis',
+      icon: <TrendingUpIcon />
+    },
+    {
+      id: 'correlation-analysis',
+      title: 'Correlation Analysis',
+      prompt: 'Analyze the current correlations between major currency pairs, gold, oil, and US equities. Identify potential trading opportunities based on correlation divergences.',
+      category: 'analysis',
+      icon: <TrendingUpIcon />
+    },
+    
+    // Trading Strategies category
+    {
+      id: 'swing-trading',
+      title: 'Swing Trading Strategy',
+      prompt: 'Explain a risk-managed swing trading strategy suitable for the current market environment, including specific entry/exit criteria and position sizing.',
       category: 'trading',
       icon: <PsychologyIcon />
     },
     {
-      id: 'learn-indicators',
-      title: 'Technical Indicators',
-      prompt: 'Explain how to effectively use RSI, MACD and Bollinger Bands together for trading decisions.',
+      id: 'scalping-strategy',
+      title: 'Scalping Strategy',
+      prompt: 'Detail an intraday scalping strategy for EUR/USD and GBP/USD using 5-minute and 15-minute charts, including precise entry/exit rules and risk parameters.',
+      category: 'trading',
+      icon: <PsychologyIcon />
+    },
+    {
+      id: 'breakout-strategy',
+      title: 'Breakout Strategy',
+      prompt: 'Explain a comprehensive breakout trading strategy with specific entry conditions, stop placement, and take profit targets. Include methods to filter false breakouts.',
+      category: 'trading',
+      icon: <PsychologyIcon />
+    },
+    
+    // Technical Analysis category
+    {
+      id: 'indicators-guide',
+      title: 'Technical Indicators Guide',
+      prompt: 'Explain how to effectively use RSI, MACD, and Bollinger Bands together for trading decisions. Include specific settings, entry/exit signals, and common pitfalls to avoid.',
       category: 'education',
       icon: <SchoolIcon />
     },
     {
-      id: 'code-indicator',
-      title: 'Custom Indicator',
-      prompt: 'Write a MQL5 code for a custom indicator that combines RSI and moving averages.',
+      id: 'price-action',
+      title: 'Price Action Patterns',
+      prompt: 'Explain the most reliable price action patterns for forex trading. Include pin bars, engulfing patterns, and multi-candle formations with specific examples for identification.',
+      category: 'education',
+      icon: <SchoolIcon />
+    },
+    {
+      id: 'elliot-wave',
+      title: 'Elliott Wave Analysis',
+      prompt: 'Provide a detailed explanation of Elliott Wave Theory and how to apply it to forex markets. Include practical examples for identifying wave structures.',
+      category: 'education',
+      icon: <SchoolIcon />
+    },
+    
+    // Risk Management category
+    {
+      id: 'risk-management',
+      title: 'Risk Management Framework',
+      prompt: 'Provide a comprehensive risk management framework for a $10,000 trading account, including position sizing, maximum drawdown rules, and equity curve management.',
+      category: 'education',
+      icon: <LightbulbIcon />
+    },
+    {
+      id: 'portfolio-optimization',
+      title: 'Portfolio Optimization',
+      prompt: 'Explain how to optimize a trading portfolio across multiple forex pairs to maximize returns while minimizing overall risk. Include correlation analysis and capital allocation strategies.',
+      category: 'education',
+      icon: <LightbulbIcon />
+    },
+    
+    // Programming & Automation category
+    {
+      id: 'mt5-strategy',
+      title: 'MT5 Strategy Code',
+      prompt: 'Write a complete MQL5 code for an automated trading strategy that combines moving averages, RSI, and support/resistance levels. Include risk management parameters.',
       category: 'general',
       icon: <CodeIcon />
     },
     {
-      id: 'risk-management',
-      title: 'Risk Management',
-      prompt: 'Provide a comprehensive risk management framework for a $10,000 trading account.',
-      category: 'education',
-      icon: <LightbulbIcon />
+      id: 'custom-indicator',
+      title: 'Custom Indicator',
+      prompt: 'Create a custom indicator in MQL5 that identifies potential reversal zones based on RSI divergence, price action patterns, and volume analysis.',
+      category: 'general',
+      icon: <CodeIcon />
     }
   ];
 
@@ -190,9 +298,20 @@ const AIAgent: React.FC = observer(() => {
   };
   
   const handleModelChange = (modelId: string) => {
-    setSelectedModel(modelId);
-    localStorage.setItem('ai_selected_model', modelId);
-    showNotification(`Model changed to ${aiModels.find(m => m.id === modelId)?.name}`, 'info');
+    try {
+      // Attempt to set the model in the OpenAI service
+      const result = setAIModel(modelId);
+      if (result) {
+        setSelectedModel(modelId);
+        localStorage.setItem('ai_selected_model', modelId);
+        showNotification(`Model changed to ${aiModels.find(m => m.id === modelId)?.name}`, 'success');
+      } else {
+        showNotification(`Failed to set model: ${modelId}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error setting AI model:', error);
+      showNotification('Error changing AI model. Please check your API configuration.', 'error');
+    }
   };
   
   const handleAdvancedModeToggle = () => {
@@ -258,12 +377,6 @@ const AIAgent: React.FC = observer(() => {
             <AIIcon fontSize="large" color="primary" />
           </Grid>
           <Grid item xs>
-            <Typography variant="h4">
-              AI Trading Assistant
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Your personal AI assistant for market analysis, trading strategies, and financial insights
-            </Typography>
           </Grid>
           <Grid item>
             <Box sx={{ display: 'flex', gap: 1 }}>
@@ -308,42 +421,121 @@ const AIAgent: React.FC = observer(() => {
 
         {isConfigured ? (
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            {/* AI Model selection chips */}
+            {/* AI Model selection section */}
             <Grid item xs={12}>
-              <Paper elevation={1} sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <Typography variant="body2" sx={{ mr: 1 }}>
-                  AI Model:
-                </Typography>
-                {aiModels.map((model) => (
-                  <Chip
-                    key={model.id}
-                    label={model.name}
-                    variant={selectedModel === model.id ? 'filled' : 'outlined'}
-                    color={selectedModel === model.id ? 'primary' : 'default'}
-                    onClick={() => model.isAvailable && handleModelChange(model.id)}
-                    disabled={!model.isAvailable}
-                    size="small"
-                  />
-                ))}
-                <Box sx={{ flexGrow: 1 }} />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={useAdvancedMode}
-                      onChange={handleAdvancedModeToggle}
-                      size="small"
+              <Paper elevation={2} sx={{ p: 2, borderRadius: '12px' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                    AI Model Selection
+                  </Typography>
+                  <Box>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={useAdvancedMode}
+                          onChange={handleAdvancedModeToggle}
+                          size="small"
+                          color="primary"
+                        />
+                      }
+                      label={<Typography variant="body2">Advanced Mode</Typography>}
                     />
-                  }
-                  label={<Typography variant="body2">Advanced Mode</Typography>}
-                />
+                    <Tooltip title="View model details">
+                      <IconButton size="small" onClick={() => setShowModelInfo(true)} color="primary">
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Box>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Select an AI model based on your needs. More powerful models offer deeper analysis but may be slower.
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    <Box sx={{ width: '100%', mb: 1 }}>
+                      <Typography variant="caption" color="primary" fontWeight="500">OpenAI Models</Typography>
+                    </Box>
+                    {aiModels.filter(model => model.id.includes('gpt')).map((model) => (
+                      <Chip
+                        key={model.id}
+                        label={model.name}
+                        variant={selectedModel === model.id ? 'filled' : 'outlined'}
+                        color={selectedModel === model.id ? 'primary' : 'default'}
+                        onClick={() => model.isAvailable && handleModelChange(model.id)}
+                        disabled={!model.isAvailable}
+                        size="medium"
+                        sx={{ px: 1 }}
+                      />
+                    ))}
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                    <Box sx={{ width: '100%', mb: 1 }}>
+                      <Typography variant="caption" color="primary" fontWeight="500">Anthropic Models</Typography>
+                    </Box>
+                    {aiModels.filter(model => model.id.includes('claude')).map((model) => (
+                      <Chip
+                        key={model.id}
+                        label={model.name}
+                        variant={selectedModel === model.id ? 'filled' : 'outlined'}
+                        color={selectedModel === model.id ? 'primary' : 'default'}
+                        onClick={() => model.isAvailable && handleModelChange(model.id)}
+                        disabled={!model.isAvailable}
+                        size="medium"
+                        sx={{ px: 1 }}
+                      />
+                    ))}
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                    <Box sx={{ width: '100%', mb: 1 }}>
+                      <Typography variant="caption" color="primary" fontWeight="500">Other Models</Typography>
+                    </Box>
+                    {aiModels.filter(model => !model.id.includes('gpt') && !model.id.includes('claude')).map((model) => (
+                      <Chip
+                        key={model.id}
+                        label={model.name}
+                        variant={selectedModel === model.id ? 'filled' : 'outlined'}
+                        color={selectedModel === model.id ? 'primary' : 'default'}
+                        onClick={() => model.isAvailable && handleModelChange(model.id)}
+                        disabled={!model.isAvailable}
+                        size="medium"
+                        sx={{ px: 1 }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
               </Paper>
             </Grid>
             
             {/* Main content area with tabs */}
             <Grid item xs={12}>
-              <Paper elevation={3} sx={{ height: 'calc(85vh - 200px)', display: 'flex', flexDirection: 'column' }}>
-                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                  <Tabs value={currentTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+              <Paper elevation={3} sx={{ height: 'calc(85vh - 240px)', display: 'flex', flexDirection: 'column', borderRadius: '12px', overflow: 'hidden' }}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+                  <Tabs 
+                    value={currentTab} 
+                    onChange={handleTabChange} 
+                    variant="scrollable" 
+                    scrollButtons="auto"
+                    sx={{
+                      '& .MuiTab-root': {
+                        minHeight: '56px',
+                        fontWeight: 500,
+                        transition: 'all 0.2s',
+                        '&.Mui-selected': {
+                          color: 'primary.main',
+                          fontWeight: 600
+                        }
+                      },
+                      '& .MuiTabs-indicator': {
+                        height: 3,
+                        borderTopLeftRadius: 3,
+                        borderTopRightRadius: 3
+                      }
+                    }}
+                  >
                     <Tab label="Chat" icon={<AIIcon />} iconPosition="start" />
                     <Tab label="Preset Prompts" icon={<LightbulbIcon />} iconPosition="start" />
                     {useAdvancedMode && <Tab label="System Prompt" icon={<CodeIcon />} iconPosition="start" />}
@@ -357,45 +549,213 @@ const AIAgent: React.FC = observer(() => {
                 
                 {/* Preset Prompts */}
                 <Box sx={{ display: currentTab === 1 ? 'block' : 'none', p: 2, overflowY: 'auto', height: '100%' }}>
-                  <Typography variant="h6" gutterBottom>
-                    Preset Prompts
-                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" gutterBottom>
+                      Preset Trading Prompts
+                    </Typography>
+                    <Chip 
+                      label={`${presetPrompts.length} prompts available`} 
+                      size="small" 
+                      color="primary" 
+                      variant="outlined"
+                    />
+                  </Box>
+                  
                   <Typography variant="body2" color="text.secondary" paragraph>
                     Click on any prompt to quickly get AI assistance on common trading topics.
                   </Typography>
                   
-                  <Grid container spacing={2}>
-                    {presetPrompts.map((preset) => (
-                      <Grid item xs={12} sm={6} md={4} key={preset.id}>
-                        <Card 
-                          variant="outlined" 
-                          sx={{
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            '&:hover': {
-                              transform: 'translateY(-2px)',
-                              boxShadow: 2
-                            }
-                          }}
-                          onClick={() => handlePresetPromptClick(preset.prompt)}
-                        >
-                          <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                              <Box sx={{ mr: 1, color: 'primary.main' }}>
-                                {preset.icon}
-                              </Box>
-                              <Typography variant="subtitle1">
-                                {preset.title}
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {preset.prompt}
-                            </Typography>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
+                  {/* Market Analysis Section */}
+                  <Box sx={{ mb: 4 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      mb: 1, 
+                      pb: 0.5, 
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.12)' 
+                    }}>
+                      <TrendingUpIcon color="primary" sx={{ mr: 1 }} />
+                      <Typography variant="subtitle1" fontWeight={500}>
+                        Market Analysis
+                      </Typography>
+                    </Box>
+                    
+                    <Grid container spacing={2}>
+                      {presetPrompts
+                        .filter(prompt => prompt.category === 'analysis')
+                        .map((preset) => (
+                          <Grid item xs={12} sm={6} md={4} key={preset.id}>
+                            <Card 
+                              variant="outlined" 
+                              sx={{
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                borderRadius: '10px',
+                                '&:hover': {
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: 2,
+                                  borderColor: 'primary.main'
+                                }
+                              }}
+                              onClick={() => handlePresetPromptClick(preset.prompt)}
+                            >
+                              <CardContent>
+                                <Typography variant="subtitle1" fontWeight={500}>
+                                  {preset.title}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ height: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {preset.prompt}
+                                </Typography>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                  
+                  {/* Trading Strategies Section */}
+                  <Box sx={{ mb: 4 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      mb: 1, 
+                      pb: 0.5, 
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.12)' 
+                    }}>
+                      <PsychologyIcon color="secondary" sx={{ mr: 1 }} />
+                      <Typography variant="subtitle1" fontWeight={500}>
+                        Trading Strategies
+                      </Typography>
+                    </Box>
+                    
+                    <Grid container spacing={2}>
+                      {presetPrompts
+                        .filter(prompt => prompt.category === 'trading')
+                        .map((preset) => (
+                          <Grid item xs={12} sm={6} md={4} key={preset.id}>
+                            <Card 
+                              variant="outlined" 
+                              sx={{
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                borderRadius: '10px',
+                                '&:hover': {
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: 2,
+                                  borderColor: 'secondary.main'
+                                }
+                              }}
+                              onClick={() => handlePresetPromptClick(preset.prompt)}
+                            >
+                              <CardContent>
+                                <Typography variant="subtitle1" fontWeight={500}>
+                                  {preset.title}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ height: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {preset.prompt}
+                                </Typography>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                  
+                  {/* Technical Analysis & Education Section */}
+                  <Box sx={{ mb: 4 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      mb: 1, 
+                      pb: 0.5, 
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.12)' 
+                    }}>
+                      <SchoolIcon color="info" sx={{ mr: 1 }} />
+                      <Typography variant="subtitle1" fontWeight={500}>
+                        Technical Analysis & Education
+                      </Typography>
+                    </Box>
+                    
+                    <Grid container spacing={2}>
+                      {presetPrompts
+                        .filter(prompt => prompt.category === 'education')
+                        .map((preset) => (
+                          <Grid item xs={12} sm={6} md={4} key={preset.id}>
+                            <Card 
+                              variant="outlined" 
+                              sx={{
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                borderRadius: '10px',
+                                '&:hover': {
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: 2,
+                                  borderColor: 'info.main'
+                                }
+                              }}
+                              onClick={() => handlePresetPromptClick(preset.prompt)}
+                            >
+                              <CardContent>
+                                <Typography variant="subtitle1" fontWeight={500}>
+                                  {preset.title}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ height: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {preset.prompt}
+                                </Typography>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                  
+                  {/* Programming & Automation Section */}
+                  <Box>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      mb: 1, 
+                      pb: 0.5, 
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.12)' 
+                    }}>
+                      <CodeIcon color="success" sx={{ mr: 1 }} />
+                      <Typography variant="subtitle1" fontWeight={500}>
+                        Programming & Automation
+                      </Typography>
+                    </Box>
+                    
+                    <Grid container spacing={2}>
+                      {presetPrompts
+                        .filter(prompt => prompt.category === 'general')
+                        .map((preset) => (
+                          <Grid item xs={12} sm={6} md={4} key={preset.id}>
+                            <Card 
+                              variant="outlined" 
+                              sx={{
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                borderRadius: '10px',
+                                '&:hover': {
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: 2,
+                                  borderColor: 'success.main'
+                                }
+                              }}
+                              onClick={() => handlePresetPromptClick(preset.prompt)}
+                            >
+                              <CardContent>
+                                <Typography variant="subtitle1" fontWeight={500}>
+                                  {preset.title}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ height: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {preset.prompt}
+                                </Typography>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
                 </Box>
                 
                 {/* System Prompt (Advanced Mode) */}
@@ -403,31 +763,146 @@ const AIAgent: React.FC = observer(() => {
                   <Box sx={{ display: currentTab === 2 ? 'block' : 'none', p: 2, overflowY: 'auto', height: '100%' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                       <Typography variant="h6">
-                        System Prompt
+                        System Prompt Configuration
                       </Typography>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<SaveIcon />}
-                        onClick={handleSystemPromptSave}
-                      >
-                        Save
-                      </Button>
+                      <Box>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => setSystemPrompt('')}
+                          sx={{ mr: 1 }}
+                        >
+                          Clear
+                        </Button>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<SaveIcon />}
+                          onClick={handleSystemPromptSave}
+                        >
+                          Save
+                        </Button>
+                      </Box>
                     </Box>
                     
-                    <Alert severity="info" sx={{ mb: 2 }}>
+                    <Alert severity="info" sx={{ mb: 3 }}>
                       The system prompt defines the AI's behavior and knowledge context. Customize it to get more specialized trading assistance.
+                      Your changes will be saved locally and applied to all future conversations.
                     </Alert>
                     
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={10}
-                      variant="outlined"
-                      value={systemPrompt}
-                      onChange={(e) => setSystemPrompt(e.target.value)}
-                      placeholder="Enter system prompt for the AI..."
-                    />
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500 }}>
+                          Preset System Prompts
+                        </Typography>
+                        <Card variant="outlined" sx={{ mb: 2 }}>
+                          <CardContent sx={{ py: 1 }}>
+                            <Button 
+                              fullWidth 
+                              variant="text" 
+                              onClick={() => setSystemPrompt(
+                                'You are an expert forex and trading assistant for Algo360FX, a sophisticated trading platform. ' +
+                                'Provide professional, accurate information about trading, technical analysis, and market insights. ' +
+                                'Always emphasize risk management in your advice. Focus on factual information and avoid speculation. ' +
+                                'When appropriate, explain concepts in detail and provide educational context.'
+                              )}
+                            >
+                              General Trading Assistant
+                            </Button>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card variant="outlined" sx={{ mb: 2 }}>
+                          <CardContent sx={{ py: 1 }}>
+                            <Button 
+                              fullWidth 
+                              variant="text" 
+                              onClick={() => setSystemPrompt(
+                                'You are a technical analysis specialist for Algo360FX. Your expertise is in chart patterns, ' +
+                                'indicators, and price action analysis. When asked about trading, focus primarily on technical ' +
+                                'aspects rather than fundamentals. Provide detailed explanations of chart setups, indicator ' +
+                                'configurations, and pattern recognition techniques. Include specific entry criteria, stop loss ' +
+                                'placement guidelines, and take profit methodologies in your advice.'
+                              )}
+                            >
+                              Technical Analysis Specialist
+                            </Button>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card variant="outlined" sx={{ mb: 2 }}>
+                          <CardContent sx={{ py: 1 }}>
+                            <Button 
+                              fullWidth 
+                              variant="text" 
+                              onClick={() => setSystemPrompt(
+                                'You are a risk management and psychology expert for traders using the Algo360FX platform. ' +
+                                'Your primary focus is helping traders develop robust risk management strategies and maintain ' +
+                                'psychological discipline. Always emphasize position sizing, risk-to-reward ratios, drawdown ' +
+                                'management, and maintaining trading discipline. When providing advice, prioritize capital ' +
+                                'preservation strategies and psychological resilience techniques over specific trading setups.'
+                              )}
+                            >
+                              Risk Management Specialist
+                            </Button>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card variant="outlined">
+                          <CardContent sx={{ py: 1 }}>
+                            <Button 
+                              fullWidth 
+                              variant="text" 
+                              onClick={() => setSystemPrompt(
+                                'You are an automated trading and coding expert for the Algo360FX platform. Your specialty is ' +
+                                'helping traders develop algorithmic trading strategies, particularly in MQL4/MQL5 and Python. ' +
+                                'When assisting with code, focus on best practices, error handling, and optimization techniques. ' +
+                                'Always ensure that automation strategies include proper risk management parameters and ' +
+                                'safeguards. Provide detailed explanations of code logic and implementation approaches.'
+                              )}
+                            >
+                              Trading Automation Expert
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500 }}>
+                          Custom System Prompt
+                        </Typography>
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={17}
+                          variant="outlined"
+                          value={systemPrompt}
+                          onChange={(e) => setSystemPrompt(e.target.value)}
+                          placeholder="Enter a custom system prompt for the AI assistant..."
+                          InputProps={{
+                            sx: {
+                              '& textarea': {
+                                fontFamily: 'monospace',
+                                fontSize: '0.875rem'
+                              }
+                            }
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                    
+                    <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, border: '1px solid rgba(0,0,0,0.12)' }}>
+                      <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                        Tips for effective system prompts:
+                      </Typography>
+                      <Typography variant="body2" component="ul" sx={{ pl: 2, m: 0 }}>
+                        <li>Define the AI's role and expertise clearly</li>
+                        <li>Specify how it should handle questions about risk</li>
+                        <li>Indicate the level of detail you expect in responses</li>
+                        <li>Provide guidance on the balance between technical and fundamental analysis</li>
+                      </Typography>
+                    </Box>
                   </Box>
                 )}
               </Paper>
@@ -511,25 +986,49 @@ const AIAgent: React.FC = observer(() => {
       </Dialog>
       
       {/* AI Model Information Dialog */}
-      <Dialog open={showModelInfo} onClose={() => setShowModelInfo(false)} maxWidth="md" fullWidth>
+      <Dialog open={showModelInfo} onClose={() => setShowModelInfo(false)} maxWidth="lg" fullWidth>
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <InfoIcon sx={{ mr: 1 }} />
-            AI Models Information
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <InfoIcon sx={{ mr: 1 }} />
+              <Typography variant="h6">AI Models Comparison</Typography>
+            </Box>
+            <IconButton onClick={() => setShowModelInfo(false)} size="small">
+              <Box sx={{ p: 0.5 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                </svg>
+              </Box>
+            </IconButton>
           </Box>
         </DialogTitle>
         <DialogContent dividers>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            The AI Trading Assistant supports multiple AI models with different capabilities. 
-            Choose the model that best suits your needs.
-          </Typography>
+          <Box sx={{ mb: 3 }}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              The AI Trading Assistant integrates with multiple AI models to provide the best trading insights. Select the model that best matches your specific needs.
+            </Alert>
+            
+            <Typography variant="subtitle1" gutterBottom sx={{ mt: 3, fontWeight: 500 }}>
+              Model Categories
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Chip icon={<AIIcon />} label="OpenAI Models" color="primary" variant="outlined" />
+              <Chip icon={<PsychologyIcon />} label="Anthropic Models" color="secondary" variant="outlined" />
+              <Chip icon={<TrendingUpIcon />} label="Trading Optimized" color="success" variant="outlined" />
+              <Chip icon={<LightbulbIcon />} label="General Purpose" color="default" variant="outlined" />
+            </Box>
+          </Box>
           
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            {aiModels.map((model) => (
-              <Grid item xs={12} key={model.id}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500, color: 'primary.main', pb: 1, borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
+            OpenAI Models
+          </Typography>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            {aiModels.filter(model => model.id.includes('gpt')).map((model) => (
+              <Grid item xs={12} md={6} key={model.id}>
+                <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 2 }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                       <Typography variant="h6">{model.name}</Typography>
                       <Chip 
                         label={model.isAvailable ? 'Available' : 'Coming Soon'} 
@@ -540,17 +1039,136 @@ const AIAgent: React.FC = observer(() => {
                     <Typography variant="body2" color="text.secondary" paragraph>
                       {model.description}
                     </Typography>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Capabilities:
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
-                      {model.capabilities.map((capability, index) => (
-                        <Chip key={index} label={capability} size="small" variant="outlined" />
-                      ))}
+                    <Box sx={{ mt: 'auto' }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Best for:
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+                        {model.capabilities.map((capability, index) => (
+                          <Chip key={index} label={capability} size="small" variant="outlined" />
+                        ))}
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Context: {model.contextLength.toLocaleString()} tokens
+                        </Typography>
+                        <Button 
+                          size="small" 
+                          variant="text" 
+                          color="primary"
+                          disabled={!model.isAvailable}
+                          onClick={() => { 
+                            handleModelChange(model.id);
+                            setShowModelInfo(false);
+                          }}
+                        >
+                          Select
+                        </Button>
+                      </Box>
                     </Box>
-                    <Typography variant="body2">
-                      Context length: {model.contextLength.toLocaleString()} tokens
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+          
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500, color: 'secondary.main', pb: 1, borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
+            Anthropic Models
+          </Typography>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            {aiModels.filter(model => model.id.includes('claude')).map((model) => (
+              <Grid item xs={12} md={6} key={model.id}>
+                <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 2 }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="h6">{model.name}</Typography>
+                      <Chip 
+                        label={model.isAvailable ? 'Available' : 'Coming Soon'} 
+                        color={model.isAvailable ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      {model.description}
                     </Typography>
+                    <Box sx={{ mt: 'auto' }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Best for:
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+                        {model.capabilities.map((capability, index) => (
+                          <Chip key={index} label={capability} size="small" variant="outlined" />
+                        ))}
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Context: {model.contextLength.toLocaleString()} tokens
+                        </Typography>
+                        <Button 
+                          size="small" 
+                          variant="text" 
+                          color="secondary"
+                          disabled={!model.isAvailable}
+                          onClick={() => { 
+                            handleModelChange(model.id);
+                            setShowModelInfo(false);
+                          }}
+                        >
+                          Select
+                        </Button>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+          
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500, color: 'text.primary', pb: 1, borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
+            Other AI Models
+          </Typography>
+          <Grid container spacing={2}>
+            {aiModels.filter(model => !model.id.includes('gpt') && !model.id.includes('claude')).map((model) => (
+              <Grid item xs={12} md={6} key={model.id}>
+                <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 2 }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="h6">{model.name}</Typography>
+                      <Chip 
+                        label={model.isAvailable ? 'Available' : 'Coming Soon'} 
+                        color={model.isAvailable ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      {model.description}
+                    </Typography>
+                    <Box sx={{ mt: 'auto' }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Best for:
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+                        {model.capabilities.map((capability, index) => (
+                          <Chip key={index} label={capability} size="small" variant="outlined" />
+                        ))}
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Context: {model.contextLength.toLocaleString()} tokens
+                        </Typography>
+                        <Button 
+                          size="small" 
+                          variant="text"
+                          disabled={!model.isAvailable}
+                          onClick={() => { 
+                            handleModelChange(model.id);
+                            setShowModelInfo(false);
+                          }}
+                        >
+                          Select
+                        </Button>
+                      </Box>
+                    </Box>
                   </CardContent>
                 </Card>
               </Grid>
@@ -558,7 +1176,9 @@ const AIAgent: React.FC = observer(() => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowModelInfo(false)}>Close</Button>
+          <Button onClick={() => setShowModelInfo(false)} variant="outlined">
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
       

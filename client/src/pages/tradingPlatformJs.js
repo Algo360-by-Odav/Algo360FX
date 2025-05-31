@@ -92,46 +92,12 @@ const TradingPlatform = observer(() => {
     handleMenuClose();
   };
 
-  // Create custom action buttons for the trading platform topbar
-  const tradingActionButtons = [
-    React.createElement(
-      Button, 
-      {
-        key: 'new-order',
-        variant: 'contained',
-        size: 'small',
-        startIcon: React.createElement(AddIcon),
-        color: 'primary'
-      },
-      'New Order'
-    ),
-    React.createElement(
-      Button, 
-      {
-        key: 'refresh-data',
-        variant: 'outlined',
-        size: 'small',
-        startIcon: React.createElement(RefreshIcon),
-        color: 'primary'
-      },
-      'Refresh'
-    ),
-    React.createElement(
-      Button, 
-      {
-        key: 'download-data',
-        variant: 'outlined',
-        size: 'small',
-        startIcon: React.createElement(DownloadIcon),
-        color: 'primary'
-      },
-      'Export'
-    )
-  ];
+  // Empty array for action buttons to keep the top bar clean
+  const tradingActionButtons = [];
 
   // Create the main content of the trading platform
   const createTradingContent = () => {
-    return React.createElement(Box, { sx: { height: '100%', display: 'flex', flexDirection: 'column' } },
+    return React.createElement(Box, { sx: { height: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' } },
       // Trading platform toolbar
       React.createElement(AppBar, {
         position: "static",
@@ -252,11 +218,11 @@ const TradingPlatform = observer(() => {
   // Create the trading platform layout
   return isStandalone
     ? React.createElement(Box, { sx: { height: '100vh', display: 'flex', flexDirection: 'column' } },
-        // Top navigation bar with enhanced features for standalone mode
+        // Top navigation bar with enhanced features for standalone mode - keeping it clean
         React.createElement(TopBar, {
           pageTitle: 'Trading Platform',
           pageIcon: React.createElement(TrendingUpIcon),
-          actions: tradingActionButtons,
+          actions: [],
           onMenuClick: () => {}, // Empty function since we don't need menu toggle in standalone mode
         }),
         createTradingContent()
@@ -338,11 +304,11 @@ const TradingPlatform = observer(() => {
     ),
     
     // Main trading platform content
-    React.createElement(Box, { sx: { flexGrow: 1, overflow: 'hidden', p: 2 } },
-      React.createElement(Grid, { container: true, spacing: 2, sx: { height: '100%' } },
+    React.createElement(Box, { sx: { flexGrow: 1, overflow: 'auto', p: 2 } },
+      React.createElement(Grid, { container: true, spacing: 2, sx: { height: 'calc(100% - 16px)' } },
         // Left sidebar - Market watch
-        React.createElement(Grid, { item: true, xs: 12, md: 2, sx: { height: '100%' } },
-          React.createElement(Paper, { sx: { height: '100%', overflow: 'auto' } },
+        React.createElement(Grid, { item: true, xs: 12, md: 2, sx: { height: '100%', maxHeight: 'calc(100vh - 140px)' } },
+          React.createElement(Paper, { sx: { height: '100%', overflow: 'auto', maxHeight: '100%' } },
             React.createElement(MarketWatch, {
               selectedSymbol: selectedSymbol,
               onSymbolSelect: setSelectedSymbol
@@ -351,10 +317,10 @@ const TradingPlatform = observer(() => {
         ),
         
         // Main chart area
-        React.createElement(Grid, { item: true, xs: 12, md: 7, sx: { height: '100%' } },
-          React.createElement(Stack, { spacing: 2, sx: { height: '100%' } },
+        React.createElement(Grid, { item: true, xs: 12, md: 7, sx: { height: '100%', maxHeight: 'calc(100vh - 140px)' } },
+          React.createElement(Stack, { spacing: 2, sx: { height: '100%', overflow: 'hidden' } },
             // Chart
-            React.createElement(Paper, { sx: { flexGrow: 1 } },
+            React.createElement(Paper, { sx: { flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' } },
               React.createElement(CustomTradingChart, { symbol: selectedSymbol })
             ),
             
@@ -369,15 +335,15 @@ const TradingPlatform = observer(() => {
         ),
         
         // Right sidebar - Orders and history
-        React.createElement(Grid, { item: true, xs: 12, md: 3, sx: { height: '100%' } },
-          React.createElement(Stack, { spacing: 2, sx: { height: '100%' } },
+        React.createElement(Grid, { item: true, xs: 12, md: 3, sx: { height: '100%', maxHeight: 'calc(100vh - 140px)' } },
+          React.createElement(Stack, { spacing: 2, sx: { height: '100%', overflow: 'hidden' } },
             // Order book
-            React.createElement(Paper, { sx: { flexGrow: 1, overflow: 'auto' } },
+            React.createElement(Paper, { sx: { flexGrow: 1, overflow: 'auto', height: '50%' } },
               React.createElement(OrderBook, { symbol: selectedSymbol })
             ),
             
             // Trade history
-            React.createElement(Paper, { sx: { flexGrow: 1, overflow: 'auto' } },
+            React.createElement(Paper, { sx: { flexGrow: 1, overflow: 'auto', height: '50%' } },
               React.createElement(TradeHistory)
             )
           )

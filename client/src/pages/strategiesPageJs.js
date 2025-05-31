@@ -926,12 +926,7 @@ const StrategiesPage = () => {
   
   // Main render
   return React.createElement(Container, { maxWidth: 'xl' },
-    React.createElement(Box, { sx: { mt: 4, mb: 4 } },
-      React.createElement(Typography, { variant: 'h4', component: 'h1', gutterBottom: true }, "Trading Strategies"),
-      React.createElement(Typography, { variant: 'body1', color: 'textSecondary', paragraph: true }, 
-        "Create, manage, and monitor your automated trading strategies."
-      )
-    ),
+    React.createElement(Box, { sx: { mt: 2, mb: 2 } }),
     
     loading && React.createElement(LinearProgress, { sx: { mb: 3 } }),
     

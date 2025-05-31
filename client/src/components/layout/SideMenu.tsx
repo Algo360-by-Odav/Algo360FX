@@ -28,10 +28,34 @@ import {
   Storage as StorageIcon,
   Memory as MiningIcon,
   AccountBalanceWallet as WalletIcon,
+  SmartButton as RobotIcon,
 } from '@mui/icons-material';
-import { observer } from '../utils/mobxMock';
+import { observer } from '../../utils/mobxMock';
 
-const menuItems = [
+// Define menu item interface
+interface MenuItem {
+  title: string;
+  path: string;
+  icon: React.ReactNode;
+  external?: boolean;
+  highlight?: boolean;
+}
+
+interface MenuCategory {
+  category: string;
+  items: MenuItem[];
+}
+
+// Special highlighted item for Trading Agent
+const tradingAgentItem = { 
+  title: 'Trading Agent', 
+  path: '/standalone-agent.html', 
+  icon: <RobotIcon color="primary" />, 
+  external: true,
+  highlight: true 
+};
+
+const menuItems: MenuCategory[] = [
   {
     category: 'Overview',
     items: [
@@ -44,6 +68,7 @@ const menuItems = [
     items: [
       { title: 'Trading Platform', path: '/dashboard/trading', icon: <TrendingUp /> },
       { title: 'Advanced Trading', path: '/dashboard/advanced-trading', icon: <AnalyticsIcon /> },
+      tradingAgentItem, // Use the special highlighted item
       { title: 'HFT', path: '/dashboard/hft', icon: <TrendingUp /> },
       { title: 'MT5', path: '/dashboard/mt5', icon: <TrendingUp /> },
     ],
@@ -90,6 +115,7 @@ const menuItems = [
       { title: 'Subscription', path: '/dashboard/subscription', icon: <PaymentIcon /> },
       { title: 'Backend Demo', path: '/dashboard/backend-demo', icon: <StorageIcon /> },
       { title: 'Comparison', path: '/dashboard/comparison', icon: <CompareIcon /> },
+      { title: 'Trading Agent (Alt)', path: '/standalone-agent.html', icon: <RobotIcon color="secondary" />, external: true },
     ],
   },
 ];
@@ -104,8 +130,15 @@ const drawerWidth = 240;
 const SideMenu = observer(({ open, handleDrawerToggle }: SideMenuProps) => {
   const navigate = useNavigate();
 
-  const handleNavigation = (path: string) => {
-    navigate(path);
+  const handleNavigation = (path: string, isExternal = false) => {
+    if (isExternal) {
+      // Handle external links by directly changing window.location
+      window.location.href = path;
+    } else {
+      // Use React Router for internal navigation
+      navigate(path);
+    }
+    
     // Close drawer on mobile after navigation
     if (window.innerWidth < 600) {
       handleDrawerToggle();
@@ -119,11 +152,21 @@ const SideMenu = observer(({ open, handleDrawerToggle }: SideMenuProps) => {
         <React.Fragment key={category.category}>
           {index > 0 && <Divider />}
           <List sx={{ py: 0 }}>
-            {category.items.map((item) => (
+            {category.items.map((item: MenuItem) => (
               <ListItem key={item.path} disablePadding>
                 <ListItemButton 
-                  onClick={() => handleNavigation(item.path)}
-                  sx={{ py: 1 }}
+                  onClick={() => handleNavigation(item.path, item.external)}
+                  sx={{ 
+                    py: 1,
+                    ...(item.highlight && {
+                      bgcolor: 'rgba(25, 118, 210, 0.08)',
+                      '&:hover': {
+                        bgcolor: 'rgba(25, 118, 210, 0.12)',
+                      },
+                      borderLeft: '4px solid #1976d2',
+                      pl: 1.5,
+                    })
+                  }}
                 >
                   <ListItemIcon sx={{ minWidth: 40 }}>
                     {item.icon}

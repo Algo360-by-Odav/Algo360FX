@@ -261,12 +261,6 @@ const DashboardPage = () => {
 
   // Main component render
   return React.createElement(Box, { sx: { p: { xs: 2, sm: 3 } } },
-    React.createElement(Typography, {
-      variant: "h4",
-      component: "h1",
-      gutterBottom: true,
-      sx: { mb: { xs: 2, sm: 4 }, fontSize: { xs: '1.8rem', sm: '2.125rem' } }
-    }, "Dashboard"),
     
     React.createElement(Grid, { container: true, spacing: { xs: 2, sm: 3 } },
       // Account stats
@@ -287,7 +281,9 @@ const DashboardPage = () => {
       // Trading performance
       React.createElement(Grid, { item: true, xs: 12 },
         createTradingPerformanceCard()
-      )
+      ),
+      
+
     )
   );
 };

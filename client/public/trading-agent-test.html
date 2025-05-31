@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Agent Test Page</title>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+  />
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    #root {
+      padding: 20px;
+    }
+    .header {
+      background-color: #1976d2;
+      color: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 {
+      margin: 0;
+    }
+    .content {
+      padding: 20px;
+    }
+    .card {
+      background-color: white;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .button {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .button:hover {
+      background-color: #1565c0;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Trading Agent Test Page</h1>
+    <button class="button" onclick="window.location.href='/'">Back to Dashboard</button>
+  </div>
+
+  <div id="root">
+    <div class="content">
+      <div class="card">
+        <h2>Loading Trading Agent...</h2>
+        <p>Please wait while the Trading Agent loads. If it doesn't load in a few seconds, there might be an issue with the JavaScript configuration.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // This script will inject a message to notify the user how to properly access the Trading Agent
+    document.addEventListener('DOMContentLoaded', function() {
+      const root = document.getElementById('root');
+      
+      // Create agent control panel
+      const agentControlPanel = document.createElement('div');
+      agentControlPanel.className = 'card';
+      agentControlPanel.innerHTML = `
+        <h2>Agent Control Panel</h2>
+        <div style="display: flex; align-items: center; margin-bottom: 16px;">
+          <span style="margin-right: 8px;">Status:</span>
+          <span id="status-chip" style="background-color: #e0e0e0; padding: 4px 12px; border-radius: 16px; font-size: 14px;">Idle</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="start-btn" class="button" style="background-color: #4caf50;">Start</button>
+          <button id="pause-btn" class="button" style="background-color: #ff9800;" disabled>Pause</button>
+          <button id="stop-btn" class="button" style="background-color: #f44336;" disabled>Stop</button>
+        </div>
+        <div style="margin-top: 16px; padding: 12px; background-color: #f5f5f5; border-radius: 4px;">
+          <p id="status-message" style="margin: 0; color: #666;">Agent is currently idle. Press Start to begin automated trading.</p>
+        </div>
+      `;
+      
+      // Create performance metrics panel
+      const performancePanel = document.createElement('div');
+      performancePanel.className = 'card';
+      performancePanel.innerHTML = `
+        <h2>Performance Metrics</h2>
+        <div class="grid">
+          <div style="background-color: #f9f9f9; padding: 16px; border-radius: 4px;">
+            <div style="color: #666; font-size: 14px;">Win Rate</div>
+            <div style="color: #4caf50; font-size: 24px; font-weight: 500;">68%</div>
+          </div>
+          <div style="background-color: #f9f9f9; padding: 16px; border-radius: 4px;">
+            <div style="color: #666; font-size: 14px;">Net P&L</div>
+            <div style="color: #4caf50; font-size: 24px; font-weight: 500;">$287.25</div>
+          </div>
+          <div style="background-color: #f9f9f9; padding: 16px; border-radius: 4px;">
+            <div style="color: #666; font-size: 14px;">Open Trades</div>
+            <div style="font-size: 24px; font-weight: 500;">3</div>
+          </div>
+          <div style="background-color: #f9f9f9; padding: 16px; border-radius: 4px;">
+            <div style="color: #666; font-size: 14px;">Closed Trades</div>
+            <div style="font-size: 24px; font-weight: 500;">12</div>
+          </div>
+        </div>
+      `;
+      
+      // Create strategy settings panel
+      const strategyPanel = document.createElement('div');
+      strategyPanel.className = 'card';
+      strategyPanel.innerHTML = `
+        <h2>Strategy Settings</h2>
+        <div style="margin-bottom: 16px;">
+          <div style="font-weight: 500; margin-bottom: 8px;">Strategy Type</div>
+          <div style="display: flex; gap: 16px;">
+            <label>
+              <input type="radio" name="strategy" value="multi-indicator" checked> Multi-Indicator Strategy
+            </label>
+            <label>
+              <input type="radio" name="strategy" value="trend-following"> Trend Following
+            </label>
+            <label>
+              <input type="radio" name="strategy" value="breakout"> Breakout Strategy
+            </label>
+          </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <div style="font-weight: 500; margin-bottom: 8px;">Indicator Selection</div>
+          <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <label>
+              <input type="checkbox" checked> RSI
+            </label>
+            <label>
+              <input type="checkbox" checked> Accelerator (AC)
+            </label>
+            <label>
+              <input type="checkbox" checked> Envelopes
+            </label>
+            <label>
+              <input type="checkbox"> Parabolic SAR
+            </label>
+          </div>
+        </div>
+        <button class="button">Save Strategy</button>
+      `;
+      
+      // Create trade history panel
+      const tradeHistoryPanel = document.createElement('div');
+      tradeHistoryPanel.className = 'card';
+      tradeHistoryPanel.innerHTML = `
+        <h2>Trade History</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background-color: #f5f5f5;">
+              <th style="text-align: left; padding: 8px;">Symbol</th>
+              <th style="text-align: left; padding: 8px;">Type</th>
+              <th style="text-align: left; padding: 8px;">Open Time</th>
+              <th style="text-align: left; padding: 8px;">Profit</th>
+              <th style="text-align: left; padding: 8px;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;">EURUSD</td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;"><span style="color: #4caf50;">BUY</span></td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;">2025-05-30 10:23:45</td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee; color: #4caf50;">+$38</td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;"><span style="background-color: #e0e0e0; padding: 2px 8px; border-radius: 12px; font-size: 12px;">CLOSED</span></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;">GBPUSD</td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;"><span style="color: #f44336;">SELL</span></td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;">2025-05-30 11:42:12</td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee; color: #4caf50;">+$34</td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;"><span style="background-color: #e0e0e0; padding: 2px 8px; border-radius: 12px; font-size: 12px;">CLOSED</span></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;">USDJPY</td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;"><span style="color: #4caf50;">BUY</span></td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;">2025-05-30 13:15:22</td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee; color: #4caf50;">+$17</td>
+              <td style="padding: 8px; border-bottom: 1px solid #eee;"><span style="background-color: #1976d2; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">OPEN</span></td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+      
+      // Replace content with panels
+      root.innerHTML = '';
+      root.appendChild(document.createElement('div')).className = 'content';
+      root.querySelector('.content').appendChild(agentControlPanel);
+      
+      const grid = document.createElement('div');
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+      grid.style.gap = '20px';
+      
+      grid.appendChild(performancePanel);
+      grid.appendChild(strategyPanel);
+      root.querySelector('.content').appendChild(grid);
+      root.querySelector('.content').appendChild(tradeHistoryPanel);
+      
+      // Add interactivity
+      const statusChip = document.getElementById('status-chip');
+      const statusMessage = document.getElementById('status-message');
+      const startBtn = document.getElementById('start-btn');
+      const pauseBtn = document.getElementById('pause-btn');
+      const stopBtn = document.getElementById('stop-btn');
+      
+      startBtn.addEventListener('click', function() {
+        statusChip.textContent = 'Running';
+        statusChip.style.backgroundColor = '#4caf50';
+        statusChip.style.color = 'white';
+        statusMessage.textContent = 'Agent is actively monitoring markets and executing trades based on your strategy.';
+        startBtn.disabled = true;
+        pauseBtn.disabled = false;
+        stopBtn.disabled = false;
+      });
+      
+      pauseBtn.addEventListener('click', function() {
+        statusChip.textContent = 'Paused';
+        statusChip.style.backgroundColor = '#ff9800';
+        statusChip.style.color = 'white';
+        statusMessage.textContent = 'Agent is paused. Current positions are maintained but no new trades will be opened.';
+        startBtn.disabled = false;
+        pauseBtn.disabled = true;
+        stopBtn.disabled = false;
+      });
+      
+      stopBtn.addEventListener('click', function() {
+        statusChip.textContent = 'Idle';
+        statusChip.style.backgroundColor = '#e0e0e0';
+        statusChip.style.color = 'black';
+        statusMessage.textContent = 'Agent is currently idle. Press Start to begin automated trading.';
+        startBtn.disabled = false;
+        pauseBtn.disabled = true;
+        stopBtn.disabled = true;
+      });
+    });
+  </script>
+</body>
+</html>

@@ -74,13 +74,7 @@ export const SignalProviderPageJs = observer(() => {
 
   return (
     <Container maxWidth="xl">
-      <Box sx={{ width: '100%', mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Signal Provider
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary" paragraph>
-          Follow top-performing signal providers, analyze their performance, and copy their trades directly to your MT5 account.
-        </Typography>
+      <Box sx={{ width: '100%', mb: 2 }}>
 
         <Paper sx={{ width: '100%', mb: 2 }}>
           <Tabs

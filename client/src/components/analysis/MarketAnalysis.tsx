@@ -78,7 +78,6 @@ const MarketAnalysis: React.FC = observer(() => {
     <Paper sx={{ p: 3, mb: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h6" sx={{ mb: 1 }}>Market Overview</Typography>
           {analysisStore.marketData.length > 0 && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
               <Box>
@@ -153,9 +152,6 @@ const MarketAnalysis: React.FC = observer(() => {
 
   const renderTechnicalIndicators = () => (
     <Paper sx={{ p: 3, mb: 3, mt: 3, position: 'relative', zIndex: 1 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Technical Indicators
-      </Typography>
       <Grid container spacing={2}>
         {analysisStore.technicalIndicators.map((indicator, index) => (
           <Grid item xs={12} sm={6} md={4} key={index}>
@@ -206,15 +202,11 @@ const MarketAnalysis: React.FC = observer(() => {
 
   const renderMarketSentiment = () => (
     <Paper sx={{ p: 3, mb: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Market Sentiment
-      </Typography>
       {analysisStore.marketSentiment && (
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
             <Card>
               <CardContent>
-                <Typography variant="subtitle2" gutterBottom>Sentiment Distribution</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <TrendingIcon sx={{ color: theme.palette.success.main, mr: 1 }} />
                   <Typography>Bullish: {formatPercent(analysisStore.marketSentiment.bullishPercent)}</Typography>

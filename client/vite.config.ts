@@ -18,6 +18,22 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    sourcemap: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        tradingAgent: path.resolve(__dirname, 'standalone-trading.html')
+      },
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          charts: ['recharts'],
+          ui: ['@mui/material', '@emotion/react', '@emotion/styled']
+        }
+      }
+    }
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -45,16 +61,5 @@ export default defineConfig({
       }
     }
   },
-  build: {
-    sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          charts: ['recharts'],
-          ui: ['@mui/material', '@emotion/react', '@emotion/styled']
-        }
-      }
-    }
-  }
+
 });

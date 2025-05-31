@@ -1693,14 +1693,35 @@ const AdvancedTradingPage = observer(function AdvancedTradingPage() {
   };
 
   // Main render
-  return React.createElement(Container, {
-    maxWidth: 'xl',
-    sx: { py: 4 }
-  }, [
+  return React.createElement(
+    'div',
+    { 
+      style: {
+        height: 'calc(100vh - 72px)',
+        overflow: 'hidden',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }
+    },
+    React.createElement(
+      Container, 
+      {
+        maxWidth: 'xl',
+        sx: { 
+          py: 2,
+          px: 2,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }
+      },
+      [
     // Tabs
     React.createElement(Paper, {
       key: 'tabs-paper',
-      sx: { mb: 3 }
+      sx: { mb: 2, boxShadow: 'none', borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }
     }, [
       React.createElement(Tabs, {
         key: 'tabs',
@@ -1715,21 +1736,32 @@ const AdvancedTradingPage = observer(function AdvancedTradingPage() {
       ])
     ]),
     
-    // Tab content
-    selectedTab === 0 ? renderAlgorithmList() : 
-    selectedTab === 1 ? renderMarketDataTab() :
-    renderPerformanceTab(),
-    
-    // Dialogs
-    React.createElement('div', { key: 'dialogs' }, [
-      createAlgorithmDialog(),
-      createDeleteDialog(),
-      createBacktestDialog(),
-      createBacktestResultDialog(),
-      createOptimizationDialog(),
-      createOptimizationResultDialog()
-    ])
-  ]);
+        // Tab content
+        React.createElement(Box, {
+          key: 'tab-content',
+          sx: { 
+            flex: 1,
+            overflow: 'auto',
+            height: 'calc(100% - 48px)' // Account for tab height
+          }
+        }, [
+          selectedTab === 0 ? renderAlgorithmList() : 
+          selectedTab === 1 ? renderMarketDataTab() :
+          renderPerformanceTab()
+        ]),
+        
+        // Dialogs
+        React.createElement('div', { key: 'dialogs' }, [
+          createAlgorithmDialog(),
+          createDeleteDialog(),
+          createBacktestDialog(),
+          createBacktestResultDialog(),
+          createOptimizationDialog(),
+          createOptimizationResultDialog()
+        ])
+      ]
+    )
+  );
 });
 
 export default AdvancedTradingPage;

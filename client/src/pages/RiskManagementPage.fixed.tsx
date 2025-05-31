@@ -91,22 +91,10 @@ const RiskManagementPage: React.FC = observer(() => {
   return (
     <Box sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
       <Grid container spacing={3}>
-        {/* Header */}
+        {/* Alert for emergency close */}
         <Grid item xs={12}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h4" component="h1">
-              Risk Management Dashboard
-            </Typography>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleEmergencyClose}
-            >
-              Emergency Close All Positions
-            </Button>
-          </Box>
           {showAlert && (
-            <Alert severity="warning" sx={{ mt: 2 }} onClose={() => setShowAlert(false)}>
+            <Alert severity="warning" sx={{ mt: 2, mb: 2 }} onClose={() => setShowAlert(false)}>
               Emergency close initiated. Closing all open positions...
             </Alert>
           )}
@@ -365,6 +353,21 @@ const RiskManagementPage: React.FC = observer(() => {
               </Grid>
             </TabPanel>
           </Paper>
+        </Grid>
+        
+        {/* Emergency Close Button at bottom right */}
+        <Grid item xs={12}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleEmergencyClose}
+              size="large"
+              sx={{ fontWeight: 'bold', px: 3, py: 1.5 }}
+            >
+              Emergency Close All Positions
+            </Button>
+          </Box>
         </Grid>
       </Grid>
     </Box>

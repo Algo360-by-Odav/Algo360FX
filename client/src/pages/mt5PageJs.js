@@ -205,19 +205,44 @@ const MT5Page = () => {
 
   // Create the connection form
   const createConnectionForm = () => {
-    return React.createElement(Paper, {
-      sx: { p: 3, mb: 3 }
-    }, [
+    if (mt5Store.isConnected) return null;
+
+    return React.createElement(Box, {
+      sx: { 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: 'calc(100vh - 100px)',
+        width: '100%'
+      }
+    }, 
+      React.createElement(Paper, {
+        elevation: 3,
+        sx: { 
+          p: 4, 
+          width: '400px',
+          height: '400px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderRadius: 4,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          bgcolor: 'background.paper'
+        }
+      }, [
       React.createElement(Typography, {
         key: "connection-title",
-        variant: "h6",
-        gutterBottom: true
-      }, "MT5 Connection"),
+        variant: "h5",
+        gutterBottom: true,
+        align: "center",
+        sx: { mb: 3, fontWeight: 'bold' }
+      }, "Connect to MetaTrader 5"),
       
       React.createElement(Box, {
         key: "connection-form",
         component: "form",
-        sx: { display: 'flex', flexDirection: 'column', gap: 2 }
+        sx: { display: 'flex', flexDirection: 'column', gap: 3, width: '100%' }
       }, [
         React.createElement(TextField, {
           key: "account-id",
@@ -244,7 +269,7 @@ const MT5Page = () => {
         
         React.createElement(Box, {
           key: "connection-buttons",
-          sx: { display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }
+          sx: { display: 'flex', justifyContent: 'center', width: '100%', mt: 3 }
         }, [
           mt5Store.isConnected ? (
             React.createElement(Button, {
@@ -259,24 +284,29 @@ const MT5Page = () => {
             React.createElement(Button, {
               key: "connect-button",
               variant: "contained",
+              color: "primary",
+              disabled: loading || !accountId || !password,
               onClick: handleConnect,
-              disabled: loading || !accountId || !password
+              fullWidth: true,
+              size: "large",
+              sx: { mt: 4, py: 1.5, fontWeight: 'bold' }
             }, loading ? 
-              React.createElement(CircularProgress, { size: 24 }) : 
-              "Connect to MT5"
-            )
-          ),
-          
-          mt5Store.isConnected && React.createElement(Button, {
-            key: "refresh-button",
-            variant: "outlined",
-            onClick: handleRefresh,
-            disabled: loading,
-            startIcon: React.createElement(RefreshIcon)
-          }, "Refresh")
+              React.createElement(Box, {
+                sx: { display: 'flex', alignItems: 'center', justifyContent: 'center' }
+              }, [
+                "Connecting",
+                React.createElement(CircularProgress, {
+                  key: "progress",
+                  size: 20,
+                  sx: { ml: 1 }
+                })
+              ])
+            : "Connect")
+          )
         ])
       ])
-    ]);
+    ])
+  );
   };
 
   // Create the account info section
@@ -892,7 +922,7 @@ const MT5Page = () => {
 
   // Main render
   return React.createElement(Box, {
-    sx: { p: 3 }
+    sx: { p: 0 }
   }, [
     React.createElement('div', { key: 'connection-form' }, createConnectionForm()),
     React.createElement('div', { key: 'account-info' }, createAccountInfo()),

@@ -167,35 +167,11 @@ const PortfolioPage = observer(() => {
     maxWidth: "lg", 
     sx: { mt: 4, mb: 4 } 
   }, [
-    // Header with Title and Buttons
+    // Empty header with spacing
     React.createElement(Box, { 
       key: "header",
-      sx: { mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' } 
-    }, [
-      React.createElement(Typography, { 
-        key: "title",
-        variant: "h4", 
-        component: "h1" 
-      }, "Portfolio Overview"),
-      React.createElement(Box, { key: "buttons" }, [
-        React.createElement(Button, {
-          key: "refresh-btn",
-          variant: "contained",
-          color: "primary",
-          startIcon: React.createElement(RefreshIcon),
-          onClick: handleRefresh,
-          disabled: loading,
-          sx: { mr: 1 }
-        }, "Refresh"),
-        React.createElement(Button, {
-          key: "analytics-btn",
-          variant: "outlined",
-          color: "primary",
-          startIcon: React.createElement(AnalyticsIcon),
-          onClick: () => setAnalyticsOpen(true)
-        }, "Analytics")
-      ])
-    ]),
+      sx: { mb: 4 } 
+    }),
 
     // Main Grid
     React.createElement(Grid, { 
@@ -533,6 +509,34 @@ const PortfolioPage = observer(() => {
           ])
         )
       )
+    ]),
+
+    // Bottom buttons
+    React.createElement(Box, { 
+      key: "bottom-buttons",
+      sx: { 
+        display: 'flex', 
+        justifyContent: 'center', 
+        mt: 4, 
+        mb: 2 
+      } 
+    }, [
+      React.createElement(Button, {
+        key: "refresh-btn",
+        variant: "contained",
+        color: "primary",
+        startIcon: React.createElement(RefreshIcon),
+        onClick: handleRefresh,
+        disabled: loading,
+        sx: { mr: 2 }
+      }, "Refresh"),
+      React.createElement(Button, {
+        key: "analytics-btn",
+        variant: "outlined",
+        color: "primary",
+        startIcon: React.createElement(AnalyticsIcon),
+        onClick: () => setAnalyticsOpen(true)
+      }, "Analytics")
     ]),
 
     // Portfolio Analytics Dialog

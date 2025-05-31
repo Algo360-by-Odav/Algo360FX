@@ -410,14 +410,11 @@ const MarketAnalysis = observer(function MarketAnalysis() {
     maxWidth: 'xl',
     sx: { py: 4, flexGrow: 1 }
   }, [
-    // Page header
-    React.createElement(Typography, { 
-      key: 'page-title',
-      variant: 'h4', 
-      component: 'h1',
-      gutterBottom: true,
-      sx: { mb: 4 }
-    }, 'Market Analysis'),
+    // Page spacing - title removed
+    React.createElement(Box, { 
+      key: 'spacing',
+      sx: { mb: 2 }
+    }),
     
     // Tabs
     React.createElement(Box, { key: 'tabs-box', sx: { borderBottom: 1, borderColor: 'divider', mb: 3 } }, [
